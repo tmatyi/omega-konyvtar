@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "kpregisztracio-6fb9d"
+  },
+  "targets": {
+    "kpregisztracio-6fb9d": {
+      "hosting": {
+        "omega-konyvtar": [
+          "omega-konyvtar"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
