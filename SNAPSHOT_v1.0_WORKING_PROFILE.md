@@ -1,23 +1,26 @@
-# 🎯 SNAPSHOT v1.0 - Working Profile System
+# 🎯 SNAPSHOT v0.1.0 - Working Profile System
 
 **Created:** February 1, 2026  
-**Git Tag:** `v1.0-working-profile`  
-**Commit:** `036983c`
+**Git Tag:** `v0.1.0`  
+**Version:** 0.1.0  
+**GitHub Repository:** `omega-konyvtar` (to be created)
 
 ## 🚀 RESTORE INSTRUCTIONS
 
 ### Quick Restore:
+
 ```bash
-git checkout v1.0-working-profile
+git checkout v0.1.0
 ```
 
 ### Full Restore Process:
+
 ```bash
 # 1. Stash any current changes (if needed)
 git stash
 
 # 2. Checkout the snapshot
-git checkout v1.0-working-profile
+git checkout v0.1.0
 
 # 3. Install dependencies
 npm install
@@ -33,12 +36,14 @@ npm run dev
 ## ✅ WORKING FEATURES
 
 ### 🔐 Authentication System
+
 - **Firebase authentication** with email/password
 - **Persistent sessions** - Users stay logged in across refreshes
 - **Local storage persistence** - `browserLocalPersistence`
 - **Auto-login** - No re-login required after page refresh
 
 ### 👤 Profile System
+
 - **Complete profile management** - Edit name, phone, address, bio
 - **Avatar upload** - JPG/PNG support with auto-resizing (max 500x500px)
 - **Auto-save** - Profile saves immediately after changes
@@ -46,6 +51,7 @@ npm run dev
 - **Real-time updates** - Avatar updates in sidebar instantly
 
 ### 🖼️ Image Processing
+
 - **JPG/JPEG support** - Perfect compatibility
 - **PNG support** - Perfect compatibility
 - **Auto-resizing** - Large images resized to max 500x500px
@@ -54,6 +60,7 @@ npm run dev
 - **Size limits** - 10MB max before processing
 
 ### 🧭 Navigation System
+
 - **Sidebar navigation** - Collapsible with user info
 - **Mobile navigation** - Bottom nav for mobile devices
 - **User area clickable** - Click avatar/name to access profile
@@ -61,6 +68,7 @@ npm run dev
 - **Responsive design** - Works on all screen sizes
 
 ### 📚 Book Management
+
 - **Book display** - Grid layout with book cards
 - **Add books** - Modal for adding new books
 - **Book details** - View detailed book information
@@ -70,17 +78,20 @@ npm run dev
 ## 🔧 CONFIGURATION
 
 ### Firebase Setup
+
 - **Project ID:** `kpregisztracio-6fb9d`
 - **Database:** Realtime Database
 - **Authentication:** Email/Password
 - **Hosting:** Firebase Hosting
 
 ### Local Development
+
 - **URL:** http://localhost:5173/
 - **Command:** `npm run dev`
 - **PWA:** Disabled in development (no caching issues)
 
 ### Production
+
 - **URL:** https://omega-konyvtar.web.app
 - **Deploy:** `npm run deploy:firebase`
 - **PWA:** Enabled with service worker
@@ -88,11 +99,13 @@ npm run dev
 ## 📱 KNOWN LIMITATIONS
 
 ### By Design
+
 - **HEIC not supported** - Only JPG/PNG for reliability
 - **Profile data in localStorage** - Not synced to Firebase
 - **No real-time sync** - Profile changes only on current device
 
 ### Technical
+
 - **Single user profile** - No multi-user profile management
 - **No profile backup** - LocalStorage can be cleared
 - **No image backup** - Avatars stored as base64 in localStorage
@@ -135,6 +148,7 @@ When continuing from this snapshot, consider:
 ## 🔍 TESTING CHECKLIST
 
 Before deploying from this snapshot, verify:
+
 - [ ] Login/logout functionality works
 - [ ] Profile updates persist across refreshes
 - [ ] Image upload works with JPG/PNG
