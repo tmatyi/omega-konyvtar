@@ -52,6 +52,7 @@ function App() {
   const [showEditModal, setShowEditModal] = useState(false); // New state for edit modal
   const [searchLoading, setSearchLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState(null); // For thumbnail upload preview
+  const [successMessage, setSuccessMessage] = useState(""); // For success messages
 
   const handleDensityChange = (newDensity) => {
     if (newDensity === cardDensity) return;
@@ -251,6 +252,7 @@ function App() {
       setOriginalTitle("");
       setPageCount("");
       setPublisher("");
+      setSuccessMessage("");
       setShowAddForm(false);
     }
   };
@@ -266,8 +268,12 @@ function App() {
       // Check which site and process accordingly
       if (bookUrl.includes("clchungary.com")) {
         bookData = await processClcHungaryUrl(bookUrl);
+      } else if (bookUrl.includes("bookline.hu")) {
+        bookData = await processBooklineUrl(bookUrl);
       } else {
-        alert("Nem támogatott URL. Kérjük, CLC Hungary URL-eket használjon.");
+        alert(
+          "Nem támogatott URL. Kérjük, CLC Hungary vagy Bookline URL-eket használjon.",
+        );
         return;
       }
 
@@ -285,7 +291,9 @@ function App() {
         setPageCount(bookData.pageCount || "");
         setPublisher(bookData.publisher || "");
 
-        alert("A könyvadatok sikeresen kinyerése!");
+        setSuccessMessage("A könyvadatok sikeresen kinyerése!");
+        // Clear success message after 4 seconds
+        setTimeout(() => setSuccessMessage(""), 4000);
       } else {
         alert(
           "A könyvadatok kinyerése sikertelen. Kérjük, ellenőrizze az URL-t és próbálja újra.",
@@ -556,6 +564,135 @@ function App() {
       } else {
         alert(
           "Hiba a CLC Hungary URL feldolgozása közben. Kérjük, ellenőrizze az URL-t és próbálja újra.",
+        );
+      }
+
+      return null;
+    }
+  };
+
+  // Process Bookline URLs
+  const processBooklineUrl = async (url) => {
+    try {
+      // Try multiple proxy services
+      const proxies = [
+        "https://api.allorigins.win/raw?url=",
+        "https://corsproxy.io/?",
+        "https://cors-anywhere.herokuapp.com/",
+      ];
+
+      let html = "";
+      for (const proxy of proxies) {
+        try {
+          const proxyUrl = proxy + encodeURIComponent(url);
+          const response = await fetch(proxyUrl);
+          if (response.ok) {
+            html = await response.text();
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (!html) throw new Error("All proxies failed");
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+
+      console.log("Processing Bookline URL:", url);
+
+      // Extract title
+      const titleElement = doc.querySelector(".c-product__title");
+      const title = titleElement ? titleElement.textContent.trim() : "";
+
+      // Extract author
+      const authorElement = doc.querySelector(".o-product-authors");
+      const author = authorElement ? authorElement.textContent.trim() : "";
+
+      // Extract publisher
+      const publisherElement = doc.querySelector(".c-product__publisher");
+      const publisher = publisherElement
+        ? publisherElement.textContent.trim()
+        : "";
+
+      // Extract description (look for more specific description paragraphs)
+      let description = "";
+      const descriptionElements = doc.querySelectorAll("p");
+      for (const p of descriptionElements) {
+        const text = p.textContent.trim();
+        // Skip very short paragraphs and likely navigation/footer text
+        if (
+          text.length > 50 &&
+          !text.includes("Kosár") &&
+          !text.includes(" Ft") &&
+          !text.includes("Raktáron")
+        ) {
+          description = text;
+          break;
+        }
+      }
+
+      // Extract ISBN
+      const isbnElement = doc.querySelector('span[itemprop="sku"]');
+      const isbn = isbnElement ? isbnElement.textContent.trim() : "";
+
+      // Extract thumbnail (handle different image attribute patterns)
+      let thumbnail = "";
+      const thumbnailElement = doc.querySelector(
+        ".o-product-figure__product-img",
+      );
+      if (thumbnailElement) {
+        thumbnail =
+          thumbnailElement.src ||
+          thumbnailElement.getAttribute("data-src") ||
+          thumbnailElement.getAttribute("data-lazy") ||
+          thumbnailElement.getAttribute("srcset")?.split(" ")[0] ||
+          "";
+      }
+
+      // Extract year (try to find it in publisher or other elements)
+      let year = "";
+      if (publisher) {
+        const yearMatch = publisher.match(/\b(19|20)\d{2}\b/);
+        if (yearMatch) {
+          year = yearMatch[0];
+        }
+      }
+
+      console.log("Bookline extracted data:", {
+        title,
+        author,
+        publisher,
+        description,
+        isbn,
+        thumbnail,
+        year,
+      });
+
+      return {
+        title,
+        author,
+        publisher,
+        description,
+        isbn,
+        thumbnail,
+        year,
+        genre: "", // Bookline doesn't have a clear genre field
+        originalTitle: "",
+        pageCount: "",
+      };
+    } catch (error) {
+      console.error("Error processing Bookline URL:", error);
+
+      // Provide more helpful error message
+      if (error.message.includes("All proxies failed")) {
+        alert(
+          "Nem lehet hozzáférni a Bookline weboldalához CORS korlátozások miatt. Kérjük, adja meg a könyv adatait manuálisan, vagy próbáljon másik URL-t.",
+        );
+      } else {
+        alert(
+          "Hiba a Bookline URL feldolgozása közben. Kérjük, ellenőrizze az URL-t és próbálja újra.",
         );
       }
 
@@ -1341,7 +1478,7 @@ function App() {
             <div className="url-section">
               <input
                 type="url"
-                placeholder="ILessze be a CLC Hungary könyv URL-jét"
+                placeholder="ILessze be a CLC Hungary vagy Bookline könyv URL-jét"
                 value={bookUrl}
                 onChange={(e) => setBookUrl(e.target.value)}
                 className="url-input"
@@ -1352,122 +1489,161 @@ function App() {
                 className="process-url-btn"
               >
                 {searchLoading ? (
-                  <span className="loading-spinner">
-                    <span className="spinner"></span>
-                    Feldolgozás...
-                  </span>
+                  <div className="modern-loader">
+                    <div className="loader-dots">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
                 ) : (
                   "🔍 Keresés"
                 )}
               </button>
             </div>
+            {successMessage && (
+              <div className="success-message">
+                <div className="success-icon">✓</div>
+                <span>{successMessage}</span>
+              </div>
+            )}
             <div className="divider" data-text="VAGY"></div>
             <div className="manual-entry">
-              <input
-                type="text"
-                placeholder="Cím"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Szerző"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Év"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Műfaj"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Eredeti cím"
-                value={originalTitle}
-                onChange={(e) => setOriginalTitle(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Oldalszám"
-                value={pageCount}
-                onChange={(e) => setPageCount(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Kiadó"
-                value={publisher}
-                onChange={(e) => setPublisher(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="ISBN (opcionális)"
-                value={isbn}
-                onChange={(e) => setIsbn(e.target.value)}
-              />
-              <div className="thumbnail-upload-section">
-                <div className="thumbnail-upload-container">
-                  <div className="thumbnail-preview">
-                    {thumbnailPreview ? (
-                      <img
-                        src={thumbnailPreview}
-                        alt="Borítókép előnézet"
-                        className="thumbnail-preview-image"
-                      />
-                    ) : (
-                      <div className="thumbnail-upload-placeholder">
-                        <svg
-                          className="thumbnail-upload-icon"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <span>
-                          {thumbnailPreview
-                            ? "Borítókép cseréje"
-                            : "Borítókép feltöltése"}
-                        </span>
-                      </div>
-                    )}
+              <div className="form-field">
+                <label className="field-label">Borítókép</label>
+                <div className="thumbnail-upload-section">
+                  <div className="thumbnail-upload-container">
+                    <div className="thumbnail-preview">
+                      {thumbnailPreview ? (
+                        <img
+                          src={thumbnailPreview}
+                          alt="Borítókép előnézet"
+                          className="thumbnail-preview-image"
+                        />
+                      ) : (
+                        <div className="thumbnail-upload-placeholder">
+                          <svg
+                            className="thumbnail-upload-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <span>
+                            {thumbnailPreview
+                              ? "Borítókép cseréje"
+                              : "Borítókép feltöltése"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={triggerThumbnailUpload}
+                      className="thumbnail-upload-btn"
+                    >
+                      {thumbnailPreview
+                        ? "Borítókép cseréje"
+                        : "Borítókép kiválasztása"}
+                    </button>
+                    <input
+                      id="thumbnail-upload"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handleThumbnailUpload}
+                      style={{ display: "none" }}
+                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={triggerThumbnailUpload}
-                    className="thumbnail-upload-btn"
-                  >
-                    {thumbnailPreview
-                      ? "Borítókép cseréje"
-                      : "Borítókép kiválasztása"}
-                  </button>
-                  <input
-                    id="thumbnail-upload"
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    onChange={handleThumbnailUpload}
-                    style={{ display: "none" }}
-                  />
                 </div>
               </div>
-              <textarea
-                placeholder="Leírás (opcionális)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows="3"
-              />
+              <div className="form-field">
+                <label className="field-label">Cím</label>
+                <input
+                  type="text"
+                  placeholder="Add meg a könyv címét"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Szerző</label>
+                <input
+                  type="text"
+                  placeholder="Add meg a szerző nevét"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Év</label>
+                <input
+                  type="text"
+                  placeholder="Kiadás éve"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Műfaj</label>
+                <input
+                  type="text"
+                  placeholder="Műfaj vagy kategória"
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Eredeti cím</label>
+                <input
+                  type="text"
+                  placeholder="Eredeti nyelvű cím (opcionális)"
+                  value={originalTitle}
+                  onChange={(e) => setOriginalTitle(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Oldalszám</label>
+                <input
+                  type="text"
+                  placeholder="Oldalak száma"
+                  value={pageCount}
+                  onChange={(e) => setPageCount(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Kiadó</label>
+                <input
+                  type="text"
+                  placeholder="Kiadó neve"
+                  value={publisher}
+                  onChange={(e) => setPublisher(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">ISBN</label>
+                <input
+                  type="text"
+                  placeholder="ISBN szám (opcionális)"
+                  value={isbn}
+                  onChange={(e) => setIsbn(e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Leírás</label>
+                <textarea
+                  placeholder="Add meg a könyv leírását (opcionális)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows="3"
+                />
+              </div>
             </div>
             <div className="modal-buttons">
               <button onClick={addBook}>Könyv Hozzáadása</button>
@@ -1487,6 +1663,7 @@ function App() {
                   setPageCount("");
                   setPublisher("");
                   setCategory("Bolt");
+                  setSuccessMessage("");
                 }}
               >
                 Mégse
