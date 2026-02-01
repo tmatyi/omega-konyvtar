@@ -15,7 +15,8 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
   }, [isCollapsed]);
 
   const tabs = [
-    { id: "books", label: "Könyvek", icon: "📚" },
+    { id: "books", label: "Bolt", icon: "�" },
+    { id: "library", label: "Könyvtár", icon: "🏛️" },
     { id: "passcard", label: "Olvasókártya", icon: "🎫" },
     { id: "logout", label: "Kijelentkezés", icon: "🚪" },
   ];

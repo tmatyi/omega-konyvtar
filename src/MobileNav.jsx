@@ -63,8 +63,16 @@ function MobileNav({ user, onLogout, activeTab, onTabChange }) {
             className={`mobile-nav-tab ${activeTab === "books" ? "active" : ""}`}
             onClick={() => handleTabClick("books")}
           >
-            <span className="mobile-nav-icon">📚</span>
-            <span className="mobile-nav-label">Könyvek</span>
+            <span className="mobile-nav-icon">�</span>
+            <span className="mobile-nav-label">Bolt</span>
+          </button>
+
+          <button
+            className={`mobile-nav-tab ${activeTab === "library" ? "active" : ""}`}
+            onClick={() => handleTabClick("library")}
+          >
+            <span className="mobile-nav-icon">🏛️</span>
+            <span className="mobile-nav-label">Könyvtár</span>
           </button>
 
           <button
