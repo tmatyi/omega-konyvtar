@@ -1,193 +1,195 @@
 # Omega Könyvtár
 
-**Version: 0.1.1**
+**Verzió: 0.1.1**
 
-A comprehensive book management system with intelligent URL-based data extraction for Hungarian Christian literature.
+Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeréssel rendelkezik a magyar keresztény irodalom számára.
 
-## 🎯 Features
+## 🎯 Funkciók
 
-### 📚 Book Management
+### 📚 Könyvkezelés
 
-- **Dual Categories**: Separate "Bolt" (Shop) and "Könyvtár" (Library) collections
-- **Smart Filtering**: Filter by title, author, genre, and category
-- **Responsive Design**: Adaptive card density for optimal viewing
-- **Book Details**: Comprehensive book information display
+- **Két Kategória**: Különálló "Bolt" és "Könyvtár" gyűjtemények
+- **Intelligens Szűrés**: Szűrés cím, szerző, műfaj és kategória szerint
+- **Reszponzív Tervezés**: Adaptív kártyasűrűség az optimális megjelenítéshez
+- **Részletes Könyvinformáció**: Átfogató könyvinformációk megjelenítése
 
-### 🔗 URL-Based Data Extraction
+### 🔗 URL-alapú Adatkinyerés
 
-- **CLC Hungary Integration**: Automatic book data extraction from CLC Hungary URLs
-- **Intelligent Parsing**: Extracts title, author, year, ISBN, description, and more
-- **Multi-Proxy Support**: Reliable data fetching with fallback proxies
-- **Error Handling**: Graceful fallbacks for network issues
+- **CLC Hungary Integráció**: Automatikus könyvadat-kinyerés CLC Hungary URL-ekből
+- **Intelligensz Elemzés**: Cím, szerző, év, ISBN, leírás és további adatok kinyerése
+- **Több Proxy Támogatás**: Megbízható adatlekérés visszahúzó proxykkal
+- **Hibakezelés**: Elegáns visszahúzások hálózati problémák esetén
 
-### ✏️ Complete Edit Functionality
+### ✏️ Teljes Szerkesztési Funkcionalitás
 
-- **Full Book Editing**: Edit all book fields with pre-filled forms
-- **Data Integrity**: Maintains all book metadata during updates
-- **Modal Interface**: Clean, intuitive editing experience
+- **Teljes Könyvszerkesztés**: Minden könyvmező szerkeszése előre kitöltött űrlapokkal
+- **Adatintegritás**: Megőrzi az összes könyv metaadatát frissítés közben
+- **Modal Interfész**: Tiszta, intuitív szerkesztési élmény
+- **Beépített Szerkesztés**: A részletek modaljában való közvetlen szerkesztés
 
-### 📊 Rich Book Data
+### 📊 Gazdag Könyvadatok
 
-- **Core Fields**: Title, Author, Year, Genre, Description, ISBN
-- **Extended Fields**: Original Title, Page Count, Publisher
-- **Thumbnail Support**: Automatic cover image extraction
-- **Hungarian Labels**: Localized field names for Hungarian users
+- **Alap Mezők**: Cím, Szerző, Év, Műfaj, Leírás, ISBN
+- **Kiterjesztett Mezők**: Eredeti Cím, Oldalszám, Kiadó
+- **Borítókép Támogatás**: Automatikus borítókép-kinyerés
+- **Magyar Címkék**: Helyi mezőnevek a magyar felhasználók számára
 
-## 🚀 Getting Started
+## 🚀 Kezdés
 
-### Prerequisites
+### Előfeltételek
 
-- Node.js 16+ and npm
-- Firebase project configuration
+- Node.js 16+ és npm
+- Firebase projekt konfiguráció
 
-### Installation
+### Telepítés
 
-1. Clone the repository:
+1. Klónozza a repository-t:
 
    ```bash
    git clone https://github.com/tmatyi/omega-konyvtar.git
    cd omega-konyvtar
    ```
 
-2. Install dependencies:
+2. Telepítse a függőségeket:
 
    ```bash
    npm install
    ```
 
-3. Configure Firebase:
-   - Create a Firebase project at https://console.firebase.google.com
-   - Copy your Firebase configuration to `src/firebase.js`
-   - Enable Authentication and Realtime Database
+3. Konfigurálja a Firebase-ot:
+   - Hozzon létre egy Firebase projektet a https://console.firebase.google.com oldalon
+   - Másolja a Firebase konfigurációt a `src/firebase.js` fájlba
+   - Engedélyezze az Authentication és Realtime Database szolgáltatásokat
 
-4. Start the development server:
+4. Indítsa a fejlesztői szervert:
 
    ```bash
    npm run dev
    ```
 
-5. Open [http://localhost:5173](http://localhost:5173) to view the application.
+5. Nyissa meg a [http://localhost:5173](http://localhost:5173) oldalt az alkalmazás megtekintéséhez.
 
-## 🔧 Usage
+## 🔧 Használat
 
-### Adding Books
+### Könyvek Hozzáadása
 
-#### URL Extraction (Recommended)
+#### URL Kinyerés (Ajánlott)
 
-1. Click "+ Új Könyv Hozzáadása"
-2. Paste a CLC Hungary book URL (e.g., `https://www.clchungary.com/termek/...`)
-3. Click "🔗 Extract Data"
-4. Review extracted data and click "Add Book"
+1. Kattintson a "+ Új Könyv Hozzáadása" gombra
+2. Illessze be a CLC Hungary könyv URL-jét (pl., `https://www.clchungary.com/termek/...`)
+3. Kattintson a "� Keresés" gombra
+4. Ellenőrizze a kinyert adatokat és kattintson a "Könyv Hozzáadása" gombra
 
-#### Manual Entry
+#### Manuális Bevitel
 
-1. Click "+ Új Könyv Hozzáadása"
-2. Scroll down to "OR" section
-3. Fill in book details manually
-4. Click "Add Book"
+1. Kattintson a "+ Új Könyv Hozzáadása" gombra
+2. Görgessen le a "VAGY" szekcióhoz
+3. Töltse ki a könyv adatait manuálisan
+4. Kattintson a "Könyv Hozzáadása" gombra
 
-### Editing Books
+### Könyvek Szerkesztése
 
-1. Click on any book card to view details
-2. Click "Edit" button in the detail modal
-3. Modify any field as needed
-4. Click "Update Book" to save changes
+1. Kattintson bármelyik könyvkártyára a részletek megtekintéséhez
+2. Kattintson a "Szerkesztés" gombra a részletek modalban
+3. Módosítsa bármelyik mezőt igény szerint
+4. Kattintson a "Könyv Frissítése" gombra a mentéshez
 
-### Managing Collections
+### Gyűjtemények Kezelése
 
-- **Bolt Tab**: Shop inventory books
-- **Könyvtár Tab**: Library collection books
-- **Profile Tab**: User profile and settings
-- **Passcard Tab**: Reader card information
+- **Bolt Fül**: Bolti készleten lévő könyvek
+- **Könyvtár Fül**: Könyvtári gyűjteményben lévő könyvek
+- **Profil Fül**: Felhasználói profil és beállítások
+- **Olvasókártya Fül**: Olvasói kártya információk
 
-## 🌐 Supported URLs
+## 🌐 Támogatott URL-ek
 
 ### CLC Hungary
 
-- **Format**: `https://www.clchungary.com/termek/book-title-isbn`
-- **Extracted Data**: Title, Author, Year, Publisher, Original Title, Page Count, ISBN, Description, Thumbnail
-- **Example**: `https://www.clchungary.com/termek/kaland-a-coats-szigeten-bettina-kettschau-evangeliumi-kiado-9789639867772`
+- **Formátum**: `https://www.clchungary.com/termek/könyv-cím-isbn`
+- **Kinyert Adatok**: Cím, Szerző, Év, Kiadó, Eredeti Cím, Oldalszám, ISBN, Leírás, Borítókép
+- **Példa**: `https://www.clchungary.com/termek/kaland-a-coats-szigeten-bettina-kettschau-evangeliumi-kiado-9789639867772`
 
-## 🛠️ Technical Stack
+## 🛠️ Technikai Stack
 
 ### Frontend
 
-- **React 18**: Modern React with hooks
-- **Vite**: Fast development build tool
-- **CSS3**: Responsive design with custom properties
+- **React 18**: Modern React hook-okkal
+- **Vite**: Gyors fejlesztői build eszköz
+- **CSS3**: Reszponzív tervezés egyedi tulajdonságokkal
 
-### Backend & Database
+### Backend és Adatbázis
 
-- **Firebase Authentication**: User management
-- **Firebase Realtime Database**: Book data storage
-- **Firebase Hosting**: Production deployment
+- **Firebase Authentication**: Felhasználókezelés
+- **Firebase Realtime Database**: Könyvadatok tárolása
+- **Firebase Hosting**: Éles környezetben való telepítés
 
-### Data Processing
+### Adatfeldolgozás
 
-- **Web Scraping**: Intelligent HTML parsing
-- **CORS Proxies**: Multiple proxy services for reliability
-- **DOM Parser**: Client-side HTML processing
+- **Web Scraping**: Intelligens HTML elemzés
+- **CORS Proxik**: Több proxy szolgáltatás megbízhatóságért
+- **DOM Parser**: Kliensoldali HTML feldolgozás
 
-## 📱 Responsive Design
+## 📱 Reszponzív Tervezés
 
-- **Desktop**: Full-featured interface with sidebar navigation
-- **Tablet**: Adaptive layout with touch-friendly controls
-- **Mobile**: Bottom navigation and optimized card layouts
-- **Card Density**: Adjustable from compact to spacious views
+- **Desktop**: Teljes funkcionalitás oldalsáv navigációval
+- **Tablet**: Adaptív elrendezés érintőbarát vezérlőkkel
+- **Mobile**: Alsó navigáció és optimalizált kártya elrendezés
+- **Kártyasűrűség**: Állítható sűrűtől tágas nézetig
 
-## 🔒 Security
+## 🔒 Biztonság
 
-- **Firebase Authentication**: Secure user login
-- **Input Validation**: Client-side data validation
-- **CORS Handling**: Safe cross-origin requests
-- **Data Sanitization**: Clean data extraction and storage
+- **Firebase Authentication**: Biztonságos felhasználói bejelentkezés
+- **Input Validáció**: Kliensoldali adatvalidáció
+- **CORS Kezelés**: Biztonságos cross-origin kérések
+- **Adat Tisztítás**: Tiszta adatkinyerés és tárolás
 
-## 📦 Available Scripts
+## 📦 Elérhető Parancsok
 
-- `npm run dev` - Runs the app in development mode
-- `npm run build` - Builds the app for production
-- `npm run preview` - Previews the production build
-- `npm run deploy` - Deploys to Firebase Hosting
+- `npm run dev` - Alkalmazás futtatása fejlesztői módban
+- `npm run build` - Alkalmazás buildelése éles környezetre
+- `npm run preview` - Éles build előnézete
+- `npm run deploy` - Telepítés Firebase Hostingra
 
-## 🔄 Version History
+## 🔄 Verziótörténet
 
-### v0.1.1 (Current)
+### v0.1.1 (Jelenlegi)
 
-- ✨ Add CLC Hungary URL processing
-- ✨ Implement complete edit functionality
-- ✨ Add new book fields (original title, page count, publisher)
-- ✨ Separate publisher from description
-- ✨ Enhanced data extraction with debug logging
+- ✨ CLC Hungary URL feldolgozás hozzáadása
+- ✨ Teljes szerkesztési funkcionalitás implementálása
+- ✨ Új könyvmezők (eredeti cím, oldalszám, kiadó)
+- ✨ Kiadó szétválasztása a leírástól
+- ✨ Fejlesztett adatkinyerés debug naplózással
+- ✨ Teljes magyar nyelvű lokalizáció
 
 ### v0.1.0
 
-- 🎯 Initial release with basic book management
-- 📱 Dual category system (Bolt/Könyvtár)
-- 🔍 Search and filtering functionality
-- 👤 User authentication system
+- 🎯 Kiadás alap könyvkezeléssel
+- 📱 Dupla kategória rendszer (Bolt/Könyvtár)
+- 🔍 Keresési és szűrési funkcionalitás
+- 👤 Felhasználói hitelesítési rendszer
 
-## 🤝 Contributing
+## 🤝 Hozzájárulás
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Forkolja a repository-t
+2. Hozzon létre egy feature ágat (`git checkout -b feature/amazing-feature`)
+3. Véglegesítse a változtatásait (`git commit -m 'Add amazing feature'`)
+4. Tolja az ágat (`git push origin feature/amazing-feature`)
+5. Nyisson egy Pull Requestet
 
-## 📄 License
+## 📄 Licenc
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Ez a projekt az MIT Licenc alatt érhető el - lásd a [LICENSE](LICENSE) fájlt a részletekért.
 
-## 🆘 Support
+## 🆘 Támogatás
 
-For issues and questions:
+Problémák és kérdések esetén:
 
-- Create an issue on GitHub
-- Check existing issues for solutions
-- Review the documentation for common problems
+- Hozzon létre egy issue-t GitHubon
+- Ellenőrizze a meglévő issue-ket a megoldásokért
+- Tekintse meg a dokumentációt a gyakori problémákhoz
 
-## 🌟 Acknowledgments
+## 🌟 Köszönetnyilvánítás
 
-- **CLC Hungary**: For providing comprehensive Christian literature data
-- **Firebase**: For robust backend services
-- **React Community**: For excellent tools and libraries
+- **CLC Hungary**: Az átfogató keresztény irodalmi adatokért
+- **Firebase**: A robusztus backend szolgáltatásokért
+- **React Közösség**: A kiváló eszközök és könyvtárakért
