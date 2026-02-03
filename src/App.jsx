@@ -53,6 +53,8 @@ function App() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState(null); // For thumbnail upload preview
   const [successMessage, setSuccessMessage] = useState(""); // For success messages
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // For delete confirmation
+  const [bookToDelete, setBookToDelete] = useState(null); // Book to be deleted
 
   const handleDensityChange = (newDensity) => {
     if (newDensity === cardDensity) return;
@@ -270,9 +272,11 @@ function App() {
         bookData = await processClcHungaryUrl(bookUrl);
       } else if (bookUrl.includes("bookline.hu")) {
         bookData = await processBooklineUrl(bookUrl);
+      } else if (bookUrl.includes("moly.hu")) {
+        bookData = await processMolyHuUrl(bookUrl);
       } else {
         alert(
-          "Nem támogatott URL. Kérjük, CLC Hungary vagy Bookline URL-eket használjon.",
+          "Nem támogatott URL. Kérjük, CLC Hungary, Bookline vagy Moly.hu URL-eket használjon.",
         );
         return;
       }
@@ -702,20 +706,261 @@ function App() {
 
   // Process Moly.hu URLs
   const processMolyHuUrl = async (url) => {
+    let doc = null;
     try {
-      const proxyUrl = "https://api.allorigins.win/raw?url=";
-      const response = await fetch(proxyUrl + encodeURIComponent(url));
+      // Try multiple proxy services
+      const proxies = [
+        "https://api.allorigins.win/raw?url=",
+        "https://corsproxy.io/?",
+        "https://cors-anywhere.herokuapp.com/",
+      ];
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      let html = "";
+      for (const proxy of proxies) {
+        try {
+          const proxyUrl = proxy + encodeURIComponent(url);
+          const response = await fetch(proxyUrl);
+          if (response.ok) {
+            html = await response.text();
+            break;
+          }
+        } catch {
+          continue;
+        }
       }
 
-      const html = await response.text();
-      return parseMolyBookPage(html, url);
+      if (!html) throw new Error("All proxies failed");
+
+      const parser = new DOMParser();
+      doc = parser.parseFromString(html, "text/html");
+
+      console.log("Processing Moly.hu URL:", url);
+
+      // Check if this is a publication page (kiadasok) or book page (konyvek)
+      const isPublicationPage = url.includes("/kiadasok/");
+
+      if (isPublicationPage) {
+        return processMolyPublicationPage(doc);
+      } else {
+        return processMolyBookPage(doc);
+      }
     } catch (error) {
       console.error("Error processing Moly.hu URL:", error);
+
+      // Provide more helpful error message
+      if (error.message.includes("All proxies failed")) {
+        alert(
+          "Nem lehet hozzáférni a Moly.hu weboldalához CORS korlátozások miatt. Kérjük, adja meg a könyv adatait manuálisan, vagy próbáljon másik URL-t.",
+        );
+      } else {
+        alert(
+          "Hiba a Moly.hu URL feldolgozása közben. Kérjük, ellenőrizze az URL-t és próbálja újra.",
+        );
+      }
+
       return null;
     }
+  };
+
+  // Process Moly.hu publication pages (kiadasok)
+  const processMolyPublicationPage = (doc) => {
+    // Extract title and author from book_selector class (separated by ":")
+    const bookSelectorElement = doc.querySelector(".book_selector");
+    let title = "";
+    let author = "";
+
+    if (bookSelectorElement) {
+      const selectorText = bookSelectorElement.textContent.trim();
+      const parts = selectorText.split(":");
+      if (parts.length >= 2) {
+        author = parts[0].trim(); // First part is author
+        title = parts[1].trim(); // Second part is title
+      }
+    }
+
+    // Extract thumbnail from book_with_shop class, inside <a> tag
+    let thumbnail = "";
+    const bookWithShopElement = doc.querySelector(".book_with_shop a img");
+    if (bookWithShopElement) {
+      thumbnail =
+        bookWithShopElement.src ||
+        bookWithShopElement.getAttribute("data-src") ||
+        bookWithShopElement.getAttribute("data-lazy") ||
+        "";
+    }
+
+    // Extract metadata from flex_content ul li strong elements
+    let publisher = "";
+    let year = "";
+    let pageCount = "";
+    let isbn = "";
+
+    const flexContentElement = doc.querySelector(".flex_content ul");
+    if (flexContentElement) {
+      const listItems = flexContentElement.querySelectorAll("li strong");
+
+      // Map the strong elements to their corresponding data
+      const strongElements = Array.from(listItems);
+
+      // First strong: Kiadó
+      if (strongElements[0]) {
+        publisher = strongElements[0].textContent.trim();
+      }
+
+      // Second strong: irrelevant (skip)
+
+      // Third strong: Év
+      if (strongElements[2]) {
+        year = strongElements[2].textContent.trim();
+      }
+
+      // Fourth strong: Oldal
+      if (strongElements[3]) {
+        pageCount = strongElements[3].textContent.trim();
+      }
+
+      // Fifth strong: irrelevant (skip)
+
+      // Sixth strong: ISBN
+      if (strongElements[5]) {
+        isbn = strongElements[5].textContent.trim();
+      }
+    }
+
+    // Try to extract description from text shrinkable shrunk paragraphs
+    let description = "";
+    const descriptionElements = doc.querySelectorAll(
+      ".text.shrinkable.shrunk p",
+    );
+    if (descriptionElements.length > 0) {
+      description = Array.from(descriptionElements)
+        .map((p) => p.textContent.trim())
+        .filter((text) => text.length > 20)
+        .join("\n\n");
+    }
+
+    console.log("Moly.hu publication extracted data:", {
+      title,
+      author,
+      publisher,
+      year,
+      pageCount,
+      isbn,
+      thumbnail,
+      description,
+    });
+
+    return {
+      title,
+      author,
+      publisher,
+      description,
+      isbn,
+      thumbnail,
+      year,
+      pageCount,
+      genre: "",
+      originalTitle: "",
+    };
+  };
+
+  // Process Moly.hu regular book pages (konyvek)
+  const processMolyBookPage = (doc) => {
+    // Extract author from authors class
+    const authorElement = doc.querySelector(".authors");
+    const author = authorElement ? authorElement.textContent.trim() : "";
+
+    // Extract title from first H1, then inside span, get text before <a> tag
+    const titleElement = doc.querySelector("h1 span");
+    let title = "";
+    if (titleElement) {
+      // Get all text nodes before the first <a> tag within the span
+      const walker = document.createTreeWalker(
+        titleElement,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false,
+      );
+      let textNodes = [];
+      let node;
+      while ((node = walker.nextNode())) {
+        // Stop when we encounter an <a> tag's parent
+        if (node.parentElement.tagName === "A") break;
+        if (node.textContent.trim()) {
+          textNodes.push(node.textContent.trim());
+        }
+      }
+      title = textNodes.join(" ").trim();
+    }
+
+    // Extract thumbnail from book_with_shop class
+    let thumbnail = "";
+    const bookWithShopElement = doc.querySelector(".book_with_shop img");
+    if (bookWithShopElement) {
+      thumbnail =
+        bookWithShopElement.src ||
+        bookWithShopElement.getAttribute("data-src") ||
+        bookWithShopElement.getAttribute("data-lazy") ||
+        "";
+    }
+
+    // Extract description from text shrinkable shrunk paragraphs
+    let description = "";
+    const descriptionElements = doc.querySelectorAll(
+      ".text.shrinkable.shrunk p",
+    );
+    if (descriptionElements.length > 0) {
+      description = Array.from(descriptionElements)
+        .map((p) => p.textContent.trim())
+        .filter((text) => text.length > 20)
+        .join("\n\n");
+    }
+
+    // Try to extract other metadata if available
+    let publisher = "";
+    let year = "";
+    let isbn = "";
+
+    // Try to find ISBN in the page
+    const isbnElement = doc.querySelector("*[itemprop='isbn']");
+    if (isbnElement) {
+      isbn = isbnElement.textContent.trim();
+    }
+
+    // Try to find publisher
+    const publisherElement = doc.querySelector("*[itemprop='publisher']");
+    if (publisherElement) {
+      publisher = publisherElement.textContent.trim();
+    }
+
+    // Try to find year from various places
+    const yearElement = doc.querySelector("*[itemprop='datePublished']");
+    if (yearElement) {
+      year = yearElement.textContent.trim();
+    }
+
+    console.log("Moly.hu book extracted data:", {
+      title,
+      author,
+      publisher,
+      description,
+      isbn,
+      thumbnail,
+      year,
+    });
+
+    return {
+      title,
+      author,
+      publisher,
+      description,
+      isbn,
+      thumbnail,
+      year,
+      genre: "", // Moly.hu doesn't have a clear genre field
+      originalTitle: "",
+      pageCount: "",
+    };
   };
 
   // Process Open Library URLs
@@ -1033,6 +1278,34 @@ function App() {
     if (isEditMode) {
       cancelEditMode();
     }
+  };
+
+  // Delete book functions
+  const handleDeleteClick = (book) => {
+    setBookToDelete(book);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (bookToDelete) {
+      const bookRef = ref(database, `books/${bookToDelete.id}`);
+      remove(bookRef)
+        .then(() => {
+          console.log("Book deleted successfully");
+          closeBookDetail(); // Close the detail modal
+          setShowDeleteConfirm(false);
+          setBookToDelete(null);
+        })
+        .catch((error) => {
+          console.error("Error deleting book:", error);
+          alert("Hiba történt a könyv törlése közben. Kérjük, próbálja újra.");
+        });
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setBookToDelete(null);
   };
 
   // Close edit modal
@@ -1478,7 +1751,7 @@ function App() {
             <div className="url-section">
               <input
                 type="url"
-                placeholder="ILessze be a CLC Hungary vagy Bookline könyv URL-jét"
+                placeholder="ILessze be a CLC Hungary, Bookline vagy Moly.hu könyv URL-jét"
                 value={bookUrl}
                 onChange={(e) => setBookUrl(e.target.value)}
                 className="url-input"
@@ -1971,9 +2244,39 @@ function App() {
                   <button onClick={() => handleBookEdit(selectedBook)}>
                     Szerkesztés
                   </button>
+                  <button
+                    onClick={() => handleDeleteClick(selectedBook)}
+                    className="delete-btn"
+                  >
+                    Törlés
+                  </button>
                   <button onClick={closeBookDetail}>Bezárás</button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && bookToDelete && (
+        <div className="modal">
+          <div className="modal-content confirm-modal">
+            <h2>Törlés Megerősítése</h2>
+            <div className="confirm-message">
+              <p>Biztosan törölni szeretnéd a következő könyvet?</p>
+              <div className="book-to-delete">
+                <strong>{bookToDelete.title}</strong>
+                {bookToDelete.author && <span> - {bookToDelete.author}</span>}
+              </div>
+            </div>
+            <div className="modal-buttons">
+              <button onClick={confirmDelete} className="confirm-delete-btn">
+                Igen, Törlés
+              </button>
+              <button onClick={cancelDelete} className="cancel-delete-btn">
+                Mégse
+              </button>
             </div>
           </div>
         </div>
