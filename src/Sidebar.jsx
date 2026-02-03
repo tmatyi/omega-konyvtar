@@ -3,6 +3,7 @@ import "./Sidebar.css";
 
 function Sidebar({ user, onLogout, activeTab, onTabChange }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isSticky, setIsSticky] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   let hoverTimeout;
 
@@ -37,9 +38,11 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
   };
 
   const handleMouseLeave = () => {
-    hoverTimeout = setTimeout(() => {
-      setIsCollapsed(true);
-    }, 300);
+    if (!isSticky) {
+      hoverTimeout = setTimeout(() => {
+        setIsCollapsed(true);
+      }, 300);
+    }
   };
 
   const handleLogoutConfirm = () => {
@@ -49,6 +52,10 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
 
   const handleLogoutCancel = () => {
     setShowLogoutConfirm(false);
+  };
+
+  const toggleSticky = () => {
+    setIsSticky(!isSticky);
   };
 
   const getInitials = (name) => {
@@ -86,13 +93,18 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
           )}
           {!isCollapsed && (
             <button
-              className="collapse-btn"
+              className={`collapse-btn ${isSticky ? "sticky" : ""}`}
               onClick={(e) => {
                 e.stopPropagation(); // Prevent triggering profile navigation
-                setIsCollapsed(true);
+                toggleSticky();
               }}
+              title={
+                isSticky
+                  ? "Unpin sidebar (auto-collapse)"
+                  : "Pin sidebar (stay open)"
+              }
             >
-              ◀
+              {isSticky ? "📌" : "📍"}
             </button>
           )}
         </div>

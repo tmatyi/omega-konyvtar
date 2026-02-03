@@ -102,6 +102,15 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+.collapse-btn.sticky {
+  background: rgba(132, 74, 89, 0.8);
+  color: #fff;
+}
+
+.collapse-btn.sticky:hover {
+  background: rgba(132, 74, 89, 1);
+}
+
 .sidebar-nav {
   flex: 1;
   display: flex;
