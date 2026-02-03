@@ -242,12 +242,7 @@ const UsersPanel = ({ user }) => {
     <div className="users-panel">
       <div className="users-header">
         <h2>Felhasználók Kezelése</h2>
-        <div className="users-stats">
-          <div className="stat-card">
-            <div className="stat-number">{stats.totalUsers}</div>
-            <div className="stat-label">Összes felhasználó</div>
-          </div>
-        </div>
+        <div className="user-count">Összes felhasználó: {stats.totalUsers}</div>
       </div>
 
       <div className="users-controls">

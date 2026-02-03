@@ -1,7 +1,39 @@
+/* Global Custom Scrollbar */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+/* Firefox scrollbar for html */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #844a59 #f1f5f9;
+}
+
+/* Reusable custom scrollbar class */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #844a59 #f8fafc;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #844a59;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b3a48;
 }
 
 body {
@@ -1667,9 +1699,15 @@ body {
 
 .users-header h2 {
   color: #2c3e50;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   font-size: 28px;
-  font-weight: 600;
+}
+
+.user-count {
+  font-size: 18px;
+  color: #6b3a48;
+  font-weight: 500;
+  margin-bottom: 20px;
 }
 
 .users-stats {
@@ -2152,7 +2190,7 @@ body {
   }
 
   .user-avatar img,
-  .avatar-placeholder {
+  .user-avatar .avatar-placeholder {
     width: 60px;
     height: 60px;
     font-size: 24px;
