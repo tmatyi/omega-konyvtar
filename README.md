@@ -1,21 +1,28 @@
 # Omega Könyvtár
 
-**Verzió: 0.2.1**
+**Verzió: 0.2.2**
 
 Egy átfogó könyvtári rendszer, amely intelligens URL-alapú adatkinyeréssel és teljes körű felhasználókezeléssel rendelkezik a magyar keresztény irodalom számára.
 
 ## 🎯 Funkciók
 
+### 🎨 Modern UI/UX Feltöltések
+
+- **Smooth Animations**: Modern animációk a szűrők és modális ablakok számára
+- **Responsive Design**: Tökéletesen alkalmazkodó kártyasűrűség és betűméret
+- **Sticky Sidebar**: Rögzíthető oldalsáv a jobb felhasználói élményért
+- **Modern Loading Spinner**: Tiszta, modern töltési animációk
+
 ### � Felhasználókezelés
 
 - **Teljes Felhasználókezelés**: Regisztráció, bejelentkezés, profilkezelés
-- **Szerepkör-alapú Hozzáférés**: Admin, Tulajdonos, Tag szerepkörök
+- **Szerepkör-alapú Hozzáférés**: Admin, Szolgáló, Tag szerepkörök
 - **Felhasználói Adatok**: Név, email, telefonszám, lakcím, bemutatkozás
 - **Valós idejű Statisztikák**: Dinamikus felhasználószám megjelenítés
 - **Szűrés és Keresés**: Felhasználók keresése név, email és szerepkör szerint
 - **Biztonságos Műveletek**: Szerepkör-alapú szerkesztési és törlési jogosultságok
 
-### �📚 Könyvkezelés
+### 📚 Könyvkezelés
 
 - **Két Kategória**: Különálló "Bolt" és "Könyvtár" gyűjtemények
 - **Intelligens Szűrés**: Szűrés cím, szerző, műfaj és kategória szerint

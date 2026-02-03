@@ -1387,26 +1387,24 @@ function App() {
           <>
             <header className="App-header">
               <div className="header-section header-title">
-                <div className="logo-container">
-                  <img
-                    src="/logo.svg"
-                    alt="Omega Könyvtár"
-                    className="app-logo"
-                  />
+                <div className="title-container">
+                  <h1>Omega Könyvtár</h1>
+                  <p>Digitális Könyvtárad</p>
                 </div>
-                <h1>Omega Könyvtár</h1>
-                <p>Digitális Könyvtárad</p>
               </div>
               <div className="header-section header-controls">
                 <div className="controls-left">
                   <div className="book-stats">
                     <span className="total-books">
-                      {books.length} összes könyv
+                      {filteredBooks.length} összes könyv
                     </span>
-                    {filteredBooks.length !== books.length && (
-                      <span className="filtered-books">
-                        ({filteredBooks.length} látható)
-                      </span>
+                    {filteredBooks.length !==
+                      books.filter(
+                        (book) =>
+                          book.category ===
+                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                      ).length && (
+                      <span className="filtered-books">(szűrve)</span>
                     )}
                   </div>
                 </div>
@@ -1427,7 +1425,7 @@ function App() {
               </div>
             </header>
 
-            {showFilters && (
+            <div className={`filters-wrapper ${showFilters ? "show" : ""}`}>
               <div className="filters-section">
                 <div className="filter-row">
                   <input
@@ -1476,13 +1474,26 @@ function App() {
                     </button>
                   )}
                 </div>
-                {filteredBooks.length !== books.length && (
+                {filteredBooks.length !==
+                  books.filter(
+                    (book) =>
+                      book.category ===
+                      (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                  ).length && (
                   <div className="filter-results">
-                    {filteredBooks.length} / {books.length} könyv látható
+                    {filteredBooks.length} /{" "}
+                    {
+                      books.filter(
+                        (book) =>
+                          book.category ===
+                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                      ).length
+                    }{" "}
+                    könyv látható
                   </div>
                 )}
               </div>
-            )}
+            </div>
 
             <main className="main-content">
               <div className="density-buttons-wrapper">
@@ -1517,15 +1528,19 @@ function App() {
               >
                 {filteredBooks.length === 0 ? (
                   <div className="no-books">
-                    {books.length === 0 ? (
+                    {books.filter(
+                      (book) =>
+                        book.category ===
+                        (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                    ).length === 0 ? (
                       <p>
-                        Nincsenek könyvek az adatbázisban. Adja hozzá az első
-                        könyvet!
+                        Nincsenek könyvek ebben a kategóriában. Adja hozzá az
+                        első könyvet!
                       </p>
                     ) : (
                       <p>
-                        Nincsenek a szűrési feltételeknek megfelelő könyvek.
-                        Próbálja módosítani a keresési feltételeket.
+                        Nincs a szűrésnek megfelelő könyv. Próbálja meg
+                        módosítani a szűrőfeltételeket!
                       </p>
                     )}
                   </div>
@@ -1591,30 +1606,35 @@ function App() {
           </div>
         )}
 
+        {activeTab === "passcard" && (
+          <div className="tab-content custom-scrollbar">
+            <h2>Olvasókártya</h2>
+            <p>Olvasókártya tartalom hamarosan...</p>
+          </div>
+        )}
+
         {activeTab === "library" && (
           <>
             <header className="App-header">
               <div className="header-section header-title">
-                <div className="logo-container">
-                  <img
-                    src="/logo.svg"
-                    alt="Omega Könyvtár"
-                    className="app-logo"
-                  />
+                <div className="title-container">
+                  <h1>Omega Könyvtár</h1>
+                  <p>Digitális Könyvtárad</p>
                 </div>
-                <h1>Omega Könyvtár</h1>
-                <p>Digitális Könyvtárad</p>
               </div>
               <div className="header-section header-controls">
                 <div className="controls-left">
                   <div className="book-stats">
                     <span className="total-books">
-                      {books.length} összes könyv
+                      {filteredBooks.length} összes könyv
                     </span>
-                    {filteredBooks.length !== books.length && (
-                      <span className="filtered-books">
-                        ({filteredBooks.length} látható)
-                      </span>
+                    {filteredBooks.length !==
+                      books.filter(
+                        (book) =>
+                          book.category ===
+                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                      ).length && (
+                      <span className="filtered-books">(szűrve)</span>
                     )}
                   </div>
                 </div>
@@ -1635,7 +1655,7 @@ function App() {
               </div>
             </header>
 
-            {showFilters && (
+            <div className={`filters-wrapper ${showFilters ? "show" : ""}`}>
               <div className="filters-section">
                 <div className="filter-row">
                   <input
@@ -1684,13 +1704,26 @@ function App() {
                     </button>
                   )}
                 </div>
-                {filteredBooks.length !== books.length && (
+                {filteredBooks.length !==
+                  books.filter(
+                    (book) =>
+                      book.category ===
+                      (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                  ).length && (
                   <div className="filter-results">
-                    {filteredBooks.length} / {books.length} könyv látható
+                    {filteredBooks.length} /{" "}
+                    {
+                      books.filter(
+                        (book) =>
+                          book.category ===
+                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                      ).length
+                    }{" "}
+                    könyv látható
                   </div>
                 )}
               </div>
-            )}
+            </div>
 
             <main className="main-content">
               <div className="density-buttons-wrapper">
@@ -1725,15 +1758,19 @@ function App() {
               >
                 {filteredBooks.length === 0 ? (
                   <div className="no-books">
-                    {books.length === 0 ? (
+                    {books.filter(
+                      (book) =>
+                        book.category ===
+                        (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                    ).length === 0 ? (
                       <p>
-                        Nincsenek könyvek az adatbázisban. Adja hozzá az első
-                        könyvet!
+                        Nincsenek könyvek ebben a kategóriában. Adja hozzá az
+                        első könyvet!
                       </p>
                     ) : (
                       <p>
-                        Nincsenek a szűrési feltételeknek megfelelő könyvek.
-                        Próbálja módosítani a keresési feltételeket.
+                        Nincs a szűrésnek megfelelő könyv. Próbálja meg
+                        módosítani a szűrőfeltételeket!
                       </p>
                     )}
                   </div>
@@ -1766,13 +1803,6 @@ function App() {
           </>
         )}
 
-        {activeTab === "passcard" && (
-          <div className="tab-content">
-            <h2>Olvasókártya</h2>
-            <p>Olvasókártya tartalom hamarosan...</p>
-          </div>
-        )}
-
         {activeTab === "users" && (
           <div className="tab-content custom-scrollbar">
             <UsersPanel user={user} />
@@ -1781,219 +1811,220 @@ function App() {
       </div>
 
       {/* Add Book Modal */}
-      {showAddForm && (
-        <div className="modal" onClick={() => setShowAddForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-inner-content">
-              <h2>Új Könyv Hozzáadása</h2>
-              <div className="url-section">
-                <input
-                  type="url"
-                  placeholder="ILessze be a CLC Hungary, Bookline vagy Moly.hu könyv URL-jét"
-                  value={bookUrl}
-                  onChange={(e) => setBookUrl(e.target.value)}
-                  className="url-input"
-                />
-                <button
-                  onClick={processBookUrl}
-                  disabled={searchLoading}
-                  className="process-url-btn"
-                >
-                  {searchLoading ? (
-                    <div className="modern-loader">
-                      <div className="loader-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                    </div>
-                  ) : (
-                    "🔍 Keresés"
-                  )}
-                </button>
-              </div>
-              {successMessage && (
-                <div className="success-message">
-                  <div className="success-icon">✓</div>
-                  <span>{successMessage}</span>
-                </div>
-              )}
-              <div className="divider" data-text="VAGY"></div>
-              <div className="manual-entry">
-                <div className="form-field">
-                  <label className="field-label">Borítókép</label>
-                  <div className="thumbnail-upload-section">
-                    <div className="thumbnail-upload-container">
-                      <div className="thumbnail-preview">
-                        {thumbnailPreview ? (
-                          <img
-                            src={thumbnailPreview}
-                            alt="Borítókép előnézet"
-                            className="thumbnail-preview-image"
-                          />
-                        ) : (
-                          <div className="thumbnail-upload-placeholder">
-                            <svg
-                              className="thumbnail-upload-icon"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            <span>
-                              {thumbnailPreview
-                                ? "Borítókép cseréje"
-                                : "Borítókép feltöltése"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={triggerThumbnailUpload}
-                        className="thumbnail-upload-btn"
-                      >
-                        {thumbnailPreview
-                          ? "Borítókép cseréje"
-                          : "Borítókép kiválasztása"}
-                      </button>
-                      <input
-                        id="thumbnail-upload"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png"
-                        onChange={handleThumbnailUpload}
-                        style={{ display: "none" }}
-                      />
+      <div
+        className={`modal ${showAddForm ? "show" : ""}`}
+        onClick={() => setShowAddForm(false)}
+      >
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-inner-content">
+            <h2>Új Könyv Hozzáadása</h2>
+            <div className="url-section">
+              <input
+                type="url"
+                placeholder="ILessze be a CLC Hungary, Bookline vagy Moly.hu könyv URL-jét"
+                value={bookUrl}
+                onChange={(e) => setBookUrl(e.target.value)}
+                className="url-input"
+              />
+              <button
+                onClick={processBookUrl}
+                disabled={searchLoading}
+                className="process-url-btn"
+              >
+                {searchLoading ? (
+                  <div className="modern-loader">
+                    <div className="loader-dots">
+                      <span></span>
+                      <span></span>
+                      <span></span>
                     </div>
                   </div>
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Cím</label>
-                  <input
-                    type="text"
-                    placeholder="Add meg a könyv címét"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Szerző</label>
-                  <input
-                    type="text"
-                    placeholder="Add meg a szerzőt"
-                    value={author}
-                    onChange={(e) => setAuthor(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Kiadás éve</label>
-                  <input
-                    type="number"
-                    placeholder="Add meg a kiadás évét"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Műfaj</label>
-                  <input
-                    type="text"
-                    placeholder="Add meg a műfajat"
-                    value={genre}
-                    onChange={(e) => setGenre(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Leírás</label>
-                  <textarea
-                    placeholder="Add meg a könyv leírását"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="form-textarea"
-                    rows={4}
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">ISBN</label>
-                  <input
-                    type="text"
-                    placeholder="Add meg az ISBN-t"
-                    value={isbn}
-                    onChange={(e) => setIsbn(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Eredeti cím</label>
-                  <input
-                    type="text"
-                    placeholder="Add meg az eredeti címet"
-                    value={originalTitle}
-                    onChange={(e) => setOriginalTitle(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Oldalszám</label>
-                  <input
-                    type="number"
-                    placeholder="Add meg az oldalszámot"
-                    value={pageCount}
-                    onChange={(e) => setPageCount(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">Kiadó</label>
-                  <input
-                    type="text"
-                    placeholder="Add meg a kiadót"
-                    value={publisher}
-                    onChange={(e) => setPublisher(e.target.value)}
-                    className="form-input"
-                  />
+                ) : (
+                  "🔍 Keresés"
+                )}
+              </button>
+            </div>
+            {successMessage && (
+              <div className="success-message">
+                <div className="success-icon">✓</div>
+                <span>{successMessage}</span>
+              </div>
+            )}
+            <div className="divider" data-text="VAGY"></div>
+            <div className="manual-entry">
+              <div className="form-field">
+                <label className="field-label">Borítókép</label>
+                <div className="thumbnail-upload-section">
+                  <div className="thumbnail-upload-container">
+                    <div className="thumbnail-preview">
+                      {thumbnailPreview ? (
+                        <img
+                          src={thumbnailPreview}
+                          alt="Borítókép előnézet"
+                          className="thumbnail-preview-image"
+                        />
+                      ) : (
+                        <div className="thumbnail-upload-placeholder">
+                          <svg
+                            className="thumbnail-upload-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <span>
+                            {thumbnailPreview
+                              ? "Borítókép cseréje"
+                              : "Borítókép feltöltése"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={triggerThumbnailUpload}
+                      className="thumbnail-upload-btn"
+                    >
+                      {thumbnailPreview
+                        ? "Borítókép cseréje"
+                        : "Borítókép kiválasztása"}
+                    </button>
+                    <input
+                      id="thumbnail-upload"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handleThumbnailUpload}
+                      style={{ display: "none" }}
+                    />
+                  </div>
                 </div>
               </div>
+              <div className="form-field">
+                <label className="field-label">Cím</label>
+                <input
+                  type="text"
+                  placeholder="Add meg a könyv címét"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Szerző</label>
+                <input
+                  type="text"
+                  placeholder="Add meg a szerzőt"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Kiadás éve</label>
+                <input
+                  type="number"
+                  placeholder="Add meg a kiadás évét"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Műfaj</label>
+                <input
+                  type="text"
+                  placeholder="Add meg a műfajat"
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Leírás</label>
+                <textarea
+                  placeholder="Add meg a könyv leírását"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="form-textarea"
+                  rows={4}
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">ISBN</label>
+                <input
+                  type="text"
+                  placeholder="Add meg az ISBN-t"
+                  value={isbn}
+                  onChange={(e) => setIsbn(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Eredeti cím</label>
+                <input
+                  type="text"
+                  placeholder="Add meg az eredeti címet"
+                  value={originalTitle}
+                  onChange={(e) => setOriginalTitle(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Oldalszám</label>
+                <input
+                  type="number"
+                  placeholder="Add meg az oldalszámot"
+                  value={pageCount}
+                  onChange={(e) => setPageCount(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-field">
+                <label className="field-label">Kiadó</label>
+                <input
+                  type="text"
+                  placeholder="Add meg a kiadót"
+                  value={publisher}
+                  onChange={(e) => setPublisher(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+            </div>
 
-              <div className="modal-buttons">
-                <button onClick={addBook}>Könyv Hozzáadása</button>
-                <button
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setTitle("");
-                    setAuthor("");
-                    setYear("");
-                    setGenre("");
-                    setDescription("");
-                    setIsbn("");
-                    setThumbnail("");
-                    setThumbnailPreview(null);
-                    setBookUrl("");
-                    setOriginalTitle("");
-                    setPageCount("");
-                    setPublisher("");
-                    setCategory("Bolt");
-                    setSuccessMessage("");
-                  }}
-                >
-                  Mégse
-                </button>
-              </div>
+            <div className="modal-buttons">
+              <button onClick={addBook}>Könyv Hozzáadása</button>
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setTitle("");
+                  setAuthor("");
+                  setYear("");
+                  setGenre("");
+                  setDescription("");
+                  setIsbn("");
+                  setThumbnail("");
+                  setThumbnailPreview(null);
+                  setBookUrl("");
+                  setOriginalTitle("");
+                  setPageCount("");
+                  setPublisher("");
+                  setCategory("Bolt");
+                  setSuccessMessage("");
+                }}
+              >
+                Mégse
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Search Results Modal */}
       {showResultsModal && (

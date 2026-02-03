@@ -37,6 +37,7 @@ html {
 }
 
 body {
+  margin: 0;
   font-family:
     "Source Sans Pro",
     -apple-system,
@@ -46,7 +47,7 @@ body {
     "Helvetica Neue",
     Arial,
     sans-serif;
-  background-color: #fafafa;
+  background-color: #e8e0e2;
   color: #2c3e50;
   line-height: 1.6;
 }
@@ -117,15 +118,33 @@ body {
 
 .App {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fafafa, #f5f5f5);
+  background: #e8e0e2;
 }
 
 .App-header {
   padding: 0;
   text-align: center;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  background: linear-gradient(135deg, #f8f9fa, #e8e0e2);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid #dee2e6;
+}
+
+.title-container {
+  text-align: center;
+  flex: 1;
+  padding: 20px 40px;
+}
+
+.title-container h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #2c3e50;
+}
+
+.title-container p {
+  margin: 5px 0 0 0;
+  font-size: 1.2rem;
+  color: #6c757d;
 }
 
 .header-section {
@@ -223,13 +242,13 @@ body {
 }
 
 .total-books {
-  color: #844a59;
+  color: #2c3e50;
   font-size: 18px;
   font-weight: 600;
-  background: linear-gradient(135deg, #f8e6ea, #f0d4dc);
+  background: linear-gradient(135deg, #e8f4f8, #d6eef5);
   padding: 8px 16px;
   border-radius: 20px;
-  border: 1px solid #d4a5b5;
+  border: 1px solid #b8d4db;
 }
 
 .filtered-books {
@@ -346,11 +365,21 @@ body {
   background: linear-gradient(135deg, #6b3c47, #5a2f3a);
 }
 
+.filters-wrapper {
+  overflow: hidden;
+  transition: height 0.5s ease;
+  height: 0;
+}
+
+.filters-wrapper.show {
+  height: 180px; /* Adjusted to match actual content height */
+}
+
 .filters-section {
   margin: 0;
   padding: 25px 20px;
   background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-bottom: 1px solid #e9ecef;
+  border-radius: 12px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -446,10 +475,11 @@ body {
 .filter-results {
   margin-top: 15px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #f8e6ea, #f0d4dc);
-  border: 1px solid #d4a5b5;
+  background: linear-gradient(135deg, #e8f4f8, #d6eef5);
   border-radius: 8px;
-  color: #844a59;
+  color: #2c3e50;
+  font-size: 14px;
+  border: 1px solid #b8d4db;
   font-size: 14px;
   font-weight: 500;
   text-align: center;
@@ -610,10 +640,25 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0);
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    background-color 0.3s ease,
+    opacity 0.3s ease,
+    z-index 0.3s ease;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.modal.show {
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 1;
+  pointer-events: auto;
   z-index: 1000;
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
@@ -629,6 +674,14 @@ body {
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   border: 1px solid #e9ecef;
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal.show .modal-content {
+  transform: scale(1) translateY(0);
+  opacity: 1;
 }
 
 .modal-content h2 {

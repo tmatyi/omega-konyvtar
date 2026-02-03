@@ -65,22 +65,6 @@ const UsersPanel = ({ user }) => {
 
   const stats = getUserStats();
 
-  // Debug information (remove in production)
-  console.log("Users Panel Debug:", {
-    totalUsers: users.length,
-    filteredUsers: filteredUsers.length,
-    searchTerm,
-    filterRole,
-    users: users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      displayName: u.displayName,
-      role: u.role,
-      hasEmail: !!u.email,
-      hasDisplayName: !!u.displayName,
-    })),
-  });
-
   const handleUserClick = (user) => {
     setSelectedUser(user);
     setShowUserDetails(true);
@@ -132,7 +116,7 @@ const UsersPanel = ({ user }) => {
       return "Csak admin törölhet admint";
     }
     if (selectedUser?.role === "owner" && user?.role !== "admin") {
-      return "Csak admin törölhet tulajdonost";
+      return "Csak admin törölhet szolgálot";
     }
     return "Felhasználó törlése";
   };
@@ -210,7 +194,7 @@ const UsersPanel = ({ user }) => {
 
     const roleLabels = {
       admin: "Admin",
-      owner: "Tulajdonos",
+      owner: "Szolgáló",
       member: "Tag",
     };
 
@@ -274,7 +258,7 @@ const UsersPanel = ({ user }) => {
           className={`role-filter-btn ${filterRole === "owner" ? "active" : ""}`}
           onClick={() => setFilterRole("owner")}
         >
-          Tulajdonos
+          Szolgáló
         </button>
         <button
           className={`role-filter-btn ${filterRole === "member" ? "active" : ""}`}
@@ -288,13 +272,6 @@ const UsersPanel = ({ user }) => {
         {filteredUsers.length === 0 ? (
           <div className="no-users">
             <p>Nem található felhasználó a megadott feltételekkel.</p>
-            {users.length > 0 && (
-              <p className="debug-info">
-                Debug: {users.length} felhasználó található összesen, de a
-                szűrés miatt egyik sem jelenik meg. Keresési szó: "{searchTerm}"
-                | Szerepkör szűrés: {filterRole}
-              </p>
-            )}
           </div>
         ) : (
           <div className="users-grid">
@@ -330,34 +307,18 @@ const UsersPanel = ({ user }) => {
             ))}
           </div>
         )}
-
-        {/* Debug section - show discrepancy */}
-        {users.length !== filteredUsers.length && (
-          <div
-            className="debug-section"
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              backgroundColor: "#fff3cd",
-              border: "1px solid #ffeaa7",
-              borderRadius: "8px",
-              fontSize: "14px",
-            }}
-          >
-            <strong>Debug Információ:</strong>
-            <br />• Összes felhasználó: {users.length}
-            <br />• Szűrt felhasználók: {filteredUsers.length}
-            <br />• Keresési szó: "{searchTerm || "(üres)"}"<br />• Szerepkör
-            szűrés: {filterRole}
-            <br />• Hiányzó felhasználók: {users.length - filteredUsers.length}
-          </div>
-        )}
       </div>
 
       {/* User Details Modal */}
-      {showUserDetails && selectedUser && (
-        <div className="modal">
-          <div className="modal-content user-details-modal">
+      <div
+        className={`modal ${showUserDetails && selectedUser ? "show" : ""}`}
+        onClick={() => setShowUserDetails(false)}
+      >
+        {showUserDetails && selectedUser && (
+          <div
+            className="modal-content user-details-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h2>Felhasználó Részletei</h2>
               <button
@@ -453,7 +414,7 @@ const UsersPanel = ({ user }) => {
                         >
                           <option value="member">Tag</option>
                           <option value="admin">Admin</option>
-                          <option value="owner">Tulajdonos</option>
+                          <option value="owner">Szolgáló</option>
                         </select>
                       </div>
 
@@ -537,8 +498,8 @@ const UsersPanel = ({ user }) => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && selectedUser && (

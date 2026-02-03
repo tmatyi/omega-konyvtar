@@ -24,10 +24,12 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
   ];
 
   const handleTabClick = (tabId) => {
+    console.log("Sidebar handleTabClick called with:", tabId);
     if (tabId === "logout") {
       setShowLogoutConfirm(true);
     } else {
       // Just navigate to the tab (hover handles expanding)
+      console.log("Calling onTabChange with:", tabId);
       onTabChange(tabId);
     }
   };

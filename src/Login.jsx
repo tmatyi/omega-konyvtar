@@ -117,7 +117,6 @@ function Login({ onLogin, onRegister }) {
             {loading ? (
               <span className="loading-spinner">
                 <span className="spinner"></span>
-                {isRegistering ? "Fiók létrehozása..." : "Bejelentkezés..."}
               </span>
             ) : isRegistering ? (
               "Fiók Létrehozása"
