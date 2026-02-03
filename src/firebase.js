@@ -3,9 +3,11 @@ import {
   getDatabase,
   ref,
   onValue,
+  off,
   push,
   update,
   remove,
+  set,
 } from "firebase/database";
 import {
   getAuth,
@@ -15,6 +17,7 @@ import {
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
+  browserSessionPersistence,
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -33,10 +36,10 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth = getAuth(app);
 
-// Set authentication persistence to local storage
-setPersistence(auth, browserLocalPersistence)
+// Set authentication persistence to session storage
+setPersistence(auth, browserSessionPersistence)
   .then(() => {
-    console.log("Auth persistence set to LOCAL");
+    console.log("Auth persistence set to SESSION");
   })
   .catch((error) => {
     console.error("Error setting auth persistence:", error);
@@ -46,9 +49,11 @@ export {
   database,
   ref,
   onValue,
+  off,
   update,
   push,
   remove,
+  set,
   auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -56,4 +61,5 @@ export {
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
+  browserSessionPersistence,
 };

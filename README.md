@@ -1,6 +1,6 @@
 # Omega Könyvtár
 
-**Verzió: 0.1.1**
+**Verzió: 0.1.4**
 
 Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeréssel rendelkezik a magyar keresztény irodalom számára.
 
@@ -16,13 +16,16 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 ### 🔗 URL-alapú Adatkinyerés
 
 - **CLC Hungary Integráció**: Automatikus könyvadat-kinyerés CLC Hungary URL-ekből
-- **Intelligensz Elemzés**: Cím, szerző, év, ISBN, leírás és további adatok kinyerése
+- **Bookline.hu Támogatás**: Könyvadatok kinyerése Bookline.hu webshopból
+- **Moly.hu Integráció**: Támogatás mind könyv oldalak (`/konyvek/`) és kiadás oldalak (`/kiadasok/`) esetén
+- **Intelligens Elemzés**: Cím, szerző, év, ISBN, leírás, kiadó és további adatok kinyerése
 - **Több Proxy Támogatás**: Megbízható adatlekérés visszahúzó proxykkal
 - **Hibakezelés**: Elegáns visszahúzások hálózati problémák esetén
 
 ### ✏️ Teljes Szerkesztési Funkcionalitás
 
 - **Teljes Könyvszerkesztés**: Minden könyvmező szerkeszése előre kitöltött űrlapokkal
+- **Könyv Törlése**: Biztonságos törlés megerősítő modal ablakkal
 - **Adatintegritás**: Megőrzi az összes könyv metaadatát frissítés közben
 - **Modal Interfész**: Tiszta, intuitív szerkesztési élmény
 - **Beépített Szerkesztés**: A részletek modaljában való közvetlen szerkesztés
@@ -31,7 +34,8 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 
 - **Alap Mezők**: Cím, Szerző, Év, Műfaj, Leírás, ISBN
 - **Kiterjesztett Mezők**: Eredeti Cím, Oldalszám, Kiadó
-- **Borítókép Támogatás**: Automatikus borítókép-kinyerés
+- **Borítókép Feltöltés**: Fájl alapú borítókép feltöltés előnézettel
+- **Automatikus Borítókép**: URL-ből történő automatikus kinyerés
 - **Magyar Címkék**: Helyi mezőnevek a magyar felhasználók számára
 
 ## 🚀 Kezdés
@@ -76,8 +80,11 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 #### URL Kinyerés (Ajánlott)
 
 1. Kattintson a "+ Új Könyv Hozzáadása" gombra
-2. Illessze be a CLC Hungary könyv URL-jét (pl., `https://www.clchungary.com/termek/...`)
-3. Kattintson a "� Keresés" gombra
+2. Illessze be a támogatott könyv URL-jét:
+   - **CLC Hungary**: `https://www.clchungary.com/termek/...`
+   - **Bookline.hu**: `https://www.bookline.hu/product/...`
+   - **Moly.hu**: `https://moly.hu/konyvek/...` vagy `https://moly.hu/kiadasok/...`
+3. Kattintson a "🔍 Keresés" gombra
 4. Ellenőrizze a kinyert adatokat és kattintson a "Könyv Hozzáadása" gombra
 
 #### Manuális Bevitel
@@ -87,12 +94,13 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 3. Töltse ki a könyv adatait manuálisan
 4. Kattintson a "Könyv Hozzáadása" gombra
 
-### Könyvek Szerkesztése
+### Könyvek Szerkesztése és Törlése
 
 1. Kattintson bármelyik könyvkártyára a részletek megtekintéséhez
-2. Kattintson a "Szerkesztés" gombra a részletek modalban
+2. **Szerkesztés**: Kattintson a "Szerkesztés" gombra a részletek modalban
 3. Módosítsa bármelyik mezőt igény szerint
 4. Kattintson a "Könyv Frissítése" gombra a mentéshez
+5. **Törlés**: Kattintson a "Törlés" gombra és erősítse meg a törlést
 
 ### Gyűjtemények Kezelése
 
@@ -108,6 +116,19 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 - **Formátum**: `https://www.clchungary.com/termek/könyv-cím-isbn`
 - **Kinyert Adatok**: Cím, Szerző, Év, Kiadó, Eredeti Cím, Oldalszám, ISBN, Leírás, Borítókép
 - **Példa**: `https://www.clchungary.com/termek/kaland-a-coats-szigeten-bettina-kettschau-evangeliumi-kiado-9789639867772`
+
+### Bookline.hu
+
+- **Formátum**: `https://www.bookline.hu/product/...`
+- **Kinyert Adatok**: Cím, Szerző, Kiadó, Leírás, ISBN, Borítókép, Év
+- **Példa**: `https://www.bookline.hu/product/bookpage/vol.1._id_253735.html`
+
+### Moly.hu
+
+- **Könyv oldalak**: `https://moly.hu/konyvek/...`
+- **Kiadás oldalak**: `https://moly.hu/kiadasok/...`
+- **Kinyert Adatok**: Cím, Szerző, Kiadó, Év, Oldalszám, ISBN, Leírás, Borítókép
+- **Példa**: `https://moly.hu/konyvek/a-szentek-utjai-252830`
 
 ## 🛠️ Technikai Stack
 
@@ -152,7 +173,17 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 
 ## 🔄 Verziótörténet
 
-### v0.1.1 (Jelenlegi)
+### v0.1.4 (Jelenlegi)
+
+- ✨ Moly.hu URL feldolgozás hozzáadása (könyv és kiadás oldalak támogatása)
+- ✨ Bookline.hu URL feldolgozás implementálása
+- ✨ Könyv törlési funkcionalitás megerősítő modal ablakkal
+- ✨ Borítókép feltöltés fájl alapú feltöltéssel és előnézettel
+- ✨ Modern UI elemek (loading animációk, success üzenetek)
+- ✨ Űrlap mezők átrendezése (borítókép első helyen)
+- ✨ Teljes magyar nyelvű lokalizáció minden új funkcióhoz
+
+### v0.1.3
 
 - ✨ CLC Hungary URL feldolgozás hozzáadása
 - ✨ Teljes szerkesztési funkcionalitás implementálása
@@ -161,7 +192,7 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 - ✨ Fejlesztett adatkinyerés debug naplózással
 - ✨ Teljes magyar nyelvű lokalizáció
 
-### v0.1.0
+### v0.1.2
 
 - 🎯 Kiadás alap könyvkezeléssel
 - 📱 Dupla kategória rendszer (Bolt/Könyvtár)

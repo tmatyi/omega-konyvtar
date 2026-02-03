@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { database, ref, set, update } from "./firebase.js";
 import "./Profile.css";
 
 function Profile({ user, onUpdateUser }) {
@@ -68,6 +69,37 @@ function Profile({ user, onUpdateUser }) {
     }
   };
 
+  // Save profile data to Firebase Realtime Database
+  const saveProfileToFirebase = async (profileData) => {
+    if (!user?.uid) {
+      console.error("Cannot save to Firebase: no user UID");
+      return;
+    }
+
+    try {
+      const userRef = ref(database, `users/${user.uid}`);
+      const userData = {
+        displayName: profileData.displayName,
+        email: profileData.email,
+        photoURL: profileData.photoURL,
+        phone: profileData.phone,
+        address: profileData.address,
+        bio: profileData.bio,
+        updatedAt: profileData.updatedAt,
+        // Keep existing fields if they exist
+        role: profileData.role || "member",
+        createdAt: profileData.createdAt || new Date().toISOString(),
+        lastLogin: profileData.lastLogin || null,
+      };
+
+      await update(userRef, userData);
+      console.log("Profile saved to Firebase Realtime Database");
+    } catch (error) {
+      console.error("Error saving profile to Firebase:", error);
+      throw error;
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -111,6 +143,13 @@ function Profile({ user, onUpdateUser }) {
 
         console.log("Auto-saving avatar after upload");
         saveProfileToStorage(profileData);
+
+        // Also save to Firebase for real-time sync
+        try {
+          await saveProfileToFirebase(profileData);
+        } catch (error) {
+          console.error("Failed to save avatar to Firebase:", error);
+        }
 
         // Update the user in App component
         if (onUpdateUser) {
@@ -202,6 +241,16 @@ function Profile({ user, onUpdateUser }) {
       console.log("About to save profile data:", profileData);
       // Save to localStorage for persistence
       saveProfileToStorage(profileData);
+
+      // Also save to Firebase for real-time sync with UsersPanel
+      try {
+        await saveProfileToFirebase(profileData);
+        console.log("Profile saved to both localStorage and Firebase");
+      } catch (error) {
+        console.error("Failed to save profile to Firebase:", error);
+        // Still show success since localStorage save worked
+        console.log("Profile saved to localStorage only");
+      }
 
       setMessage(
         "Profil sikeresen frissítve!" +

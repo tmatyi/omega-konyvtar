@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from "react";
 import {
-  database,
-  ref,
-  onValue,
-  push,
-  update,
-  remove,
   auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  database,
+  ref,
+  set,
+  update,
+  onValue,
 } from "./firebase.js";
 import Login from "./Login.jsx";
 import Sidebar from "./Sidebar.jsx";
 import MobileNav from "./MobileNav.jsx";
 import Profile from "./Profile.jsx";
+import UsersPanel from "./components/UsersPanel.jsx";
+import "./App.css";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -76,7 +77,19 @@ function App() {
         email,
         password,
       );
-      // Firebase will automatically trigger onAuthStateChanged
+
+      // Update lastLogin timestamp in database
+      try {
+        const userRef = ref(database, `users/${userCredential.user.uid}`);
+        await update(userRef, {
+          lastLogin: new Date().toISOString(),
+        });
+        console.log("Last login timestamp updated");
+      } catch (dbError) {
+        console.warn("Could not update last login timestamp:", dbError);
+        // Don't fail login if database update fails
+      }
+
       return userCredential.user;
     } catch (error) {
       throw error;
@@ -90,10 +103,28 @@ function App() {
         email,
         password,
       );
-      // You could update the user profile with name and phone here if needed
-      // Firebase will automatically trigger onAuthStateChanged
+
+      // Create user record in Realtime Database
+      const userRef = ref(database, `users/${userCredential.user.uid}`);
+      const userData = {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        displayName: name || email.split("@")[0], // Use name or first part of email
+        phone: phone || "",
+        role: "member", // Default role for new users
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        photoURL: null,
+        address: "",
+        bio: "",
+      };
+
+      await set(userRef, userData);
+      console.log("User record created in database:", userData);
+
       return userCredential.user;
     } catch (error) {
+      console.error("Registration error:", error);
       throw error;
     }
   };
@@ -1739,6 +1770,12 @@ function App() {
           <div className="tab-content">
             <h2>Olvasókártya</h2>
             <p>Olvasókártya tartalom hamarosan...</p>
+          </div>
+        )}
+
+        {activeTab === "users" && (
+          <div className="tab-content">
+            <UsersPanel user={user} />
           </div>
         )}
       </div>

@@ -11,46 +11,47 @@ A dual-purpose application serving as both:
 
 ---
 
-## 📈 Recent Progress (January 31, 2026)
+## 📈 Recent Progress (February 3, 2026)
 
-### ✅ Dual Inventory Management System - COMPLETED
+### ✅ Advanced URL Processing System - COMPLETED
 
 **What was implemented:**
 
-- **Separate Catalogs**: Library (used books) vs Store (new books) distinction
-- **Advanced Book Fields**: Status, location, condition, price/deposit tracking
-- **Smart Filtering**: Filter by inventory type, status, location
-- **Hungarian Interface**: All new fields in Hungarian
-- **Mobile Responsive**: Works perfectly in PWA and mobile browsers
+- **Multiple Site Support**: CLC Hungary, Bookline.hu, and Moly.hu URL processing
+- **Moly.hu Dual Support**: Both book pages (`/konyvek/`) and publication pages (`/kiadasok/`)
+- **Intelligent Data Extraction**: Title, author, publisher, year, ISBN, description, page count
+- **Robust Proxy System**: Multiple CORS proxies for reliable data extraction
+- **Modern UI Enhancements**: Loading animations, success messages, improved UX
 
 **Key Features Added:**
 
-- 📚 **Inventory Type Selection**: Library vs Store categorization
-- 📊 **Status Tracking**: Available, Reserved, Borrowed, Sold
-- 📍 **Location Management**: Warehouse, Library Shelf, Store Shelf
-- 💰 **Financial Fields**: Price (store) / Deposit (library)
-- 🔍 **Advanced Filters**: Filter by all new fields
-- 📱 **Mobile Optimized**: Perfect for warehouse operations
+- � **Multi-Site URL Support**: CLC Hungary + Bookline.hu + Moly.hu
+- � **Moly.hu Intelligence**: Handles both book and publication page formats
+- 🗑️ **Delete Functionality**: Safe book deletion with confirmation modal
+- � **Thumbnail Upload**: File-based upload with preview functionality
+- 🎨 **Modern UI**: Loading animations, in-form success messages
+- 📱 **Form Improvements**: Thumbnail field moved to first position
+- 🇭🇺 **Complete Localization**: All new features fully Hungarian
 
-**Database Schema Updated:**
+**Supported URL Formats:**
 
 ```javascript
-{
-  // Original fields...
-  inventoryType: "library" | "store",
-  status: "available" | "reserved" | "borrowed" | "sold",
-  location: "warehouse" | "library-shelf" | "store-shelf",
-  condition: "new" | "good" | "fair" | "poor",
-  price: "string", // for store books
-  deposit: "string", // for library books
-  addedDate: "timestamp",
-  addedBy: "email"
-}
+// CLC Hungary
+https://www.clchungary.com/termek/konyv-cim-isbn
+
+// Bookline.hu
+https://www.bookline.hu/product/bookpage/vol.1._id_253735.html
+
+// Moly.hu - Book pages
+https://moly.hu/konyvek/a-szentek-utjai-252830
+
+// Moly.hu - Publication pages
+https://moly.hu/kiadasok/a-szentek-utjai-252830
 ```
 
 ---
 
-## ✅ Current Status (COMPLETED)
+## ✅ Current Status (COMPLETED - v0.1.4)
 
 ### ✅ Core Foundation
 
@@ -64,6 +65,23 @@ A dual-purpose application serving as both:
 - [x] Progressive Web App (PWA) Setup
 - [x] Logout Confirmation Modal (PWA + Mobile)
 - [x] Basic Offline Support
+
+### ✅ Advanced URL Processing (v0.1.4)
+
+- [x] **Multi-Site Support**: CLC Hungary, Bookline.hu, Moly.hu
+- [x] **Moly.hu Dual Processing**: Book pages + Publication pages
+- [x] **Intelligent Data Extraction**: All book fields with fallbacks
+- [x] **Robust Proxy System**: Multiple CORS proxies for reliability
+- [x] **Error Handling**: User-friendly error messages and fallbacks
+
+### ✅ Modern UI/UX (v0.1.4)
+
+- [x] **Delete Functionality**: Safe deletion with confirmation modal
+- [x] **Thumbnail Upload**: File-based upload with preview
+- [x] **Loading Animations**: Modern loading indicators
+- [x] **Success Messages**: In-form feedback for user actions
+- [x] **Form Improvements**: Better field ordering and labels
+- [x] **Complete Hungarian Localization**: All new features translated
 
 ---
 
@@ -388,8 +406,11 @@ A dual-purpose application serving as both:
 - Offline functionality reliability
 - User satisfaction and feedback
 
+- HOZZÁADNI LOGOLÁST, HOGY KÖVETHETŐ LEGYEN KI MIKOR MILYEN KÖNYVET ADOTT KI
+
 ---
 
-_Last Updated: January 31, 2026_
-_Status: Foundation Complete, Ready for Business Feature Development_
-_Focus: Library & Bookstore Management System for Mother's Business_
+_Last Updated: February 3, 2026_
+_Status: Advanced URL Processing Complete, Ready for Business Feature Development_
+_Version: v0.1.4 - Multi-Site URL Support + Modern UI_
+_Focus: Library & Bookstore Management System with Enhanced Data Extraction_
