@@ -1,17 +1,26 @@
 # Omega Könyvtár
 
-**Verzió: 0.1.4**
+**Verzió: 0.2.1**
 
-Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeréssel rendelkezik a magyar keresztény irodalom számára.
+Egy átfogó könyvtári rendszer, amely intelligens URL-alapú adatkinyeréssel és teljes körű felhasználókezeléssel rendelkezik a magyar keresztény irodalom számára.
 
 ## 🎯 Funkciók
 
-### 📚 Könyvkezelés
+### � Felhasználókezelés
+
+- **Teljes Felhasználókezelés**: Regisztráció, bejelentkezés, profilkezelés
+- **Szerepkör-alapú Hozzáférés**: Admin, Tulajdonos, Tag szerepkörök
+- **Felhasználói Adatok**: Név, email, telefonszám, lakcím, bemutatkozás
+- **Valós idejű Statisztikák**: Dinamikus felhasználószám megjelenítés
+- **Szűrés és Keresés**: Felhasználók keresése név, email és szerepkör szerint
+- **Biztonságos Műveletek**: Szerepkör-alapú szerkesztési és törlési jogosultságok
+
+### �📚 Könyvkezelés
 
 - **Két Kategória**: Különálló "Bolt" és "Könyvtár" gyűjtemények
 - **Intelligens Szűrés**: Szűrés cím, szerző, műfaj és kategória szerint
 - **Reszponzív Tervezés**: Adaptív kártyasűrűség az optimális megjelenítéshez
-- **Részletes Könyvinformáció**: Átfogató könyvinformációk megjelenítése
+- **Részletes Könyvinformáció**: Átfogó könyvinformációk megjelenítése
 
 ### 🔗 URL-alapú Adatkinyerés
 
@@ -26,17 +35,25 @@ Egy átfogató könyvkezelő rendszer, amely intelligens URL-alapú adatkinyeré
 
 - **Teljes Könyvszerkesztés**: Minden könyvmező szerkeszése előre kitöltött űrlapokkal
 - **Könyv Törlése**: Biztonságos törlés megerősítő modal ablakkal
-- **Adatintegritás**: Megőrzi az összes könyv metaadatát frissítés közben
+- **Felhasználó Szerkesztés**: Inline szerkesztés a felhasználói adatokon
+- **Adatintegritás**: Megőrzi az összes adatot frissítés közben
 - **Modal Interfész**: Tiszta, intuitív szerkesztési élmény
 - **Beépített Szerkesztés**: A részletek modaljában való közvetlen szerkesztés
 
-### 📊 Gazdag Könyvadatok
+### 📊 Gazdag Adatkezelés
 
-- **Alap Mezők**: Cím, Szerző, Év, Műfaj, Leírás, ISBN
-- **Kiterjesztett Mezők**: Eredeti Cím, Oldalszám, Kiadó
+- **Könyv Adatok**: Cím, Szerző, Év, Műfaj, Leírás, ISBN, Eredeti Cím, Oldalszám, Kiadó
+- **Felhasználói Adatok**: Profil információk, szerepkörök, kapcsolódási adatok
 - **Borítókép Feltöltés**: Fájl alapú borítókép feltöltés előnézettel
 - **Automatikus Borítókép**: URL-ből történő automatikus kinyerés
 - **Magyar Címkék**: Helyi mezőnevek a magyar felhasználók számára
+
+### 🎨 Modern UI/UX
+
+- **Testreszabott Scrollbar**: Integrált, márkaszínű scrollbar-ek
+- **Modal Interakciók**: Kattintson kívül bezárás, intuitív műveletek
+- **Reszponzív Dizájn**: Mobil és asztali optimalizálás
+- **Professzionális Megjelenés**: Tiszta, gyártásra kész felület
 
 ## 🚀 Kezdés
 
