@@ -10,12 +10,14 @@ import {
   set,
   update,
   onValue,
+  off,
 } from "./firebase.js";
 import Login from "./Login.jsx";
 import Sidebar from "./Sidebar.jsx";
 import MobileNav from "./MobileNav.jsx";
 import Profile from "./Profile.jsx";
 import UsersPanel from "./components/UsersPanel.jsx";
+import LendingPanel from "./components/LendingPanel.jsx";
 import "./App.css";
 
 function App() {
@@ -25,6 +27,7 @@ function App() {
     return localStorage.getItem("activeTab") || "books";
   });
   const [books, setBooks] = useState([]);
+  const [users, setUsers] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -186,6 +189,25 @@ function App() {
         setBooks(booksArray);
       } else {
         setBooks([]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Load users from Firebase
+  useEffect(() => {
+    const usersRef = ref(database, "users");
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const usersArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setUsers(usersArray);
+      } else {
+        setUsers([]);
       }
     });
 
@@ -1606,10 +1628,9 @@ function App() {
           </div>
         )}
 
-        {activeTab === "passcard" && (
+        {activeTab === "lending" && (
           <div className="tab-content custom-scrollbar">
-            <h2>Olvasókártya</h2>
-            <p>Olvasókártya tartalom hamarosan...</p>
+            <LendingPanel books={books} users={users} />
           </div>
         )}
 
