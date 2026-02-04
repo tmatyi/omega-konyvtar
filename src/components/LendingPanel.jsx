@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { database, ref, set, update, onValue, off, push } from "../firebase.js";
 import "./LendingPanel.css";
 
 const LendingPanel = ({ books, users }) => {
@@ -16,10 +17,29 @@ const LendingPanel = ({ books, users }) => {
     const filtered = books.filter((book) => book.category === "Könyvtár");
     setLibraryBooks(filtered);
 
-    const savedLoans = localStorage.getItem("libraryLoans");
-    if (savedLoans) {
-      setLoans(JSON.parse(savedLoans));
-    }
+    // Load loans from Firebase instead of localStorage
+    const loansRef = ref(database, "loans");
+    const handleLoansData = (snapshot) => {
+      const loansData = snapshot.val();
+      const loansList = [];
+
+      if (loansData) {
+        Object.keys(loansData).forEach((loanId) => {
+          loansList.push({
+            id: loanId,
+            ...loansData[loanId],
+          });
+        });
+      }
+
+      setLoans(loansList);
+    };
+
+    onValue(loansRef, handleLoansData);
+
+    return () => {
+      off(loansRef, "value", handleLoansData);
+    };
   }, [books]);
 
   const calculateDueDate = (startDate, weeks) => {
@@ -46,7 +66,6 @@ const LendingPanel = ({ books, users }) => {
     const dueDate = calculateDueDate(startDate, loanPeriod);
 
     const newLoan = {
-      id: Date.now().toString(),
       bookId: selectedBook.id,
       bookTitle: selectedBook.title,
       bookAuthor: selectedBook.author,
@@ -63,9 +82,17 @@ const LendingPanel = ({ books, users }) => {
       renewals: 0,
     };
 
-    const updatedLoans = [...loans, newLoan];
-    setLoans(updatedLoans);
-    localStorage.setItem("libraryLoans", JSON.stringify(updatedLoans));
+    // Save to Firebase instead of localStorage
+    const loansRef = ref(database, "loans");
+    const newLoanRef = push(loansRef);
+    set(newLoanRef, newLoan)
+      .then(() => {
+        console.log("Loan saved to Firebase:", newLoan);
+      })
+      .catch((error) => {
+        console.error("Error saving loan to Firebase:", error);
+        alert("Hiba történt a kölcsönzés mentése közben!");
+      });
 
     setSelectedBook(null);
     setSelectedUser(null);
@@ -80,14 +107,22 @@ const LendingPanel = ({ books, users }) => {
   };
 
   const handleReturnBook = (loanId) => {
-    const updatedLoans = loans.map((loan) =>
-      loan.id === loanId
-        ? { ...loan, status: "returned", returnDate: new Date().toISOString() }
-        : loan,
-    );
-    setLoans(updatedLoans);
-    localStorage.setItem("libraryLoans", JSON.stringify(updatedLoans));
-    alert("Könyv sikeresen visszahozva!");
+    // Update loan in Firebase
+    const loanRef = ref(database, `loans/${loanId}`);
+    const updatedLoan = {
+      status: "returned",
+      returnDate: new Date().toISOString(),
+    };
+
+    update(loanRef, updatedLoan)
+      .then(() => {
+        console.log("Loan returned in Firebase:", loanId);
+        alert("Könyv sikeresen visszahozva!");
+      })
+      .catch((error) => {
+        console.error("Error returning loan:", error);
+        alert("Hiba történt a visszahozás során!");
+      });
   };
 
   const handleRenewLoan = (loanId) => {
@@ -98,14 +133,23 @@ const LendingPanel = ({ books, users }) => {
     }
 
     const newDueDate = calculateDueDate(new Date(loan.dueDate), 4);
-    const updatedLoans = loans.map((l) =>
-      l.id === loanId
-        ? { ...l, dueDate: newDueDate.toISOString(), renewals: l.renewals + 1 }
-        : l,
-    );
-    setLoans(updatedLoans);
-    localStorage.setItem("libraryLoans", JSON.stringify(updatedLoans));
-    alert("Kölcsönzés meghosszabbítva!");
+
+    // Update loan in Firebase
+    const loanRef = ref(database, `loans/${loanId}`);
+    const updatedLoan = {
+      dueDate: newDueDate.toISOString(),
+      renewals: loan.renewals + 1,
+    };
+
+    update(loanRef, updatedLoan)
+      .then(() => {
+        console.log("Loan renewed in Firebase:", loanId);
+        alert("Kölcsönzés meghosszabbítva!");
+      })
+      .catch((error) => {
+        console.error("Error renewing loan:", error);
+        alert("Hiba történt a meghosszabbítás során!");
+      });
   };
 
   const filteredBooks = libraryBooks.filter(

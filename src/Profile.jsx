@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { database, ref, set, update } from "./firebase.js";
+import { database, ref, set, update, onValue, off } from "./firebase.js";
 import "./Profile.css";
 
 function Profile({ user, onUpdateUser }) {
@@ -13,34 +13,65 @@ function Profile({ user, onUpdateUser }) {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [userLoans, setUserLoans] = useState([]);
+  const [loansLoading, setLoansLoading] = useState(true);
 
-  // Load saved profile data from localStorage on mount
+  // Load user's current loans
   useEffect(() => {
-    console.log("Profile component mounted, user:", user?.email);
-    const savedProfile = localStorage.getItem(`profile_${user?.email}`);
-    console.log("Saved profile found:", !!savedProfile);
+    if (!user?.uid) return;
 
-    if (savedProfile) {
-      try {
-        const profileData = JSON.parse(savedProfile);
-        console.log("Parsed profile data:", profileData);
-        setFormData((prev) => ({
-          ...prev,
-          ...profileData,
-        }));
+    const loansRef = ref(database, "loans");
+    const handleLoansData = (snapshot) => {
+      const loansData = snapshot.val();
+      const userCurrentLoans = [];
+
+      if (loansData) {
+        Object.keys(loansData).forEach((loanId) => {
+          const loan = loansData[loanId];
+          if (loan.userId === user.uid && loan.status === "active") {
+            userCurrentLoans.push({
+              id: loanId,
+              ...loan,
+            });
+          }
+        });
+      }
+
+      setUserLoans(userCurrentLoans);
+      setLoansLoading(false);
+    };
+
+    onValue(loansRef, handleLoansData);
+
+    return () => {
+      off(loansRef, "value", handleLoansData);
+    };
+  }, [user?.uid]);
+
+  // Load profile data from Firebase on mount
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const userRef = ref(database, `users/${user.uid}`);
+    const handleProfileData = (snapshot) => {
+      const profileData = snapshot.val();
+
+      if (profileData) {
+        console.log("Profile data loaded from Firebase:", profileData);
+
+        // Set avatar preview from Firebase data
         if (profileData.photoURL) {
-          console.log("Setting avatar preview from saved data");
           setAvatarPreview(profileData.photoURL);
         }
-      } catch (error) {
-        console.error("Error loading saved profile:", error);
       }
-    } else {
-      console.log("No saved profile, using Firebase data");
-      // Use Firebase user data if no saved profile
-      setAvatarPreview(user?.photoURL || null);
-    }
-  }, [user]);
+    };
+
+    onValue(userRef, handleProfileData);
+
+    return () => {
+      off(userRef, "value", handleProfileData);
+    };
+  }, [user?.uid]);
 
   // Fallback: Check if user has photoURL but avatarPreview is null
   useEffect(() => {
@@ -49,23 +80,6 @@ function Profile({ user, onUpdateUser }) {
       setAvatarPreview(user.photoURL);
     }
   }, [user, avatarPreview]);
-
-  // Save profile data to localStorage whenever it changes
-  const saveProfileToStorage = (profileData) => {
-    if (user?.email) {
-      console.log(
-        "Saving profile to storage:",
-        profileData.photoURL ? "has avatar" : "no avatar",
-      );
-      localStorage.setItem(
-        `profile_${user.email}`,
-        JSON.stringify(profileData),
-      );
-      console.log("Profile saved to localStorage");
-    } else {
-      console.error("Cannot save profile: no user email");
-    }
-  };
 
   // Save profile data to Firebase Realtime Database
   const saveProfileToFirebase = async (profileData) => {
@@ -222,13 +236,10 @@ function Profile({ user, onUpdateUser }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("handleSubmit called");
     setLoading(true);
     setMessage("");
 
     try {
-      // Here you would typically update the user profile in Firebase
-      // For now, we'll just show a success message
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const profileData = {
@@ -238,19 +249,15 @@ function Profile({ user, onUpdateUser }) {
         updatedAt: new Date().toISOString(),
       };
 
-      console.log("About to save profile data:", profileData);
-      // Save to localStorage for persistence
-      saveProfileToStorage(profileData);
-
-      // Also save to Firebase for real-time sync with UsersPanel
+      // Save to Firebase for real-time sync with UsersPanel
       try {
-        console.log("About to save profile to Firebase:", profileData);
         await saveProfileToFirebase(profileData);
-        console.log("Profile saved to both localStorage and Firebase");
       } catch (error) {
         console.error("Failed to save profile to Firebase:", error);
-        // Still show success since localStorage save worked
-        console.log("Profile saved to localStorage only");
+        setMessage("Hiba történt a mentés során!");
+        setMessageType("error");
+        setLoading(false);
+        return;
       }
 
       setMessage(
@@ -292,40 +299,42 @@ function Profile({ user, onUpdateUser }) {
     setMessage("");
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "Nincs dátum";
+    return new Date(dateString).toLocaleDateString("hu-HU");
+  };
+
   return (
     <div className="profile-container">
       <div className="profile-header">
         <h2>Profilom</h2>
-        <div className="avatar-section">
-          <div className="avatar-container">
-            {avatarPreview ? (
-              <img
-                src={avatarPreview}
-                alt="Profile"
-                className="profile-avatar"
-              />
-            ) : (
-              <div className="avatar-placeholder">
-                {user?.displayName?.charAt(0)?.toUpperCase() ||
-                  user?.email?.charAt(0)?.toUpperCase() ||
-                  "U"}
-              </div>
-            )}
-            <button
-              className="avatar-change-btn"
-              onClick={triggerAvatarUpload}
-              title="Profilkép cseréje"
-            >
-              📷
-            </button>
-            <input
-              id="avatar-upload"
-              type="file"
-              accept="image/jpeg,image/jpg,image/png"
-              onChange={handleAvatarChange}
-              style={{ display: "none" }}
-            />
-          </div>
+      </div>
+
+      <div className="avatar-section">
+        <div className="avatar-container">
+          {avatarPreview ? (
+            <img src={avatarPreview} alt="Profile" className="profile-avatar" />
+          ) : (
+            <div className="avatar-placeholder">
+              {user?.displayName?.charAt(0)?.toUpperCase() ||
+                user?.email?.charAt(0)?.toUpperCase() ||
+                "U"}
+            </div>
+          )}
+          <button
+            className="avatar-change-btn"
+            onClick={triggerAvatarUpload}
+            title="Profilkép cseréje"
+          >
+            📷
+          </button>
+          <input
+            id="avatar-upload"
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            style={{ display: "none" }}
+          />
         </div>
       </div>
 
@@ -396,21 +405,25 @@ function Profile({ user, onUpdateUser }) {
           </div>
 
           {!isEditing ? (
-            <button className="edit-btn" onClick={handleEdit}>
-              ✏️ Profil Szerkesztése
-            </button>
+            <div className="section-actions">
+              <button className="profile-edit-btn" onClick={handleEdit}>
+                ✏️ Profil Szerkesztése
+              </button>
+            </div>
           ) : (
-            <div className="form-actions">
-              <button
-                className="save-btn"
-                onClick={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? "Mentés..." : "💾 Mentés"}
-              </button>
-              <button className="cancel-btn" onClick={handleCancel}>
-                ❌ Mégse
-              </button>
+            <div className="section-actions">
+              <div className="form-actions">
+                <button
+                  className="save-btn"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? "Mentés..." : "💾 Mentés"}
+                </button>
+                <button className="cancel-btn" onClick={handleCancel}>
+                  ❌ Mégse
+                </button>
+              </div>
             </div>
           )}
 
@@ -418,59 +431,37 @@ function Profile({ user, onUpdateUser }) {
         </div>
 
         <div className="profile-section">
-          <h3>Statisztikák</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Hozzáadott könyv</div>
+          <h3>Aktív Kölcsönzéseim</h3>
+          {loansLoading ? (
+            <div className="loading-loans">
+              <p>Betöltés...</p>
             </div>
-            <div className="stat-item">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Kölcsönzés</div>
+          ) : userLoans.length === 0 ? (
+            <div className="no-loans">
+              <p>Jelenleg nincs aktív kölcsönzésed.</p>
             </div>
-            <div className="stat-item">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Foglalás</div>
+          ) : (
+            <div className="loans-list">
+              {userLoans.map((loan) => (
+                <div key={loan.id} className="loan-item">
+                  <div className="loan-book-info">
+                    <h4>{loan.bookTitle}</h4>
+                    <p className="loan-author">{loan.bookAuthor}</p>
+                  </div>
+                  <div className="loan-details">
+                    <p className="loan-date">
+                      <strong>Kölcsönzés dátuma:</strong>{" "}
+                      {formatDate(loan.loanDate)}
+                    </p>
+                    <p className="loan-date">
+                      <strong>Visszahozás dátuma:</strong>{" "}
+                      {formatDate(loan.dueDate)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="stat-item">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Értékelés</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="profile-section">
-          <h3>Beállítások</h3>
-          <div className="settings-list">
-            <div className="setting-item">
-              <label>Értesítések</label>
-              <div className="setting-control">
-                <label className="switch">
-                  <input type="checkbox" defaultChecked />
-                  <span className="slider"></span>
-                </label>
-              </div>
-            </div>
-            <div className="setting-item">
-              <label>Email hírlevél</label>
-              <div className="setting-control">
-                <label className="switch">
-                  <input type="checkbox" />
-                  <span className="slider"></span>
-                </label>
-              </div>
-            </div>
-            <div className="setting-item">
-              <label>Profil láthatósága</label>
-              <div className="setting-control">
-                <select className="setting-select">
-                  <option value="public">Nyilvános</option>
-                  <option value="friends">Barátok</option>
-                  <option value="private">Privát</option>
-                </select>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

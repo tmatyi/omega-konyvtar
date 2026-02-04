@@ -139,21 +139,16 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log("Auth state changed - user logged in:", user.email);
-        // Load saved profile data from localStorage
-        const savedProfile = localStorage.getItem(`profile_${user.email}`);
-        console.log("Looking for saved profile:", !!savedProfile);
 
-        // Also load profile data from Firebase database
+        // Load profile data from Firebase database
         const userRef = ref(database, `users/${user.uid}`);
         onValue(userRef, (snapshot) => {
           const dbProfileData = snapshot.val();
           console.log("Database profile data:", dbProfileData);
-          console.log("Address from DB:", dbProfileData?.address);
-          console.log("Bio from DB:", dbProfileData?.bio);
 
           let enhancedUser = { ...user };
 
-          // First try database data, then localStorage, then original Firebase auth data
+          // Use database data or fallback to original Firebase auth data
           if (dbProfileData) {
             enhancedUser = {
               ...user,
@@ -171,25 +166,6 @@ function App() {
               bio: dbProfileData.bio,
               role: dbProfileData.role,
             };
-          } else if (savedProfile) {
-            try {
-              const profileData = JSON.parse(savedProfile);
-              console.log("Found saved profile data:", profileData);
-              enhancedUser = {
-                ...user,
-                displayName: profileData.displayName || user.displayName,
-                name:
-                  profileData.name ||
-                  profileData.displayName ||
-                  user.displayName,
-                photoURL: profileData.photoURL || user.photoURL,
-                phone: profileData.phone,
-                address: profileData.address,
-                bio: profileData.bio,
-              };
-            } catch (error) {
-              console.error("Error loading saved profile:", error);
-            }
           }
 
           setUser(enhancedUser);

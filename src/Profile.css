@@ -4,11 +4,58 @@
   padding: 20px;
   background: #e8e0e2;
   min-height: 100vh;
+  border-radius: 16px;
 }
 
 .profile-header {
   text-align: center;
   margin-bottom: 40px;
+}
+
+.section-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 25px;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: slideIn 0.3s ease forwards;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-edit-btn {
+  background: linear-gradient(135deg, #844a59, #6b3c47);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(132, 74, 89, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(132, 74, 89, 0.3);
+  background: linear-gradient(135deg, #9a5a69, #7b4c57);
+}
+
+.profile-edit-btn:active {
+  transform: translateY(0);
 }
 
 .avatar-section {
@@ -238,22 +285,15 @@
 
 .form-actions {
   display: flex;
-  gap: 15px;
-  margin-top: 25px;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: slideUp 0.3s ease 0.1s forwards;
+  gap: 10px;
+  align-items: center;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.form-actions .save-btn,
+.form-actions .cancel-btn {
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  border-radius: 20px;
 }
 
 .save-btn {
@@ -370,98 +410,65 @@
   font-weight: 500;
 }
 
-/* Settings */
-.settings-list {
+/* User Loans Section */
+.loading-loans,
+.no-loans {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.loans-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
 }
 
-.setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 0;
-  border-bottom: 1px solid #f8f9fa;
-}
-
-.setting-item:last-child {
-  border-bottom: none;
-}
-
-.setting-item label {
-  font-weight: 600;
-  color: #495057;
-  font-size: 0.95rem;
-}
-
-.setting-control {
-  display: flex;
-  align-items: center;
-}
-
-/* Toggle Switch */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 24px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
-  border-radius: 24px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.4s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: #844a59;
-}
-
-input:checked + .slider:before {
-  transform: translateX(26px);
-}
-
-.setting-select {
-  padding: 8px 12px;
-  border: 2px solid #e9ecef;
-  border-radius: 6px;
+.loan-item {
   background: #f8f9fa;
-  color: #2c3e50;
-  font-size: 0.9rem;
-  cursor: pointer;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
   transition: all 0.3s ease;
 }
 
-.setting-select:focus {
-  outline: none;
-  border-color: #844a59;
-  background: #fff;
+.loan-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
+
+.loan-book-info h4 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.loan-author {
+  margin: 0 0 15px 0;
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.loan-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loan-date {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.loan-date strong {
+  color: #2c3e50;
+}
+
+/* Responsive Styles */
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
@@ -571,18 +578,6 @@ input:checked + .slider:before {
 
   .stat-label {
     font-size: 0.8rem;
-  }
-
-  .setting-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 15px 0;
-  }
-
-  .setting-control {
-    width: 100%;
-    justify-content: flex-end;
   }
 }
 
