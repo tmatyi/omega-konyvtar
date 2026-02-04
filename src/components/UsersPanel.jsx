@@ -131,7 +131,6 @@ const UsersPanel = ({ user }) => {
       email: selectedUser.email || "",
       phone: selectedUser.phone || "",
       address: selectedUser.address || "",
-      bio: selectedUser.bio || "",
       role: selectedUser.role || "member",
     });
     setIsEditingUser(true);
@@ -375,10 +374,6 @@ const UsersPanel = ({ user }) => {
                         <span>{selectedUser.address || "Nincs megadva"}</span>
                       </div>
                       <div className="detail-row">
-                        <label>Bemutatkozás:</label>
-                        <span>{selectedUser.bio || "Nincs megadva"}</span>
-                      </div>
-                      <div className="detail-row">
                         <label>Regisztráció dátuma:</label>
                         <span>{formatDate(selectedUser.createdAt)}</span>
                       </div>
@@ -446,18 +441,6 @@ const UsersPanel = ({ user }) => {
                           onChange={handleEditInputChange}
                           className="edit-input"
                           placeholder="1234 Budapest, Utca utca 1."
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Bemutatkozás:</label>
-                        <textarea
-                          name="bio"
-                          value={editFormData.bio}
-                          onChange={handleEditInputChange}
-                          className="edit-input"
-                          rows={3}
-                          placeholder="Meséljen a felhasználóról..."
                         />
                       </div>
                     </div>

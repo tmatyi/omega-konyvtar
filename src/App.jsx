@@ -101,7 +101,7 @@ function App() {
     }
   };
 
-  const handleRegister = async (email, password, name, phone) => {
+  const handleRegister = async (email, password, name, phone, address) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -116,11 +116,11 @@ function App() {
         email: userCredential.user.email,
         displayName: name || email.split("@")[0], // Use name or first part of email
         phone: phone || "",
+        address: address || "",
         role: "member", // Default role for new users
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         photoURL: null,
-        address: "",
         bio: "",
       };
 
@@ -148,6 +148,8 @@ function App() {
         onValue(userRef, (snapshot) => {
           const dbProfileData = snapshot.val();
           console.log("Database profile data:", dbProfileData);
+          console.log("Address from DB:", dbProfileData?.address);
+          console.log("Bio from DB:", dbProfileData?.bio);
 
           let enhancedUser = { ...user };
 
@@ -199,12 +201,14 @@ function App() {
             "User enhanced with profile data, name:",
             enhancedUser.name,
           );
+          // Only set loading to false after profile data is loaded
+          setLoading(false);
         });
       } else {
         setUser(null);
         console.log("User is logged out");
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

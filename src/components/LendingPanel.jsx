@@ -382,7 +382,7 @@ const LendingPanel = ({ books, users }) => {
                 >
                   <div className="loan-info">
                     <h4>{loan.bookTitle}</h4>
-                    <p>{loan.bookAuthor}</p>
+                    <p style={{ marginBottom: "12px" }}>{loan.bookAuthor}</p>
                     <p>
                       <strong>Kölcsönző:</strong>{" "}
                       {loan.userName || "Ismeretlen felhasználó"}
@@ -392,9 +392,6 @@ const LendingPanel = ({ books, users }) => {
                         <strong>Email:</strong> {loan.userEmail}
                       </p>
                     )}
-                    <p>
-                      <strong>Tag kód:</strong> {loan.memberCode}
-                    </p>
                     <p>
                       <strong>Kölcsönzés dátuma:</strong>{" "}
                       {new Date(loan.loanDate).toLocaleDateString("hu-HU")}

@@ -5,11 +5,9 @@ import "./Profile.css";
 function Profile({ user, onUpdateUser }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    displayName: user?.displayName || "",
     email: user?.email || "",
     phone: "",
     address: "",
-    bio: "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -76,15 +74,16 @@ function Profile({ user, onUpdateUser }) {
       return;
     }
 
+    console.log("Saving profile to Firebase:", profileData);
+
     try {
       const userRef = ref(database, `users/${user.uid}`);
       const userData = {
-        displayName: profileData.displayName,
+        displayName: user?.displayName || user?.name,
         email: profileData.email,
         photoURL: profileData.photoURL,
         phone: profileData.phone,
         address: profileData.address,
-        bio: profileData.bio,
         updatedAt: profileData.updatedAt,
         // Keep existing fields if they exist
         role: profileData.role || "member",
@@ -233,6 +232,7 @@ function Profile({ user, onUpdateUser }) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const profileData = {
+        displayName: user?.displayName || user?.name,
         ...formData,
         photoURL: avatarPreview,
         updatedAt: new Date().toISOString(),
@@ -244,6 +244,7 @@ function Profile({ user, onUpdateUser }) {
 
       // Also save to Firebase for real-time sync with UsersPanel
       try {
+        console.log("About to save profile to Firebase:", profileData);
         await saveProfileToFirebase(profileData);
         console.log("Profile saved to both localStorage and Firebase");
       } catch (error) {
@@ -258,6 +259,7 @@ function Profile({ user, onUpdateUser }) {
       );
       setMessageType("success");
       setIsEditing(false);
+      setLoading(false);
 
       if (onUpdateUser) {
         onUpdateUser(profileData);
@@ -265,20 +267,27 @@ function Profile({ user, onUpdateUser }) {
     } catch (error) {
       setMessage("Hiba történt a frissítés során");
       setMessageType("error");
-    } finally {
+      setIsEditing(false);
       setLoading(false);
+      setMessage("");
     }
+  };
+
+  const handleEdit = () => {
+    setFormData({
+      email: user?.email || "",
+      phone: user?.phone || "",
+      address: user?.address || "",
+    });
+    setIsEditing(true);
   };
 
   const handleCancel = () => {
     setFormData({
-      displayName: user?.displayName || "",
       email: user?.email || "",
       phone: "",
       address: "",
-      bio: "",
     });
-    setAvatarPreview(user?.photoURL || null);
     setIsEditing(false);
     setMessage("");
   };
@@ -335,6 +344,36 @@ function Profile({ user, onUpdateUser }) {
               <span>{user?.email}</span>
             </div>
             <div className="info-item">
+              <label>Telefonszám</label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="edit-input"
+                  placeholder="+36 20 123 4567"
+                />
+              ) : (
+                <span>{user?.phone || "Nincs megadva"}</span>
+              )}
+            </div>
+            <div className="info-item">
+              <label>Lakcím</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className="edit-input"
+                  placeholder="1234 Budapest, Utca utca 1."
+                />
+              ) : (
+                <span>{user?.address || "Nincs megadva"}</span>
+              )}
+            </div>
+            <div className="info-item">
               <label>Regisztráció dátuma</label>
               <span>
                 {user?.metadata?.creationTime
@@ -357,67 +396,21 @@ function Profile({ user, onUpdateUser }) {
           </div>
 
           {!isEditing ? (
-            <button className="edit-btn" onClick={() => setIsEditing(true)}>
+            <button className="edit-btn" onClick={handleEdit}>
               ✏️ Profil Szerkesztése
             </button>
           ) : (
-            <div className="edit-form">
-              <div className="form-group">
-                <label>Teljes Név</label>
-                <input
-                  type="text"
-                  name="displayName"
-                  value={formData.displayName}
-                  onChange={handleInputChange}
-                  placeholder="Adja meg a teljes nevét"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Telefonszám</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="+36 20 123 4567"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Lakcím</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="1234 Budapest, Utca utca 1."
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Bemutatkozás</label>
-                <textarea
-                  name="bio"
-                  value={formData.bio}
-                  onChange={handleInputChange}
-                  placeholder="Meséljen magáról..."
-                  rows={4}
-                />
-              </div>
-
-              <div className="form-actions">
-                <button
-                  className="save-btn"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                >
-                  {loading ? "Mentés..." : "💾 Mentés"}
-                </button>
-                <button className="cancel-btn" onClick={handleCancel}>
-                  ❌ Mégse
-                </button>
-              </div>
+            <div className="form-actions">
+              <button
+                className="save-btn"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? "Mentés..." : "💾 Mentés"}
+              </button>
+              <button className="cancel-btn" onClick={handleCancel}>
+                ❌ Mégse
+              </button>
             </div>
           )}
 

@@ -7,6 +7,7 @@ function Login({ onLogin, onRegister }) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,7 +19,7 @@ function Login({ onLogin, onRegister }) {
     try {
       if (isRegistering) {
         // Registration
-        if (!name || !email || !password || !phone) {
+        if (!name || !email || !password || !phone || !address) {
           setError("Minden mező kötelező");
           setLoading(false);
           return;
@@ -31,7 +32,7 @@ function Login({ onLogin, onRegister }) {
           return;
         }
 
-        await onRegister(email, password, name, phone);
+        await onRegister(email, password, name, phone, address);
       } else {
         // Login
         if (!email || !password) {
@@ -85,6 +86,17 @@ function Login({ onLogin, onRegister }) {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+36 20 123 4567"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Lakcím</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="1234 Budapest, Utca utca 1."
                   required
                 />
               </div>
