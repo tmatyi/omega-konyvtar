@@ -28,6 +28,9 @@ function App() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem("activeTab") || "books";
   });
+  const [activeMode, setActiveMode] = useState(() => {
+    return localStorage.getItem("activeMode") || "könyvtár";
+  });
   const [books, setBooks] = useState([]);
   const [users, setUsers] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -232,6 +235,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem("activeTab", activeTab);
   }, [activeTab]);
+
+  // Save active mode to localStorage
+  useEffect(() => {
+    localStorage.setItem("activeMode", activeMode);
+  }, [activeMode]);
 
   const handleProfileUpdate = (profileData) => {
     // Update the current user with new profile data
@@ -1410,7 +1418,9 @@ function App() {
         user={user}
         onLogout={handleLogout}
         activeTab={activeTab}
+        activeMode={activeMode}
         onTabChange={setActiveTab}
+        onModeChange={setActiveMode}
       />
       <MobileNav
         user={user}
@@ -1432,7 +1442,7 @@ function App() {
                 <div className="controls-left">
                   <div className="book-stats">
                     <span className="total-books">
-                      {filteredBooks.length} összes könyv
+                      {filteredBooks.length} könyv található
                     </span>
                     {filteredBooks.length !==
                       books.filter(
@@ -1661,7 +1671,7 @@ function App() {
                 <div className="controls-left">
                   <div className="book-stats">
                     <span className="total-books">
-                      {filteredBooks.length} összes könyv
+                      {filteredBooks.length} könyv található
                     </span>
                     {filteredBooks.length !==
                       books.filter(

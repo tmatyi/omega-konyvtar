@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import "./Sidebar.css";
 
-function Sidebar({ user, onLogout, activeTab, onTabChange }) {
+function Sidebar({
+  user,
+  onLogout,
+  activeTab,
+  onTabChange,
+  activeMode,
+  onModeChange,
+}) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isSticky, setIsSticky] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -16,11 +23,11 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
   }, [isCollapsed]);
 
   const tabs = [
-    { id: "books", label: "Bolt", icon: "📚" },
-    { id: "library", label: "Könyvtár", icon: "🏛️" },
-    { id: "lending", label: "Kölcsönzés", icon: "📖" },
-    { id: "users", label: "Felhasználók", icon: "👥" },
-    { id: "logout", label: "Kijelentkezés", icon: "🚪" },
+    { id: "books", label: "Bolt", icon: "📚", mode: "bolt" },
+    { id: "library", label: "Könyvtár", icon: "🏛️", mode: "könyvtár" },
+    { id: "lending", label: "Kölcsönzés", icon: "📖", mode: "könyvtár" },
+    { id: "users", label: "Felhasználók", icon: "👥", mode: null }, // Always visible
+    { id: "logout", label: "Kijelentkezés", icon: "🚪", mode: null }, // Always visible
   ];
 
   const handleTabClick = (tabId) => {
@@ -33,6 +40,24 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
       onTabChange(tabId);
     }
   };
+
+  // Check if current tab is visible in current mode, if not, switch to first available tab
+  useEffect(() => {
+    const currentTab = tabs.find((tab) => tab.id === activeTab);
+    if (
+      currentTab &&
+      currentTab.mode !== null &&
+      currentTab.mode !== activeMode
+    ) {
+      // Current tab is not visible in this mode, find first available tab
+      const availableTab = tabs.find(
+        (tab) => tab.mode === null || tab.mode === activeMode,
+      );
+      if (availableTab && availableTab.id !== "logout") {
+        onTabChange(availableTab.id);
+      }
+    }
+  }, [activeMode, activeTab]);
 
   const handleMouseEnter = () => {
     clearTimeout(hoverTimeout);
@@ -111,20 +136,44 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
           )}
         </div>
 
-        <nav className="sidebar-nav">
-          {tabs.map((tab) => (
+        {/* Mode Switcher Section */}
+        <div className="mode-switcher">
+          <div className="mode-buttons">
             <button
-              key={tab.id}
-              className={`nav-tab ${activeTab === tab.id ? "active" : ""} ${
-                tab.id === "logout" ? "logout-tab" : ""
-              }`}
-              onClick={() => handleTabClick(tab.id)}
-              title={isCollapsed ? tab.label : ""}
+              className={`mode-btn ${activeMode === "könyvtár" ? "active" : ""}`}
+              onClick={() => onModeChange("könyvtár")}
+              title={isCollapsed ? "Könyvtár mód" : ""}
             >
-              <span className="tab-icon">{tab.icon}</span>
-              {!isCollapsed && <span className="tab-label">{tab.label}</span>}
+              <span className="mode-icon">🏛️</span>
+              {!isCollapsed && <span className="mode-name">Könyvtár</span>}
             </button>
-          ))}
+            <button
+              className={`mode-btn ${activeMode === "bolt" ? "active" : ""}`}
+              onClick={() => onModeChange("bolt")}
+              title={isCollapsed ? "Bolt mód" : ""}
+            >
+              <span className="mode-icon">🛒</span>
+              {!isCollapsed && <span className="mode-name">Bolt</span>}
+            </button>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          {tabs
+            .filter((tab) => tab.mode === null || tab.mode === activeMode)
+            .map((tab) => (
+              <button
+                key={tab.id}
+                className={`nav-tab ${activeTab === tab.id ? "active" : ""} ${
+                  tab.id === "logout" ? "logout-tab" : ""
+                }`}
+                onClick={() => handleTabClick(tab.id)}
+                title={isCollapsed ? tab.label : ""}
+              >
+                <span className="tab-icon">{tab.icon}</span>
+                {!isCollapsed && <span className="tab-label">{tab.label}</span>}
+              </button>
+            ))}
         </nav>
       </div>
 

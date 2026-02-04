@@ -17,7 +17,7 @@
 }
 
 .sidebar-user {
-  padding: 30px 20px;
+  padding: 25px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
@@ -25,6 +25,8 @@
   position: relative;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  height: 111px; /* Fixed height for both states */
+  box-sizing: border-box;
 }
 
 .sidebar-user:hover {
@@ -109,6 +111,91 @@
 
 .collapse-btn.sticky:hover {
   background: rgba(132, 74, 89, 1);
+}
+
+/* Mode Switcher */
+.mode-switcher {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: 82px; /* Fixed height to match collapsed state */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 60px;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #844a59, #6b3c47);
+  border-color: #844a59;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(132, 74, 89, 0.3);
+}
+
+.mode-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.mode-name {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.sidebar.collapsed .mode-switcher {
+  padding: 15px 10px;
+  height: 82px; /* Fixed height to match open state */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.sidebar.collapsed .mode-buttons {
+  gap: 4px;
+}
+
+.sidebar.collapsed .mode-btn {
+  padding: 8px 4px;
+  min-height: 50px;
+}
+
+.sidebar.collapsed .mode-icon {
+  font-size: 18px;
+  margin-bottom: 0;
+}
+
+.sidebar.collapsed .mode-name {
+  display: none;
 }
 
 .sidebar-nav {
@@ -211,7 +298,9 @@
 
 .sidebar.collapsed .sidebar-user {
   justify-content: center;
-  padding: 30px 10px;
+  padding: 25px 10px;
+  height: 111px; /* Fixed height to match open state */
+  box-sizing: border-box;
 }
 
 .sidebar.collapsed .user-avatar {
