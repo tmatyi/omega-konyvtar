@@ -286,12 +286,16 @@ const UsersPanel = ({ user }) => {
                     <img src={user.photoURL} alt={user.displayName} />
                   ) : (
                     <div className="avatar-placeholder">
-                      {user.displayName?.charAt(0)?.toUpperCase() || "U"}
+                      {(user.displayName || user.name)
+                        ?.charAt(0)
+                        ?.toUpperCase() || "U"}
                     </div>
                   )}
                 </div>
                 <div className="user-info">
-                  <h3>{user.displayName || "Ismeretlen felhasználó"}</h3>
+                  <h3>
+                    {user.displayName || user.name || "Ismeretlen felhasználó"}
+                  </h3>
                   <p className="user-email">{user.email}</p>
                   <div className="user-meta">{getRoleBadge(user.role)}</div>
                   <div className="user-dates">
@@ -339,8 +343,9 @@ const UsersPanel = ({ user }) => {
                     />
                   ) : (
                     <div className="avatar-placeholder">
-                      {selectedUser.displayName?.charAt(0)?.toUpperCase() ||
-                        "U"}
+                      {(selectedUser.displayName || selectedUser.name)
+                        ?.charAt(0)
+                        ?.toUpperCase() || "U"}
                     </div>
                   )}
                 </div>
@@ -349,7 +354,9 @@ const UsersPanel = ({ user }) => {
                   {!isEditingUser ? (
                     <>
                       <div className="user-detail-name">
-                        {selectedUser.displayName || "Ismeretlen felhasználó"}
+                        {selectedUser.displayName ||
+                          selectedUser.name ||
+                          "Ismeretlen felhasználó"}
                       </div>
                       <div className="user-detail-email">
                         {selectedUser.email}
@@ -518,7 +525,9 @@ const UsersPanel = ({ user }) => {
                 <h3>Biztosan törölni szeretné ezt a felhasználót?</h3>
                 <div className="delete-user-info">
                   <strong>
-                    {selectedUser.displayName || "Ismeretlen felhasználó"}
+                    {selectedUser.displayName ||
+                      selectedUser.name ||
+                      "Ismeretlen felhasználó"}
                   </strong>
                   <span>{selectedUser.email}</span>
                 </div>

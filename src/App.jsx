@@ -9,6 +9,8 @@ import {
   ref,
   set,
   update,
+  push,
+  remove,
   onValue,
   off,
 } from "./firebase.js";
@@ -141,31 +143,63 @@ function App() {
         const savedProfile = localStorage.getItem(`profile_${user.email}`);
         console.log("Looking for saved profile:", !!savedProfile);
 
-        if (savedProfile) {
-          try {
-            const profileData = JSON.parse(savedProfile);
-            console.log("Found saved profile data:", profileData);
-            const enhancedUser = {
+        // Also load profile data from Firebase database
+        const userRef = ref(database, `users/${user.uid}`);
+        onValue(userRef, (snapshot) => {
+          const dbProfileData = snapshot.val();
+          console.log("Database profile data:", dbProfileData);
+
+          let enhancedUser = { ...user };
+
+          // First try database data, then localStorage, then original Firebase auth data
+          if (dbProfileData) {
+            enhancedUser = {
               ...user,
-              displayName: profileData.displayName || user.displayName,
-              photoURL: profileData.photoURL || user.photoURL,
-              phone: profileData.phone,
-              address: profileData.address,
-              bio: profileData.bio,
+              displayName:
+                dbProfileData.displayName ||
+                dbProfileData.name ||
+                user.displayName,
+              name:
+                dbProfileData.name ||
+                dbProfileData.displayName ||
+                user.displayName,
+              photoURL: dbProfileData.photoURL || user.photoURL,
+              phone: dbProfileData.phone,
+              address: dbProfileData.address,
+              bio: dbProfileData.bio,
+              role: dbProfileData.role,
             };
-            setUser(enhancedUser);
-            console.log(
-              "User enhanced with saved profile, photoURL:",
-              enhancedUser.photoURL,
-            );
-          } catch (error) {
-            console.error("Error loading saved profile:", error);
-            setUser(user);
+          } else if (savedProfile) {
+            try {
+              const profileData = JSON.parse(savedProfile);
+              console.log("Found saved profile data:", profileData);
+              enhancedUser = {
+                ...user,
+                displayName: profileData.displayName || user.displayName,
+                name:
+                  profileData.name ||
+                  profileData.displayName ||
+                  user.displayName,
+                photoURL: profileData.photoURL || user.photoURL,
+                phone: profileData.phone,
+                address: profileData.address,
+                bio: profileData.bio,
+              };
+            } catch (error) {
+              console.error("Error loading saved profile:", error);
+            }
           }
-        } else {
-          setUser(user);
-          console.log("No saved profile found, using Firebase data");
-        }
+
+          setUser(enhancedUser);
+          console.log(
+            "User enhanced with profile data, displayName:",
+            enhancedUser.displayName,
+          );
+          console.log(
+            "User enhanced with profile data, name:",
+            enhancedUser.name,
+          );
+        });
       } else {
         setUser(null);
         console.log("User is logged out");
@@ -842,7 +876,7 @@ function App() {
         "";
     }
 
-    // Extract metadata from flex_content ul li strong elements
+    // Extract metadata from flex_content ul li elements using text-based search
     let publisher = "";
     let year = "";
     let pageCount = "";
@@ -850,34 +884,34 @@ function App() {
 
     const flexContentElement = doc.querySelector(".flex_content ul");
     if (flexContentElement) {
-      const listItems = flexContentElement.querySelectorAll("li strong");
+      const listItems = flexContentElement.querySelectorAll("li");
 
-      // Map the strong elements to their corresponding data
-      const strongElements = Array.from(listItems);
+      // Look for specific text labels and extract the following strong element
+      listItems.forEach((li) => {
+        const liText = li.textContent.trim();
 
-      // First strong: Kiadó
-      if (strongElements[0]) {
-        publisher = strongElements[0].textContent.trim();
-      }
-
-      // Second strong: irrelevant (skip)
-
-      // Third strong: Év
-      if (strongElements[2]) {
-        year = strongElements[2].textContent.trim();
-      }
-
-      // Fourth strong: Oldal
-      if (strongElements[3]) {
-        pageCount = strongElements[3].textContent.trim();
-      }
-
-      // Fifth strong: irrelevant (skip)
-
-      // Sixth strong: ISBN
-      if (strongElements[5]) {
-        isbn = strongElements[5].textContent.trim();
-      }
+        if (liText.includes("Kiadó:")) {
+          const strongElement = li.querySelector("strong");
+          if (strongElement) {
+            publisher = strongElement.textContent.trim();
+          }
+        } else if (liText.includes("Kiadás éve:")) {
+          const strongElement = li.querySelector("strong");
+          if (strongElement) {
+            year = strongElement.textContent.trim();
+          }
+        } else if (liText.includes("Oldalszám:")) {
+          const strongElement = li.querySelector("strong");
+          if (strongElement) {
+            pageCount = strongElement.textContent.trim();
+          }
+        } else if (liText.includes("ISBN:")) {
+          const strongElement = li.querySelector("strong");
+          if (strongElement) {
+            isbn = strongElement.textContent.trim();
+          }
+        }
+      });
     }
 
     // Try to extract description from text shrinkable shrunk paragraphs
@@ -2119,9 +2153,32 @@ function App() {
 
       {/* Book Detail Modal */}
       {showBookDetail && selectedBook && (
-        <div className="modal" onClick={closeBookDetail}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0, 0, 0, 0.8)",
+            zIndex: 999999,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          onClick={closeBookDetail}
+        >
           <div
-            className="modal-content book-detail-modal"
+            style={{
+              background: "white",
+              padding: "40px",
+              borderRadius: "20px",
+              maxWidth: "600px",
+              width: "90%",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="book-detail-header">
@@ -2130,208 +2187,230 @@ function App() {
                 ×
               </button>
             </div>
-            <div className="book-detail-content">
-              <div className="book-detail-thumbnail">
-                {selectedBook.thumbnail ? (
-                  <img
-                    src={selectedBook.thumbnail}
-                    alt={selectedBook.title}
-                    className="book-detail-image"
-                  />
-                ) : (
-                  <svg
-                    className="book-detail-placeholder"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M12 2L2 7L12 12L22 7L12 2Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+            <div
+              style={{
+                flex: 1,
+                overflow: "auto",
+                paddingRight: "10px",
+              }}
+              className="custom-scrollbar"
+            >
+              <div
+                className="book-detail-content"
+                style={{
+                  display: "flex",
+                  gap: "20px",
+                  marginBottom: "20px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div className="book-detail-thumbnail">
+                  {selectedBook.thumbnail ? (
+                    <img
+                      src={selectedBook.thumbnail}
+                      alt={selectedBook.title}
+                      className="book-detail-image"
                     />
-                    <path
-                      d="M2 17L12 22L22 17"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M2 12L12 17L22 12"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </div>
-              <div className="book-detail-info">
-                {isEditMode ? (
-                  // Edit mode - show input fields
-                  <>
-                    <div className="book-detail-field">
-                      <strong>Szerző:</strong>
-                      <input
-                        type="text"
-                        value={author}
-                        onChange={(e) => setAuthor(e.target.value)}
-                        className="edit-input"
+                  ) : (
+                    <svg
+                      className="book-detail-placeholder"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 2L2 7L12 12L22 7L12 2Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Év:</strong>
-                      <input
-                        type="text"
-                        value={year}
-                        onChange={(e) => setYear(e.target.value)}
-                        className="edit-input"
+                      <path
+                        d="M2 17L12 22L22 17"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Műfaj:</strong>
-                      <input
-                        type="text"
-                        value={genre}
-                        onChange={(e) => setGenre(e.target.value)}
-                        className="edit-input"
+                      <path
+                        d="M2 12L12 17L22 12"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Eredeti cím:</strong>
-                      <input
-                        type="text"
-                        value={originalTitle}
-                        onChange={(e) => setOriginalTitle(e.target.value)}
-                        className="edit-input"
-                      />
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Oldalszám:</strong>
-                      <input
-                        type="text"
-                        value={pageCount}
-                        onChange={(e) => setPageCount(e.target.value)}
-                        className="edit-input"
-                      />
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Kiadó:</strong>
-                      <input
-                        type="text"
-                        value={publisher}
-                        onChange={(e) => setPublisher(e.target.value)}
-                        className="edit-input"
-                      />
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>ISBN:</strong>
-                      <input
-                        type="text"
-                        value={isbn}
-                        onChange={(e) => setIsbn(e.target.value)}
-                        className="edit-input"
-                      />
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Borítókép:</strong>
-                      <div className="thumbnail-upload-section">
-                        <div className="thumbnail-upload-container">
-                          <div className="thumbnail-preview">
-                            {thumbnailPreview ? (
-                              <img
-                                src={thumbnailPreview}
-                                alt="Borítókép előnézet"
-                                className="thumbnail-preview-image"
-                              />
-                            ) : (
-                              <div className="thumbnail-upload-placeholder">
-                                <svg
-                                  className="thumbnail-upload-icon"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                                <span>Borítókép feltöltése</span>
-                              </div>
-                            )}
+                    </svg>
+                  )}
+                </div>
+                <div
+                  className="book-detail-info"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  {isEditMode ? (
+                    // Edit mode - show input fields
+                    <>
+                      <div className="book-detail-field">
+                        <strong>Szerző:</strong>
+                        <input
+                          type="text"
+                          value={author}
+                          onChange={(e) => setAuthor(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Év:</strong>
+                        <input
+                          type="text"
+                          value={year}
+                          onChange={(e) => setYear(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Műfaj:</strong>
+                        <input
+                          type="text"
+                          value={genre}
+                          onChange={(e) => setGenre(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Eredeti cím:</strong>
+                        <input
+                          type="text"
+                          value={originalTitle}
+                          onChange={(e) => setOriginalTitle(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Oldalszám:</strong>
+                        <input
+                          type="text"
+                          value={pageCount}
+                          onChange={(e) => setPageCount(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Kiadó:</strong>
+                        <input
+                          type="text"
+                          value={publisher}
+                          onChange={(e) => setPublisher(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>ISBN:</strong>
+                        <input
+                          type="text"
+                          value={isbn}
+                          onChange={(e) => setIsbn(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Borítókép:</strong>
+                        <div className="thumbnail-upload-section">
+                          <div className="thumbnail-upload-container">
+                            <div className="thumbnail-preview">
+                              {thumbnailPreview ? (
+                                <img
+                                  src={thumbnailPreview}
+                                  alt="Borítókép előnézet"
+                                  className="thumbnail-preview-image"
+                                />
+                              ) : (
+                                <div className="thumbnail-upload-placeholder">
+                                  <svg
+                                    className="thumbnail-upload-icon"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                  <span>Borítókép feltöltése</span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={triggerThumbnailUpload}
+                              className="thumbnail-upload-btn"
+                            >
+                              {thumbnailPreview
+                                ? "Borítókép cseréje"
+                                : "Borítókép kiválasztása"}
+                            </button>
+                            <input
+                              id="thumbnail-upload-edit"
+                              type="file"
+                              accept="image/jpeg,image/jpg,image/png"
+                              onChange={handleThumbnailUpload}
+                              style={{ display: "none" }}
+                            />
                           </div>
-                          <button
-                            type="button"
-                            onClick={triggerThumbnailUpload}
-                            className="thumbnail-upload-btn"
-                          >
-                            {thumbnailPreview
-                              ? "Borítókép cseréje"
-                              : "Borítókép kiválasztása"}
-                          </button>
-                          <input
-                            id="thumbnail-upload-edit"
-                            type="file"
-                            accept="image/jpeg,image/jpg,image/png"
-                            onChange={handleThumbnailUpload}
-                            style={{ display: "none" }}
-                          />
                         </div>
                       </div>
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Leírás:</strong>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="edit-textarea"
-                        rows="4"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  // View mode - show static fields
-                  <>
-                    <div className="book-detail-field">
-                      <strong>Szerző:</strong> {selectedBook.author || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Év:</strong> {selectedBook.year || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Műfaj:</strong> {selectedBook.genre || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Eredeti cím:</strong>{" "}
-                      {selectedBook.originalTitle || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Oldalszám:</strong>{" "}
-                      {selectedBook.pageCount || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Kiadó:</strong> {selectedBook.publisher || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>ISBN:</strong> {selectedBook.isbn || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Borítókép:</strong>{" "}
-                      {selectedBook.thumbnail || "N/A"}
-                    </div>
-                    <div className="book-detail-field">
-                      <strong>Leírás:</strong>
-                      <p>{selectedBook.description || "N/A"}</p>
-                    </div>
-                  </>
-                )}
+                      <div className="book-detail-field">
+                        <strong>Leírás:</strong>
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          className="edit-textarea"
+                          rows="4"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    // View mode - show static fields
+                    <>
+                      <div className="book-detail-field">
+                        <strong>Szerző:</strong> {selectedBook.author || "N/A"}
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Év:</strong> {selectedBook.year || "N/A"}
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Műfaj:</strong> {selectedBook.genre || "N/A"}
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Eredeti cím:</strong>{" "}
+                        {selectedBook.originalTitle || "N/A"}
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Oldalszám:</strong>{" "}
+                        {selectedBook.pageCount || "N/A"}
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Kiadó:</strong>{" "}
+                        {selectedBook.publisher || "N/A"}
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>ISBN:</strong> {selectedBook.isbn || "N/A"}
+                      </div>
+                      <div className="book-detail-field">
+                        <strong>Leírás:</strong>
+                        <p>{selectedBook.description || "N/A"}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <div className="modal-buttons">
@@ -2361,8 +2440,30 @@ function App() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && bookToDelete && (
-        <div className="modal">
-          <div className="modal-content confirm-modal">
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0, 0, 0, 0.8)",
+            zIndex: 999999,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: "40px",
+              borderRadius: "20px",
+              maxWidth: "500px",
+              width: "90%",
+              textAlign: "center",
+            }}
+          >
             <h2>Törlés Megerősítése</h2>
             <div className="confirm-message">
               <p>Biztosan törölni szeretnéd a következő könyvet?</p>

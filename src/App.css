@@ -264,7 +264,7 @@ body {
 
 .main-content {
   background: #e8e0e2;
-  margin-top: 0;
+  margin-top: 30px;
   position: relative;
 }
 
@@ -372,7 +372,8 @@ body {
 }
 
 .filters-wrapper.show {
-  height: 180px; /* Adjusted to match actual content height */
+  min-height: 220px; /* Increased to accommodate filter results */
+  height: auto;
 }
 
 .filters-section {
@@ -483,6 +484,8 @@ body {
   font-size: 14px;
   font-weight: 500;
   text-align: center;
+  position: relative;
+  z-index: 10;
 }
 
 .no-books {
@@ -584,15 +587,21 @@ body {
 }
 
 .books-container .book-thumbnail {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100% !important;
   height: 100% !important;
   max-height: none !important;
   min-height: none !important;
   object-fit: contain !important;
   object-position: center !important;
+  pointer-events: none;
+}
+
+.book-card {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .book-thumbnail-placeholder {

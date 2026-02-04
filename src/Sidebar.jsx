@@ -82,13 +82,13 @@ function Sidebar({ user, onLogout, activeTab, onTabChange }) {
             {user?.photoURL ? (
               <img src={user.photoURL} alt="User" className="user-avatar-img" />
             ) : (
-              getInitials(user?.displayName || user?.email)
+              getInitials(user?.displayName || user?.name || user?.email)
             )}
           </div>
           {!isCollapsed && (
             <div className="user-info">
               <div className="user-name">
-                {user?.displayName || "Felhasználó"}
+                {user?.displayName || user?.name || "Felhasználó"}
               </div>
               <div className="user-email">{user?.email}</div>
             </div>

@@ -326,7 +326,9 @@ function Profile({ user, onUpdateUser }) {
           <div className="profile-info">
             <div className="info-item">
               <label>Név</label>
-              <span>{user?.displayName || "Nincs beállítva"}</span>
+              <span>
+                {user?.displayName || user?.name || "Nincs beállítva"}
+              </span>
             </div>
             <div className="info-item">
               <label>Email</label>
