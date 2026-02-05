@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { database, ref, set, update, onValue, off, push } from "../firebase.js";
+import { database, ref, onValue, off, update, push } from "../firebase.js";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { hu } from "date-fns/locale";
 import "./LendingPanel.css";
 
 const LendingPanel = ({ books, users }) => {
@@ -12,6 +15,13 @@ const LendingPanel = ({ books, users }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [memberCode, setMemberCode] = useState("");
   const [loanPeriod, setLoanPeriod] = useState(4);
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [renewalDate, setRenewalDate] = useState(new Date());
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const [isToastExiting, setIsToastExiting] = useState(false);
 
   useEffect(() => {
     const filtered = books.filter((book) => book.category === "Könyvtár");
@@ -41,6 +51,24 @@ const LendingPanel = ({ books, users }) => {
       off(loansRef, "value", handleLoansData);
     };
   }, [books]);
+
+  const showToastNotification = (message, type = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setIsToastExiting(false);
+    setShowToast(true);
+
+    // Start exit animation after 2.5 seconds
+    setTimeout(() => {
+      setIsToastExiting(true);
+    }, 2500);
+
+    // Actually hide after 3 seconds (allows exit animation to complete)
+    setTimeout(() => {
+      setShowToast(false);
+      setIsToastExiting(false);
+    }, 3000);
+  };
 
   const calculateDueDate = (startDate, weeks) => {
     const due = new Date(startDate);
@@ -91,7 +119,10 @@ const LendingPanel = ({ books, users }) => {
       })
       .catch((error) => {
         console.error("Error saving loan to Firebase:", error);
-        alert("Hiba történt a kölcsönzés mentése közben!");
+        showToastNotification(
+          "Hiba történt a kölcsönzés mentése közben!",
+          "error",
+        );
       });
 
     setSelectedBook(null);
@@ -101,8 +132,9 @@ const LendingPanel = ({ books, users }) => {
     setMemberCode("");
     setShowLoanModal(false);
 
-    alert(
+    showToastNotification(
       `Könyv sikeresen kölcsönözve: ${selectedBook.title} → ${selectedUser.name || selectedUser.displayName || "Ismeretlen felhasználó"}!`,
+      "success",
     );
   };
 
@@ -117,38 +149,48 @@ const LendingPanel = ({ books, users }) => {
     update(loanRef, updatedLoan)
       .then(() => {
         console.log("Loan returned in Firebase:", loanId);
-        alert("Könyv sikeresen visszahozva!");
+        showToastNotification("Könyv sikeresen visszahozva!", "success");
       })
       .catch((error) => {
         console.error("Error returning loan:", error);
-        alert("Hiba történt a visszahozás során!");
+        showToastNotification("Hiba történt a visszahozás során!", "error");
       });
   };
 
   const handleRenewLoan = (loanId) => {
     const loan = loans.find((l) => l.id === loanId);
-    if (loan.renewals >= 2) {
-      alert("Ezt a kölcsönzést már nem lehet meghosszabbítani!");
-      return;
-    }
+    if (!loan) return;
 
-    const newDueDate = calculateDueDate(new Date(loan.dueDate), 4);
+    // Set the selected loan and show renewal modal
+    setSelectedLoan(loan);
+    // Set default renewal date to the current due date (not 4 weeks ahead)
+    setRenewalDate(new Date(loan.dueDate));
+    setShowRenewModal(true);
+  };
+
+  const handleRenewalConfirm = () => {
+    if (!selectedLoan || !renewalDate) return;
 
     // Update loan in Firebase
-    const loanRef = ref(database, `loans/${loanId}`);
+    const loanRef = ref(database, `loans/${selectedLoan.id}`);
     const updatedLoan = {
-      dueDate: newDueDate.toISOString(),
-      renewals: loan.renewals + 1,
+      dueDate: renewalDate.toISOString(),
     };
 
     update(loanRef, updatedLoan)
       .then(() => {
-        console.log("Loan renewed in Firebase:", loanId);
-        alert("Kölcsönzés meghosszabbítva!");
+        console.log("Loan renewed in Firebase:", selectedLoan.id);
+        showToastNotification(
+          "Kölcsönzés sikeresen meghosszabbítva!",
+          "success",
+        );
+        setShowRenewModal(false);
+        setSelectedLoan(null);
+        setRenewalDate(new Date());
       })
       .catch((error) => {
         console.error("Error renewing loan:", error);
-        alert("Hiba történt a meghosszabbítás során!");
+        showToastNotification("Hiba történt a meghosszabbítás során!", "error");
       });
   };
 
@@ -462,12 +504,12 @@ const LendingPanel = ({ books, users }) => {
                     >
                       Visszahozás
                     </button>
-                    {loan.renewals < 2 && !isOverdue && (
+                    {!isOverdue && (
                       <button
                         className="renew-btn"
                         onClick={() => handleRenewLoan(loan.id)}
                       >
-                        Meghosszabbítás ({loan.renewals}/2)
+                        Meghosszabbítás
                       </button>
                     )}
                   </div>
@@ -558,6 +600,225 @@ const LendingPanel = ({ books, users }) => {
                 Mégse
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Renewal Modal */}
+      {showRenewModal && selectedLoan && (
+        <>
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.5)",
+              zIndex: 9999,
+            }}
+          ></div>
+
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "white",
+              borderRadius: "12px",
+              padding: "0",
+              maxWidth: "500px",
+              width: "90%",
+              zIndex: 10000,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #e9ecef",
+                background: "#f8f9fa",
+                borderRadius: "12px 12px 0 0",
+              }}
+            >
+              <h3
+                style={{
+                  margin: "0",
+                  color: "#2c3e50",
+                  fontSize: "1.25rem",
+                  fontWeight: "600",
+                }}
+              >
+                Kölcsönzés Meghosszabbítása
+              </h3>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "24px" }}>
+              <div
+                style={{
+                  background: "#f8f9fa",
+                  padding: "15px",
+                  borderRadius: "8px",
+                  marginBottom: "20px",
+                }}
+              >
+                <p style={{ margin: "5px 0", color: "#495057" }}>
+                  <strong style={{ color: "#2c3e50" }}>Könyv:</strong>{" "}
+                  {selectedLoan.bookTitle}
+                </p>
+                <p style={{ margin: "5px 0", color: "#495057" }}>
+                  <strong style={{ color: "#2c3e50" }}>Kölcsönző:</strong>{" "}
+                  {selectedLoan.userName}
+                </p>
+                <p style={{ margin: "5px 0", color: "#495057" }}>
+                  <strong style={{ color: "#2c3e50" }}>
+                    Jelenlegi lejárat:
+                  </strong>{" "}
+                  {new Date(selectedLoan.dueDate).toLocaleDateString("hu-HU")}
+                </p>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "500",
+                    color: "#2c3e50",
+                  }}
+                >
+                  Új lejárat dátuma:
+                </label>
+                <DatePicker
+                  selected={renewalDate}
+                  onChange={(date) => setRenewalDate(date)}
+                  minDate={new Date()}
+                  locale={hu}
+                  dateFormat="yyyy. MM. dd."
+                  className="custom-datepicker"
+                  popperPlacement="bottom-start"
+                  popperModifiers={[
+                    {
+                      name: "offset",
+                      options: {
+                        offset: [0, 10],
+                      },
+                    },
+                    {
+                      name: "preventOverflow",
+                      options: {
+                        rootBoundary: "viewport",
+                        tether: false,
+                      },
+                    },
+                  ]}
+                />
+              </div>
+
+              <p
+                style={{
+                  margin: "0",
+                  color: "#6c757d",
+                  fontSize: "0.9rem",
+                }}
+              >
+                ℹ️ Válassza ki az új lejárat dátumát a naptárból.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                padding: "20px 24px",
+                borderTop: "1px solid #e9ecef",
+                background: "#f8f9fa",
+                borderRadius: "0 0 12px 12px",
+              }}
+            >
+              <button
+                onClick={handleRenewalConfirm}
+                style={{
+                  background: "linear-gradient(135deg, #28a745, #20c997)",
+                  color: "white",
+                  border: "none",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                }}
+              >
+                Meghosszabbítás megerősítése
+              </button>
+              <button
+                onClick={() => {
+                  setShowRenewModal(false);
+                  setSelectedLoan(null);
+                  setRenewalDate(new Date());
+                }}
+                style={{
+                  background: "#6c757d",
+                  color: "white",
+                  border: "none",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                }}
+              >
+                Mégse
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            background:
+              toastType === "success"
+                ? "linear-gradient(135deg, #28a745, #20c997)"
+                : "linear-gradient(135deg, #dc3545, #c82333)",
+            color: "white",
+            padding: "16px 24px",
+            borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
+            zIndex: 10001,
+            fontSize: "1rem",
+            fontWeight: "500",
+            maxWidth: "400px",
+            wordWrap: "break-word",
+            animation: isToastExiting
+              ? "slideOutRight 0.3s ease-in forwards"
+              : "slideInRight 0.3s ease-out",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <span style={{ fontSize: "1.2rem" }}>
+            {toastType === "success" ? "✅" : "❌"}
+          </span>
+          <div>
+            <div style={{ fontWeight: "600", marginBottom: "4px" }}>
+              {toastType === "success" ? "Siker" : "Hiba"}
+            </div>
+            <div>{toastMessage}</div>
           </div>
         </div>
       )}

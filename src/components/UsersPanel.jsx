@@ -310,236 +310,307 @@ const UsersPanel = ({ user }) => {
             ))}
           </div>
         )}
-      </div>
 
-      {/* User Details Modal */}
-      <div
-        className={`modal ${showUserDetails && selectedUser ? "show" : ""}`}
-        onClick={() => setShowUserDetails(false)}
-      >
+        {/* User Details Modal */}
         {showUserDetails && selectedUser && (
-          <div
-            className="modal-content user-details-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h2>Felhasználó Részletei</h2>
-              <button
-                className="close-btn"
-                onClick={() => setShowUserDetails(false)}
-              >
-                ×
-              </button>
-            </div>
+          <>
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(0, 0, 0, 0.5)",
+                backdropFilter: "blur(5px)",
+                zIndex: 9999,
+              }}
+              onClick={() => setShowUserDetails(false)}
+            ></div>
 
-            <div className="modal-inner-content">
-              <div className="user-details-content">
-                <div className="user-detail-avatar">
-                  {selectedUser.photoURL ? (
-                    <img
-                      src={selectedUser.photoURL}
-                      alt={selectedUser.displayName}
-                    />
-                  ) : (
-                    <div className="avatar-placeholder">
-                      {(selectedUser.displayName || selectedUser.name)
-                        ?.charAt(0)
-                        ?.toUpperCase() || "U"}
-                    </div>
-                  )}
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "white",
+                borderRadius: "16px",
+                padding: "40px",
+                maxWidth: "500px",
+                width: "90%",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                zIndex: 10000,
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "30px",
+                  paddingBottom: "15px",
+                  borderBottom: "2px solid #f1f5f9",
+                }}
+              >
+                <h2
+                  style={{
+                    margin: "0",
+                    color: "#1e293b",
+                    fontSize: "24px",
+                    fontWeight: "700",
+                  }}
+                >
+                  Felhasználó Részletei
+                </h2>
+                <button
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: "24px",
+                    cursor: "pointer",
+                    color: "#64748b",
+                    padding: "0",
+                    width: "30px",
+                    height: "30px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "6px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onClick={() => setShowUserDetails(false)}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "#f1f5f9";
+                    e.target.style.color = "#475569";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "none";
+                    e.target.style.color = "#64748b";
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div
+                style={{
+                  maxHeight: "70vh",
+                  overflowY: "auto",
+                  paddingRight: "10px",
+                }}
+              >
+                <div className="user-details-content">
+                  <div className="user-detail-avatar">
+                    {selectedUser.photoURL ? (
+                      <img
+                        src={selectedUser.photoURL}
+                        alt={selectedUser.displayName}
+                      />
+                    ) : (
+                      <div className="avatar-placeholder">
+                        {(selectedUser.displayName || selectedUser.name)
+                          ?.charAt(0)
+                          ?.toUpperCase() || "U"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="user-detail-info">
+                    {!isEditingUser ? (
+                      <>
+                        <div className="user-detail-name">
+                          {selectedUser.displayName ||
+                            selectedUser.name ||
+                            "Ismeretlen felhasználó"}
+                        </div>
+                        <div className="user-detail-email">
+                          {selectedUser.email}
+                        </div>
+
+                        <div className="detail-row">
+                          <label>Szerepkör:</label>
+                          <span>{getRoleBadge(selectedUser.role)}</span>
+                        </div>
+                        <div className="detail-row">
+                          <label>Telefonszám:</label>
+                          <span>{selectedUser.phone || "Nincs megadva"}</span>
+                        </div>
+                        <div className="detail-row">
+                          <label>Lakcím:</label>
+                          <span>{selectedUser.address || "Nincs megadva"}</span>
+                        </div>
+                        <div className="detail-row">
+                          <label>Regisztráció dátuma:</label>
+                          <span>{formatDate(selectedUser.createdAt)}</span>
+                        </div>
+                        <div className="detail-row">
+                          <label>Utoljára bejelentkezve:</label>
+                          <span>{formatDate(selectedUser.lastLogin)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="user-edit-form">
+                        <div className="form-group">
+                          <label>Név:</label>
+                          <input
+                            type="text"
+                            name="displayName"
+                            value={editFormData.displayName}
+                            onChange={handleEditInputChange}
+                            className="edit-input"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Email:</label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={editFormData.email}
+                            onChange={handleEditInputChange}
+                            className="edit-input"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Szerepkör:</label>
+                          <select
+                            name="role"
+                            value={editFormData.role}
+                            onChange={handleEditInputChange}
+                            className="edit-input"
+                          >
+                            <option value="member">Tag</option>
+                            <option value="admin">Admin</option>
+                            <option value="owner">Szolgáló</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Telefonszám:</label>
+                          <input
+                            type="tel"
+                            name="phone"
+                            value={editFormData.phone}
+                            onChange={handleEditInputChange}
+                            className="edit-input"
+                            placeholder="+36 20 123 4567"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Lakcím:</label>
+                          <input
+                            type="text"
+                            name="address"
+                            value={editFormData.address}
+                            onChange={handleEditInputChange}
+                            className="edit-input"
+                            placeholder="1234 Budapest, Utca utca 1."
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="user-detail-info">
+                <div className="modal-buttons">
                   {!isEditingUser ? (
                     <>
-                      <div className="user-detail-name">
-                        {selectedUser.displayName ||
-                          selectedUser.name ||
-                          "Ismeretlen felhasználó"}
-                      </div>
-                      <div className="user-detail-email">
-                        {selectedUser.email}
-                      </div>
-
-                      <div className="detail-row">
-                        <label>Szerepkör:</label>
-                        <span>{getRoleBadge(selectedUser.role)}</span>
-                      </div>
-                      <div className="detail-row">
-                        <label>Telefonszám:</label>
-                        <span>{selectedUser.phone || "Nincs megadva"}</span>
-                      </div>
-                      <div className="detail-row">
-                        <label>Lakcím:</label>
-                        <span>{selectedUser.address || "Nincs megadva"}</span>
-                      </div>
-                      <div className="detail-row">
-                        <label>Regisztráció dátuma:</label>
-                        <span>{formatDate(selectedUser.createdAt)}</span>
-                      </div>
-                      <div className="detail-row">
-                        <label>Utoljára bejelentkezve:</label>
-                        <span>{formatDate(selectedUser.lastLogin)}</span>
-                      </div>
+                      <button
+                        className="edit-btn"
+                        onClick={handleEditUser}
+                        disabled={selectedUser?.id === user?.uid}
+                        title={
+                          selectedUser?.id === user?.uid
+                            ? "Nem szerkesztheti a saját fiókját"
+                            : "Felhasználó szerkesztése"
+                        }
+                      >
+                        ✏️ Szerkesztés
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={handleDeleteClick}
+                        disabled={!canDeleteUser()}
+                        title={getDeleteButtonTooltip()}
+                      >
+                        🗑️ Törlés
+                      </button>
+                      <button onClick={() => setShowUserDetails(false)}>
+                        Bezárás
+                      </button>
                     </>
                   ) : (
-                    <div className="user-edit-form">
-                      <div className="form-group">
-                        <label>Név:</label>
-                        <input
-                          type="text"
-                          name="displayName"
-                          value={editFormData.displayName}
-                          onChange={handleEditInputChange}
-                          className="edit-input"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Email:</label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={editFormData.email}
-                          onChange={handleEditInputChange}
-                          className="edit-input"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Szerepkör:</label>
-                        <select
-                          name="role"
-                          value={editFormData.role}
-                          onChange={handleEditInputChange}
-                          className="edit-input"
-                        >
-                          <option value="member">Tag</option>
-                          <option value="admin">Admin</option>
-                          <option value="owner">Szolgáló</option>
-                        </select>
-                      </div>
-
-                      <div className="form-group">
-                        <label>Telefonszám:</label>
-                        <input
-                          type="tel"
-                          name="phone"
-                          value={editFormData.phone}
-                          onChange={handleEditInputChange}
-                          className="edit-input"
-                          placeholder="+36 20 123 4567"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Lakcím:</label>
-                        <input
-                          type="text"
-                          name="address"
-                          value={editFormData.address}
-                          onChange={handleEditInputChange}
-                          className="edit-input"
-                          placeholder="1234 Budapest, Utca utca 1."
-                        />
-                      </div>
-                    </div>
+                    <>
+                      <button className="cancel-btn" onClick={handleCancelEdit}>
+                        ❌ Mégse
+                      </button>
+                      <button className="save-btn" onClick={handleSaveUser}>
+                        💾 Mentés
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
+            </div>
+          </>
+        )}
 
-              <div className="modal-buttons">
-                {!isEditingUser ? (
-                  <>
-                    <button
-                      className="edit-btn"
-                      onClick={handleEditUser}
-                      disabled={selectedUser?.id === user?.uid}
-                      title={
-                        selectedUser?.id === user?.uid
-                          ? "Nem szerkesztheti a saját fiókját"
-                          : "Felhasználó szerkesztése"
-                      }
-                    >
-                      ✏️ Szerkesztés
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={handleDeleteClick}
-                      disabled={!canDeleteUser()}
-                      title={getDeleteButtonTooltip()}
-                    >
-                      🗑️ Törlés
-                    </button>
-                    <button onClick={() => setShowUserDetails(false)}>
-                      Bezárás
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button className="cancel-btn" onClick={handleCancelEdit}>
-                      ❌ Mégse
-                    </button>
-                    <button className="save-btn" onClick={handleSaveUser}>
-                      💾 Mentés
-                    </button>
-                  </>
-                )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && selectedUser && (
+          <div className="modal">
+            <div className="modal-content delete-confirm-modal">
+              <div className="modal-header">
+                <h2>Felhasználó Törlésének Megerősítése</h2>
+                <button className="close-btn" onClick={handleDeleteCancel}>
+                  ×
+                </button>
+              </div>
+
+              <div className="delete-confirm-content">
+                <div className="delete-confirm-icon">⚠️</div>
+                <div className="delete-confirm-text">
+                  <h3>Biztosan törölni szeretné ezt a felhasználót?</h3>
+                  <div className="delete-user-info">
+                    <strong>
+                      {selectedUser.displayName ||
+                        selectedUser.name ||
+                        "Ismeretlen felhasználó"}
+                    </strong>
+                    <span>{selectedUser.email}</span>
+                  </div>
+                  <p className="delete-warning">
+                    Ez a művelet <strong>visszavonhatatlan</strong> és
+                    véglegesen törli a felhasználó összes adatát a rendszerből.
+                  </p>
+                </div>
+              </div>
+
+              <div className="modal-buttons delete-confirm-buttons">
+                <button
+                  className="cancel-btn"
+                  onClick={handleDeleteCancel}
+                  disabled={deleteLoading}
+                >
+                  Mégse
+                </button>
+                <button
+                  className="confirm-delete-btn"
+                  onClick={handleDeleteUser}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? "Törlés..." : "🗑️ Igen, Törlés"}
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && selectedUser && (
-        <div className="modal">
-          <div className="modal-content delete-confirm-modal">
-            <div className="modal-header">
-              <h2>Felhasználó Törlésének Megerősítése</h2>
-              <button className="close-btn" onClick={handleDeleteCancel}>
-                ×
-              </button>
-            </div>
-
-            <div className="delete-confirm-content">
-              <div className="delete-confirm-icon">⚠️</div>
-              <div className="delete-confirm-text">
-                <h3>Biztosan törölni szeretné ezt a felhasználót?</h3>
-                <div className="delete-user-info">
-                  <strong>
-                    {selectedUser.displayName ||
-                      selectedUser.name ||
-                      "Ismeretlen felhasználó"}
-                  </strong>
-                  <span>{selectedUser.email}</span>
-                </div>
-                <p className="delete-warning">
-                  Ez a művelet <strong>visszavonhatatlan</strong> és véglegesen
-                  törli a felhasználó összes adatát a rendszerből.
-                </p>
-              </div>
-            </div>
-
-            <div className="modal-buttons delete-confirm-buttons">
-              <button
-                className="cancel-btn"
-                onClick={handleDeleteCancel}
-                disabled={deleteLoading}
-              >
-                Mégse
-              </button>
-              <button
-                className="confirm-delete-btn"
-                onClick={handleDeleteUser}
-                disabled={deleteLoading}
-              >
-                {deleteLoading ? "Törlés..." : "🗑️ Igen, Törlés"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

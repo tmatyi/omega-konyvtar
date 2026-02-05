@@ -12,6 +12,10 @@ function Profile({ user, onUpdateUser }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [isToastExiting, setIsToastExiting] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [userLoans, setUserLoans] = useState([]);
   const [loansLoading, setLoansLoading] = useState(true);
@@ -81,6 +85,26 @@ function Profile({ user, onUpdateUser }) {
     }
   }, [user, avatarPreview]);
 
+  const showToastNotification = (message, type = "success") => {
+    setIsToastExiting(false);
+    setShowToast(true);
+
+    // Store the message and type for the toast
+    setToastMessage(message);
+    setToastType(type);
+
+    // Start exit animation after 2.5 seconds
+    setTimeout(() => {
+      setIsToastExiting(true);
+    }, 2500);
+
+    // Actually hide after 3 seconds (allows exit animation to complete)
+    setTimeout(() => {
+      setShowToast(false);
+      setIsToastExiting(false);
+    }, 3000);
+  };
+
   // Save profile data to Firebase Realtime Database
   const saveProfileToFirebase = async (profileData) => {
     if (!user?.uid) {
@@ -144,8 +168,6 @@ function Profile({ user, onUpdateUser }) {
         const processedImage = await processImageFile(file);
 
         setAvatarPreview(processedImage);
-        setMessage("Profilkép sikeresen feldolgozva!");
-        setMessageType("success");
 
         // Auto-save the avatar immediately after successful processing
         const profileData = {
@@ -155,9 +177,8 @@ function Profile({ user, onUpdateUser }) {
         };
 
         console.log("Auto-saving avatar after upload");
-        saveProfileToStorage(profileData);
 
-        // Also save to Firebase for real-time sync
+        // Save to Firebase
         try {
           await saveProfileToFirebase(profileData);
         } catch (error) {
@@ -169,12 +190,13 @@ function Profile({ user, onUpdateUser }) {
           onUpdateUser(profileData);
         }
 
-        setMessage("Profilkép automatikusan mentve!");
-        setMessageType("success");
+        showToastNotification("Profilkép módosítása sikeres!", "success");
       } catch (error) {
         console.error("Error processing image:", error);
-        setMessage("Hiba történt a kép feldolgozása során!");
-        setMessageType("error");
+        showToastNotification(
+          "Hiba történt a kép feldolgozása során!",
+          "error",
+        );
       }
     }
   };
@@ -254,17 +276,12 @@ function Profile({ user, onUpdateUser }) {
         await saveProfileToFirebase(profileData);
       } catch (error) {
         console.error("Failed to save profile to Firebase:", error);
-        setMessage("Hiba történt a mentés során!");
-        setMessageType("error");
+        showToastNotification("Hiba történt a mentés során!", "error");
         setLoading(false);
         return;
       }
 
-      setMessage(
-        "Profil sikeresen frissítve!" +
-          (avatarPreview ? " Profilkép is frissítve!" : ""),
-      );
-      setMessageType("success");
+      showToastNotification("Profil sikeresen frissítve!", "success");
       setIsEditing(false);
       setLoading(false);
 
@@ -272,12 +289,12 @@ function Profile({ user, onUpdateUser }) {
         onUpdateUser(profileData);
       }
     } catch (error) {
-      setMessage("Hiba történt a frissítés során");
-      setMessageType("error");
+      console.error("Error updating profile:", error);
+      showToastNotification("Hiba történt a frissítés során", "error");
       setIsEditing(false);
       setLoading(false);
-      setMessage("");
     }
+    setMessage("");
   };
 
   const handleEdit = () => {
@@ -426,8 +443,6 @@ function Profile({ user, onUpdateUser }) {
               </div>
             </div>
           )}
-
-          {message && <div className={`message ${messageType}`}>{message}</div>}
         </div>
 
         <div className="profile-section">
@@ -464,6 +479,43 @@ function Profile({ user, onUpdateUser }) {
           )}
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            background:
+              toastType === "success"
+                ? "linear-gradient(135deg, #28a745, #20c997)"
+                : "linear-gradient(135deg, #dc3545, #c82333)",
+            color: "white",
+            padding: "16px 24px",
+            borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
+            zIndex: 10001,
+            fontSize: "1rem",
+            fontWeight: "500",
+            maxWidth: "400px",
+            wordWrap: "break-word",
+            animation: isToastExiting
+              ? "slideOutRight 0.3s ease-in forwards"
+              : "slideInRight 0.3s ease-out",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <span style={{ fontSize: "1.2rem" }}>
+            {toastType === "success" ? "✅" : "❌"}
+          </span>
+          <div>
+            <div>{toastMessage}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -370,7 +370,7 @@ function App() {
         setPageCount(bookData.pageCount || "");
         setPublisher(bookData.publisher || "");
 
-        setSuccessMessage("A könyvadatok sikeresen kinyerése!");
+        setSuccessMessage("A könyvadatok sikeresen kinyerve!");
         // Clear success message after 4 seconds
         setTimeout(() => setSuccessMessage(""), 4000);
       } else {
@@ -1856,220 +1856,371 @@ function App() {
       </div>
 
       {/* Add Book Modal */}
-      <div
-        className={`modal ${showAddForm ? "show" : ""}`}
-        onClick={() => setShowAddForm(false)}
-      >
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-inner-content">
-            <h2>Új Könyv Hozzáadása</h2>
-            <div className="url-section">
-              <input
-                type="url"
-                placeholder="ILessze be a CLC Hungary, Bookline vagy Moly.hu könyv URL-jét"
-                value={bookUrl}
-                onChange={(e) => setBookUrl(e.target.value)}
-                className="url-input"
-              />
-              <button
-                onClick={processBookUrl}
-                disabled={searchLoading}
-                className="process-url-btn"
-              >
-                {searchLoading ? (
-                  <div className="modern-loader">
-                    <div className="loader-dots">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  </div>
-                ) : (
-                  "🔍 Keresés"
-                )}
-              </button>
-            </div>
-            {successMessage && (
-              <div className="success-message">
-                <div className="success-icon">✓</div>
-                <span>{successMessage}</span>
-              </div>
-            )}
-            <div className="divider" data-text="VAGY"></div>
-            <div className="manual-entry">
-              <div className="form-field">
-                <label className="field-label">Borítókép</label>
-                <div className="thumbnail-upload-section">
-                  <div className="thumbnail-upload-container">
-                    <div className="thumbnail-preview">
-                      {thumbnailPreview ? (
-                        <img
-                          src={thumbnailPreview}
-                          alt="Borítókép előnézet"
-                          className="thumbnail-preview-image"
-                        />
-                      ) : (
-                        <div className="thumbnail-upload-placeholder">
-                          <svg
-                            className="thumbnail-upload-icon"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                          <span>
-                            {thumbnailPreview
-                              ? "Borítókép cseréje"
-                              : "Borítókép feltöltése"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={triggerThumbnailUpload}
-                      className="thumbnail-upload-btn"
-                    >
-                      {thumbnailPreview
-                        ? "Borítókép cseréje"
-                        : "Borítókép kiválasztása"}
-                    </button>
-                    <input
-                      id="thumbnail-upload"
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png"
-                      onChange={handleThumbnailUpload}
-                      style={{ display: "none" }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="form-field">
-                <label className="field-label">Cím</label>
-                <input
-                  type="text"
-                  placeholder="Add meg a könyv címét"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">Szerző</label>
-                <input
-                  type="text"
-                  placeholder="Add meg a szerzőt"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">Kiadás éve</label>
-                <input
-                  type="number"
-                  placeholder="Add meg a kiadás évét"
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">Műfaj</label>
-                <input
-                  type="text"
-                  placeholder="Add meg a műfajat"
-                  value={genre}
-                  onChange={(e) => setGenre(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">Leírás</label>
-                <textarea
-                  placeholder="Add meg a könyv leírását"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="form-textarea"
-                  rows={4}
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">ISBN</label>
-                <input
-                  type="text"
-                  placeholder="Add meg az ISBN-t"
-                  value={isbn}
-                  onChange={(e) => setIsbn(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">Eredeti cím</label>
-                <input
-                  type="text"
-                  placeholder="Add meg az eredeti címet"
-                  value={originalTitle}
-                  onChange={(e) => setOriginalTitle(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">Oldalszám</label>
-                <input
-                  type="number"
-                  placeholder="Add meg az oldalszámot"
-                  value={pageCount}
-                  onChange={(e) => setPageCount(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">Kiadó</label>
-                <input
-                  type="text"
-                  placeholder="Add meg a kiadót"
-                  value={publisher}
-                  onChange={(e) => setPublisher(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-            </div>
+      {showAddForm && (
+        <>
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.5)",
+              backdropFilter: "blur(5px)",
+              zIndex: 9999,
+            }}
+            onClick={() => setShowAddForm(false)}
+          ></div>
 
-            <div className="modal-buttons">
-              <button onClick={addBook}>Könyv Hozzáadása</button>
-              <button
-                onClick={() => {
-                  setShowAddForm(false);
-                  setTitle("");
-                  setAuthor("");
-                  setYear("");
-                  setGenre("");
-                  setDescription("");
-                  setIsbn("");
-                  setThumbnail("");
-                  setThumbnailPreview(null);
-                  setBookUrl("");
-                  setOriginalTitle("");
-                  setPageCount("");
-                  setPublisher("");
-                  setCategory("Bolt");
-                  setSuccessMessage("");
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "white",
+              borderRadius: "16px",
+              padding: "40px",
+              maxWidth: "600px",
+              width: "90%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              zIndex: 10000,
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                maxHeight: "70vh",
+                overflowY: "auto",
+                paddingRight: "10px",
+              }}
+            >
+              <h2
+                style={{
+                  margin: "0 0 30px 0",
+                  color: "#2c3e50",
+                  fontSize: "28px",
+                  fontWeight: "700",
+                  textAlign: "center",
                 }}
               >
-                Mégse
-              </button>
+                Új Könyv Hozzáadása
+              </h2>
+              <div style={{ marginBottom: "20px" }}>
+                <input
+                  type="url"
+                  placeholder="ILessze be a CLC Hungary, Bookline vagy Moly.hu könyv URL-jét"
+                  value={bookUrl}
+                  onChange={(e) => setBookUrl(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    border: "2px solid #e9ecef",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontFamily: '"Source Sans Pro", sans-serif',
+                    backgroundColor: "#f8fafc",
+                    transition: "all 0.3s ease",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#844a59";
+                    e.target.style.backgroundColor = "#fff";
+                    e.target.style.boxShadow =
+                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#e9ecef";
+                    e.target.style.backgroundColor = "#f8fafc";
+                    e.target.style.boxShadow = "none";
+                  }}
+                />
+                <button
+                  onClick={processBookUrl}
+                  disabled={searchLoading}
+                  style={{
+                    width: "100%",
+                    padding: "14px 20px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: searchLoading ? "#94a3b8" : "#844a59",
+                    color: "white",
+                    cursor: searchLoading ? "not-allowed" : "pointer",
+                    transition: "all 0.3s ease",
+                    marginTop: "10px",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!searchLoading) {
+                      e.target.style.backgroundColor = "#6b3a48";
+                      e.target.style.transform = "translateY(-1px)";
+                      e.target.style.boxShadow =
+                        "0 4px 12px rgba(0, 0, 0, 0.15)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!searchLoading) {
+                      e.target.style.backgroundColor = "#844a59";
+                      e.target.style.transform = "translateY(0)";
+                      e.target.style.boxShadow = "none";
+                    }
+                  }}
+                >
+                  {searchLoading ? (
+                    <div className="modern-loader">
+                      <div className="loader-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                  ) : (
+                    "🔍 Keresés"
+                  )}
+                </button>
+              </div>
+              {successMessage && (
+                <div className="success-message">
+                  <div className="success-icon">✓</div>
+                  <span>{successMessage}</span>
+                </div>
+              )}
+              <div className="divider" data-text="VAGY"></div>
+              <div className="manual-entry">
+                <div className="form-field">
+                  <label className="field-label">Borítókép</label>
+                  <div className="thumbnail-upload-section">
+                    <div className="thumbnail-upload-container">
+                      <div className="thumbnail-preview">
+                        {thumbnailPreview ? (
+                          <img
+                            src={thumbnailPreview}
+                            alt="Borítókép előnézet"
+                            className="thumbnail-preview-image"
+                          />
+                        ) : (
+                          <div className="thumbnail-upload-placeholder">
+                            <svg
+                              className="thumbnail-upload-icon"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M12 9V13M12 17H12.01M5 20H19C20.1046 20 21 19.1046 21 18V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V18C3 19.1046 3.89543 20 5 20Z"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <span>
+                              {thumbnailPreview
+                                ? "Borítókép cseréje"
+                                : "Borítókép feltöltése"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={triggerThumbnailUpload}
+                        className="thumbnail-upload-btn"
+                      >
+                        {thumbnailPreview
+                          ? "Borítókép cseréje"
+                          : "Borítókép kiválasztása"}
+                      </button>
+                      <input
+                        id="thumbnail-upload"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        onChange={handleThumbnailUpload}
+                        style={{ display: "none" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Cím</label>
+                  <input
+                    type="text"
+                    placeholder="Add meg a könyv címét"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Szerző</label>
+                  <input
+                    type="text"
+                    placeholder="Add meg a szerzőt"
+                    value={author}
+                    onChange={(e) => setAuthor(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Kiadás éve</label>
+                  <input
+                    type="number"
+                    placeholder="Add meg a kiadás évét"
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Műfaj</label>
+                  <input
+                    type="text"
+                    placeholder="Add meg a műfajat"
+                    value={genre}
+                    onChange={(e) => setGenre(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Leírás</label>
+                  <textarea
+                    placeholder="Add meg a könyv leírását"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="form-textarea"
+                    rows={4}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">ISBN</label>
+                  <input
+                    type="text"
+                    placeholder="Add meg az ISBN-t"
+                    value={isbn}
+                    onChange={(e) => setIsbn(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Eredeti cím</label>
+                  <input
+                    type="text"
+                    placeholder="Add meg az eredeti címet"
+                    value={originalTitle}
+                    onChange={(e) => setOriginalTitle(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Oldalszám</label>
+                  <input
+                    type="number"
+                    placeholder="Add meg az oldalszámot"
+                    value={pageCount}
+                    onChange={(e) => setPageCount(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">Kiadó</label>
+                  <input
+                    type="text"
+                    placeholder="Add meg a kiadót"
+                    value={publisher}
+                    onChange={(e) => setPublisher(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "15px",
+                  justifyContent: "flex-end",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  onClick={addBook}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: "#844a59",
+                    color: "white",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#6b3a48";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#844a59";
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  Könyv Hozzáadása
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setTitle("");
+                    setAuthor("");
+                    setYear("");
+                    setGenre("");
+                    setDescription("");
+                    setIsbn("");
+                    setThumbnail("");
+                    setThumbnailPreview(null);
+                    setBookUrl("");
+                    setOriginalTitle("");
+                    setPageCount("");
+                    setPublisher("");
+                    setCategory("Bolt");
+                    setSuccessMessage("");
+                  }}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: "#f1f5f9",
+                    color: "#475569",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#e2e8f0";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#f1f5f9";
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  Mégse
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Search Results Modal */}
       {showResultsModal && (

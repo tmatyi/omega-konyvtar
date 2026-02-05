@@ -15,10 +15,12 @@
     "snapshot:status": "git status && git log --oneline -5"
   },
   "dependencies": {
+    "date-fns": "^4.1.0",
     "firebase": "^10.7.1",
     "heic2any": "^0.0.4",
     "libheif-js": "^1.19.8",
     "react": "^18.2.0",
+    "react-datepicker": "^9.1.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
