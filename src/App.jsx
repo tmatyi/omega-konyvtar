@@ -64,6 +64,16 @@ function App() {
   const [successMessage, setSuccessMessage] = useState(""); // For success messages
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // For delete confirmation
   const [bookToDelete, setBookToDelete] = useState(null); // Book to be deleted
+  const [showAddGiftForm, setShowAddGiftForm] = useState(false); // For gift form
+  const [giftName, setGiftName] = useState("");
+  const [giftQuantity, setGiftQuantity] = useState("");
+  const [giftPrice, setGiftPrice] = useState("");
+  const [giftImage, setGiftImage] = useState("");
+  const [gifts, setGifts] = useState([]);
+  const [giftToDelete, setGiftToDelete] = useState(null);
+  const [showDeleteGiftConfirm, setShowDeleteGiftConfirm] = useState(false);
+  const [showEditGiftForm, setShowEditGiftForm] = useState(false);
+  const [editingGift, setEditingGift] = useState(null);
 
   const handleDensityChange = (newDensity) => {
     if (newDensity === cardDensity) return;
@@ -212,6 +222,41 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // Load gifts from Firebase
+  useEffect(() => {
+    const giftsRef = ref(database, "gifts");
+    const unsubscribe = onValue(giftsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const giftsArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setGifts(giftsArray);
+      } else {
+        setGifts([]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Delete gift function
+  const deleteGift = (giftId) => {
+    const giftRef = ref(database, `gifts/${giftId}`);
+    remove(giftRef);
+    setShowDeleteGiftConfirm(false);
+    setGiftToDelete(null);
+  };
+
+  // Update gift function
+  const updateGift = (giftId, updatedData) => {
+    const giftRef = ref(database, `gifts/${giftId}`);
+    update(giftRef, updatedData);
+    setShowEditGiftForm(false);
+    setEditingGift(null);
+  };
+
   // Load users from Firebase
   useEffect(() => {
     const usersRef = ref(database, "users");
@@ -261,10 +306,20 @@ function App() {
     }
   };
 
+  // Helper function to get category filter based on active tab
+  const getCategoryFilter = (tab) => {
+    if (tab === "library") {
+      return "Könyvtár";
+    } else if (tab === "gifts") {
+      return "Ajándék";
+    } else {
+      return "Bolt";
+    }
+  };
+
   // Filter books
   const filteredBooks = books.filter((book) => {
-    // Filter by category based on current tab
-    const categoryFilter = activeTab === "library" ? "Könyvtár" : "Bolt";
+    const categoryFilter = getCategoryFilter(activeTab);
     const matchesCategory = book.category === categoryFilter;
 
     const matchesText =
@@ -295,8 +350,7 @@ function App() {
   // Add book function
   const addBook = () => {
     if (title && author) {
-      // Set category based on current tab
-      const bookCategory = activeTab === "library" ? "Könyvtár" : "Bolt";
+      const bookCategory = getCategoryFilter(activeTab);
 
       const booksRef = ref(database, "books");
       push(booksRef, {
@@ -307,7 +361,7 @@ function App() {
         description,
         isbn,
         thumbnail,
-        category: activeTab === "library" ? "Könyvtár" : "Bolt",
+        category: bookCategory,
         originalTitle,
         pageCount,
         publisher,
@@ -1447,8 +1501,7 @@ function App() {
                     {filteredBooks.length !==
                       books.filter(
                         (book) =>
-                          book.category ===
-                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                          book.category === getCategoryFilter(activeTab),
                       ).length && (
                       <span className="filtered-books">(szűrve)</span>
                     )}
@@ -1522,17 +1575,14 @@ function App() {
                 </div>
                 {filteredBooks.length !==
                   books.filter(
-                    (book) =>
-                      book.category ===
-                      (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                    (book) => book.category === getCategoryFilter(activeTab),
                   ).length && (
                   <div className="filter-results">
                     {filteredBooks.length} /{" "}
                     {
                       books.filter(
                         (book) =>
-                          book.category ===
-                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                          book.category === getCategoryFilter(activeTab),
                       ).length
                     }{" "}
                     könyv látható
@@ -1646,6 +1696,848 @@ function App() {
           </>
         )}
 
+        {activeTab === "gifts" && (
+          <div className="tab-content custom-scrollbar">
+            <header className="App-header">
+              <div className="header-section header-title">
+                <div className="title-container">
+                  <h1>Ajándéktárgyak</h1>
+                  <p>Raktárkezelő Rendszer</p>
+                </div>
+              </div>
+              <div className="header-section header-controls">
+                <div className="controls-left">
+                  <div className="book-stats">
+                    <span className="total-books">
+                      Raktáron: {gifts.length} ajándéktárgy
+                    </span>
+                  </div>
+                </div>
+                <div className="controls-right">
+                  <button
+                    className="filter-toggle-btn"
+                    onClick={() => setShowAddGiftForm(true)}
+                  >
+                    ➕ Új Ajándéktárgy
+                  </button>
+                </div>
+              </div>
+            </header>
+            <main className="App-main">
+              <div className="content-wrapper">
+                <div className="inventory-table">
+                  <h2>Raktárkészlet</h2>
+                  <div className="table-container">
+                    <table className="inventory-table">
+                      <thead>
+                        <tr>
+                          <th>Kép</th>
+                          <th>Név</th>
+                          <th>Mennyiség</th>
+                          <th>Eladási ár</th>
+                          <th>Státusz</th>
+                          <th>Műveletek</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gifts.map((gift) => (
+                          <tr key={gift.id} className="inventory-item">
+                            <td>
+                              <div className="item-image">
+                                {gift.image &&
+                                (gift.image.startsWith("data:image/") ||
+                                  gift.image.startsWith("blob:")) ? (
+                                  <img
+                                    src={gift.image}
+                                    alt={gift.name}
+                                    style={{
+                                      width: "40px",
+                                      height: "40px",
+                                      objectFit: "cover",
+                                      borderRadius: "8px",
+                                    }}
+                                  />
+                                ) : gift.image &&
+                                  gift.image.startsWith("http") ? (
+                                  <img
+                                    src={gift.image}
+                                    alt={gift.name}
+                                    style={{
+                                      width: "40px",
+                                      height: "40px",
+                                      objectFit: "cover",
+                                      borderRadius: "8px",
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="placeholder-icon">
+                                    {gift.image || "🎁"}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>{gift.name}</td>
+                            <td>
+                              <span className="quantity">{gift.quantity}</span>
+                            </td>
+                            <td>{gift.price} Ft</td>
+                            <td>
+                              <span
+                                className={`status ${gift.status === "Raktáron" ? "in-stock" : "low-stock"}`}
+                              >
+                                {gift.status}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="action-buttons">
+                                <button
+                                  className="edit-btn"
+                                  onClick={() => {
+                                    setEditingGift(gift);
+                                    setShowEditGiftForm(true);
+                                  }}
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  className="delete-btn"
+                                  onClick={() => {
+                                    setGiftToDelete(gift);
+                                    setShowDeleteGiftConfirm(true);
+                                  }}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        )}
+
+        {/* Add Gift Modal */}
+        {showAddGiftForm && (
+          <>
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(0, 0, 0, 0.5)",
+                backdropFilter: "blur(5px)",
+                zIndex: 9999,
+              }}
+              onClick={() => setShowAddGiftForm(false)}
+            ></div>
+
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "white",
+                borderRadius: "16px",
+                padding: "40px",
+                maxWidth: "500px",
+                width: "90%",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                zIndex: 10000,
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2
+                style={{
+                  margin: "0 0 30px 0",
+                  color: "#2c3e50",
+                  fontSize: "28px",
+                  fontWeight: "700",
+                  textAlign: "center",
+                }}
+              >
+                Új Ajándéktárgy
+              </h2>
+
+              <div style={{ marginBottom: "20px" }}>
+                <div style={{ marginBottom: "15px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Kép
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setGiftImage(reader.result);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "15px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Név
+                  </label>
+                  <input
+                    type="text"
+                    value={giftName}
+                    onChange={(e) => setGiftName(e.target.value)}
+                    placeholder="Add meg az ajándéktárgy nevét"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "15px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Mennyiség
+                  </label>
+                  <input
+                    type="number"
+                    value={giftQuantity}
+                    onChange={(e) => setGiftQuantity(e.target.value)}
+                    placeholder="Add meg a mennyiséget"
+                    min="1"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "20px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Eladási ár
+                  </label>
+                  <input
+                    type="number"
+                    value={giftPrice}
+                    onChange={(e) => setGiftPrice(e.target.value)}
+                    placeholder="Add meg az eladási árat (Ft)"
+                    min="0"
+                    step="1"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "15px",
+                  justifyContent: "flex-end",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    // Add gift to Firebase
+                    if (giftName && giftQuantity && giftPrice) {
+                      const newGift = {
+                        name: giftName,
+                        quantity: parseInt(giftQuantity),
+                        price: parseFloat(giftPrice),
+                        image: giftImage || "🎁",
+                        status: "Raktáron",
+                        createdAt: new Date().toISOString(),
+                        addedBy: user?.email || "unknown",
+                      };
+
+                      const giftsRef = ref(database, "gifts");
+                      push(giftsRef, newGift);
+
+                      console.log("Gift added to Firebase:", newGift);
+
+                      // Reset form
+                      setShowAddGiftForm(false);
+                      setGiftName("");
+                      setGiftQuantity("");
+                      setGiftPrice("");
+                      setGiftImage("");
+                    }
+                  }}
+                  disabled={!giftName || !giftQuantity || !giftPrice}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor:
+                      !giftName || !giftQuantity || !giftPrice
+                        ? "#94a3b8"
+                        : "#844a59",
+                    color: "white",
+                    cursor:
+                      !giftName || !giftQuantity || !giftPrice
+                        ? "not-allowed"
+                        : "pointer",
+                    transition: "all 0.3s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (giftName && giftQuantity && giftPrice) {
+                      e.target.style.backgroundColor = "#6b3a48";
+                      e.target.style.transform = "translateY(-1px)";
+                      e.target.style.boxShadow =
+                        "0 4px 12px rgba(0, 0, 0, 0.15)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (giftName && giftQuantity && giftPrice) {
+                      e.target.style.backgroundColor = "#844a59";
+                      e.target.style.transform = "translateY(0)";
+                      e.target.style.boxShadow = "none";
+                    }
+                  }}
+                >
+                  💾 Ajándéktárgy Hozzáadása
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddGiftForm(false);
+                    setGiftName("");
+                    setGiftQuantity("");
+                    setGiftPrice("");
+                    setGiftImage("");
+                  }}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: "#f1f5f9",
+                    color: "#475569",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#e2e8f0";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#f1f5f9";
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  ❌ Mégse
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Delete Gift Confirmation Modal */}
+        {showDeleteGiftConfirm && (
+          <>
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(0, 0, 0, 0.5)",
+                backdropFilter: "blur(5px)",
+                zIndex: 9999,
+              }}
+              onClick={() => setShowDeleteGiftConfirm(false)}
+            ></div>
+
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "white",
+                borderRadius: "16px",
+                padding: "40px",
+                maxWidth: "400px",
+                width: "90%",
+                zIndex: 10000,
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2
+                style={{
+                  margin: "0 0 20px 0",
+                  color: "#2c3e50",
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  textAlign: "center",
+                }}
+              >
+                Ajándéktárgy Törlése
+              </h2>
+
+              <p
+                style={{
+                  margin: "0 0 30px 0",
+                  color: "#64748b",
+                  fontSize: "16px",
+                  textAlign: "center",
+                  lineHeight: "1.5",
+                }}
+              >
+                Biztosan törölni szeretnéd ezt az ajándéktárgyat?
+                <br />
+                <strong>{giftToDelete?.name}</strong>
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "15px",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  onClick={() => deleteGift(giftToDelete?.id)}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: "#dc2626",
+                    color: "white",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#b91c1c";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#dc2626";
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  🗑️ Törlés
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteGiftConfirm(false);
+                    setGiftToDelete(null);
+                  }}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: "#f1f5f9",
+                    color: "#475569",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#e2e8f0";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#f1f5f9";
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  ❌ Mégse
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Edit Gift Modal */}
+        {showEditGiftForm && editingGift && (
+          <>
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(0, 0, 0, 0.5)",
+                backdropFilter: "blur(5px)",
+                zIndex: 9999,
+              }}
+              onClick={() => setShowEditGiftForm(false)}
+            ></div>
+
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "white",
+                borderRadius: "16px",
+                padding: "40px",
+                maxWidth: "500px",
+                width: "90%",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                zIndex: 10000,
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2
+                style={{
+                  margin: "0 0 30px 0",
+                  color: "#2c3e50",
+                  fontSize: "28px",
+                  fontWeight: "700",
+                  textAlign: "center",
+                }}
+              >
+                Ajándéktárgy Szerkesztése
+              </h2>
+
+              <div style={{ marginBottom: "20px" }}>
+                <div style={{ marginBottom: "15px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Név
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue={editingGift.name}
+                    id="edit-gift-name"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "15px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Mennyiség
+                  </label>
+                  <input
+                    type="number"
+                    defaultValue={editingGift.quantity}
+                    id="edit-gift-quantity"
+                    min="1"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "20px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Eladási ár
+                  </label>
+                  <input
+                    type="number"
+                    defaultValue={editingGift.price}
+                    id="edit-gift-price"
+                    min="0"
+                    step="1"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "15px",
+                  justifyContent: "flex-end",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    const name =
+                      document.getElementById("edit-gift-name").value;
+                    const quantity =
+                      document.getElementById("edit-gift-quantity").value;
+                    const price =
+                      document.getElementById("edit-gift-price").value;
+
+                    if (name && quantity && price) {
+                      updateGift(editingGift.id, {
+                        name,
+                        quantity: parseInt(quantity),
+                        price: parseFloat(price),
+                      });
+                    }
+                  }}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: "#844a59",
+                    color: "white",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#6b3a48";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#844a59";
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  💾 Változtatások Mentése
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditGiftForm(false);
+                    setEditingGift(null);
+                  }}
+                  style={{
+                    padding: "12px 24px",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    backgroundColor: "#f1f5f9",
+                    color: "#475569",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#e2e8f0";
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#f1f5f9";
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                >
+                  ❌ Mégse
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
         {activeTab === "profile" && (
           <div className="tab-content custom-scrollbar">
             <Profile user={user} onUpdateUser={handleProfileUpdate} />
@@ -1676,8 +2568,7 @@ function App() {
                     {filteredBooks.length !==
                       books.filter(
                         (book) =>
-                          book.category ===
-                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                          book.category === getCategoryFilter(activeTab),
                       ).length && (
                       <span className="filtered-books">(szűrve)</span>
                     )}
@@ -1751,17 +2642,14 @@ function App() {
                 </div>
                 {filteredBooks.length !==
                   books.filter(
-                    (book) =>
-                      book.category ===
-                      (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                    (book) => book.category === getCategoryFilter(activeTab),
                   ).length && (
                   <div className="filter-results">
                     {filteredBooks.length} /{" "}
                     {
                       books.filter(
                         (book) =>
-                          book.category ===
-                          (activeTab === "library" ? "Könyvtár" : "Bolt"),
+                          book.category === getCategoryFilter(activeTab),
                       ).length
                     }{" "}
                     könyv látható

@@ -23,7 +23,8 @@ function Sidebar({
   }, [isCollapsed]);
 
   const tabs = [
-    { id: "books", label: "Bolt", icon: "📚", mode: "bolt" },
+    { id: "books", label: "Könyvesbolt", icon: "📚", mode: "bolt" },
+    { id: "gifts", label: "Ajándéktárgyak", icon: "🎁", mode: "bolt" },
     { id: "library", label: "Könyvtár", icon: "🏛️", mode: "könyvtár" },
     { id: "lending", label: "Kölcsönzés", icon: "📖", mode: "könyvtár" },
     { id: "users", label: "Felhasználók", icon: "👥", mode: null }, // Always visible
