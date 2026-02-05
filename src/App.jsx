@@ -75,6 +75,14 @@ function App() {
   const [showEditGiftForm, setShowEditGiftForm] = useState(false);
   const [editingGift, setEditingGift] = useState(null);
 
+  // Bookstore inventory management
+  const [bookQuantity, setBookQuantity] = useState("");
+  const [bookPrice, setBookPrice] = useState("");
+
+  // Sorting for table
+  const [sortField, setSortField] = useState("title");
+  const [sortOrder, setSortOrder] = useState("asc");
+
   const handleDensityChange = (newDensity) => {
     if (newDensity === cardDensity) return;
 
@@ -347,47 +355,6 @@ function App() {
     ...new Set(books.map((book) => book.author).filter(Boolean)),
   ].sort();
 
-  // Add book function
-  const addBook = () => {
-    if (title && author) {
-      const bookCategory = getCategoryFilter(activeTab);
-
-      const booksRef = ref(database, "books");
-      push(booksRef, {
-        title,
-        author,
-        year,
-        genre,
-        description,
-        isbn,
-        thumbnail,
-        category: bookCategory,
-        originalTitle,
-        pageCount,
-        publisher,
-        createdAt: new Date().toISOString(),
-        addedBy: user?.email || "unknown",
-      });
-
-      // Reset form
-      setTitle("");
-      setAuthor("");
-      setYear("");
-      setGenre("");
-      setCategory("Bolt");
-      setDescription("");
-      setIsbn("");
-      setThumbnail("");
-      setThumbnailPreview(null);
-      setBookUrl("");
-      setOriginalTitle("");
-      setPageCount("");
-      setPublisher("");
-      setSuccessMessage("");
-      setShowAddForm(false);
-    }
-  };
-
   // Process book URL and extract data
   const processBookUrl = async () => {
     if (!bookUrl.trim()) return;
@@ -535,172 +502,96 @@ function App() {
     }
   };
 
-  // Process CLC Hungary URLs
-  const processClcHungaryUrl = async (url) => {
-    try {
-      // Try multiple proxy services
-      const proxies = [
-        "https://api.allorigins.win/raw?url=",
-        "https://corsproxy.io/?",
-        "https://cors-anywhere.herokuapp.com/",
-      ];
+  // Add book function
+  const addBook = () => {
+    if (title && author) {
+      const bookCategory = getCategoryFilter(activeTab);
 
-      let html = "";
-      let workingProxy = "";
-
-      for (const proxy of proxies) {
-        try {
-          const proxyUrl = proxy + encodeURIComponent(url);
-          const response = await fetch(proxyUrl);
-
-          if (response.ok) {
-            html = await response.text();
-            workingProxy = proxy;
-            break;
-          }
-        } catch (proxyError) {
-          console.log(`Proxy ${proxy} failed, trying next...`);
-          continue;
-        }
-      }
-
-      if (!html) {
-        throw new Error("All proxies failed to fetch the URL");
-      }
-
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
-
-      // Extract title from first h1
-      const titleElement = doc.querySelector("h1");
-      const title = titleElement ? titleElement.textContent.trim() : "";
-
-      // Extract thumbnail from img with id ctl00_ucImgs_imgProduct
-      const thumbnailElement = doc.querySelector("#ctl00_ucImgs_imgProduct");
-      const thumbnail = thumbnailElement ? thumbnailElement.src : "";
-
-      // Extract author from ctl00_pcontrib_rptContributors_ctl00_lnkC
-      const authorElement = doc.querySelector(
-        "#ctl00_pcontrib_rptContributors_ctl00_lnkC",
-      );
-      const author = authorElement ? authorElement.textContent.trim() : "";
-
-      // Extract detailed info from ctl00_pprops_fs div
-      const propsElement = doc.querySelector("#ctl00_pprops_fs");
-      let isbn = "";
-      let publisher = "";
-      let originalTitle = "";
-      let pageCount = "";
-      let year = "";
-
-      if (propsElement) {
-        // Look for ISBN pattern (978-...)
-        const isbnMatch = propsElement.textContent.match(/978[-\d\s]{10,17}/);
-        isbn = isbnMatch ? isbnMatch[0].replace(/\s/g, "") : "";
-
-        // Look for publisher (Kiadó)
-        const publisherMatch = propsElement.textContent.match(
-          /Kiadó[:\s]*([^\n\r]+)/,
-        );
-        publisher = publisherMatch ? publisherMatch[1].trim() : "";
-
-        // Look for original title (Eredeti cím)
-        const originalTitleMatch = propsElement.textContent.match(
-          /Eredeti cím[:\s]*([^\n\r]+)/,
-        );
-        originalTitle = originalTitleMatch ? originalTitleMatch[1].trim() : "";
-
-        // Look for page count (Oldalszám)
-        const pageCountMatch =
-          propsElement.textContent.match(/Oldalszám[:\s]*(\d+)/);
-        pageCount = pageCountMatch ? pageCountMatch[1] : "";
-
-        // Look for year in the props section
-        const yearMatch = propsElement.textContent.match(/(20\d{2})/);
-        year = yearMatch ? yearMatch[1] : "";
-      }
-
-      // Extract description from ctl00_pdesc_fs
-      let description = "";
-      const descContainer = doc.querySelector("#ctl00_pdesc_fs");
-      if (descContainer) {
-        // Debug: Log the container content
-        console.log("Description container HTML:", descContainer.innerHTML);
-        console.log("Description container text:", descContainer.textContent);
-
-        // Try to find the actual description text
-        // First try to find paragraphs
-        const paragraphs = descContainer.querySelectorAll("p");
-        let descriptionTexts = [];
-
-        console.log("Found paragraphs:", paragraphs.length);
-
-        paragraphs.forEach((p, index) => {
-          const text = p.textContent.trim();
-          console.log(`Paragraph ${index}:`, text);
-          // Skip if it's just publisher info or empty
-          if (text && !text.includes("Kiadó:") && text.length > 10) {
-            descriptionTexts.push(text);
-          }
-        });
-
-        // If no good paragraphs, try to get all text content
-        if (descriptionTexts.length === 0) {
-          const allText = descContainer.textContent.trim();
-          console.log("All text content:", allText);
-          // Remove publisher info if present
-          const cleanText = allText.replace(/Kiadó:[^\n\r]*/g, "").trim();
-          if (cleanText.length > 10) {
-            descriptionTexts.push(cleanText);
-          }
-        }
-
-        description = descriptionTexts.join("\n\n");
-        console.log("Final description:", description);
-      } else {
-        console.log("Description container not found");
-      }
-
-      // Extract publisher from description container if not already found in props
-      if (!publisher && descContainer) {
-        const publisherMatch = descContainer.textContent.match(
-          /Kiadó[:\s]*([^\n\r]+)/,
-        );
-        if (publisherMatch) {
-          publisher = publisherMatch[1].trim();
-          console.log("Found publisher in description:", publisher);
-        }
-      }
-
-      return {
+      // Prepare book data
+      const bookData = {
         title,
         author,
         year,
-        genre: "", // CLC doesn't seem to have genre info
-        description: description.trim(),
+        genre,
+        description,
         isbn,
         thumbnail,
-        source: "CLC Hungary",
-        url,
-        publisher,
+        category: bookCategory,
         originalTitle,
         pageCount,
+        publisher,
+        createdAt: new Date().toISOString(),
+        addedBy: user?.email || "unknown",
       };
-    } catch (error) {
-      console.error("Error processing CLC Hungary URL:", error);
 
-      // Provide more helpful error message
-      if (error.message.includes("All proxies failed")) {
-        alert(
-          "Nem lehet hozzáférni a CLC Hungary weboldalához CORS korlátozások miatt. Kérjük, adja meg a könyv adatait manuálisan, vagy próbáljon másik URL-t.",
-        );
-      } else {
-        alert(
-          "Hiba a CLC Hungary URL feldolgozása közben. Kérjük, ellenőrizze az URL-t és próbálja újra.",
-        );
+      // Add quantity and price for bookstore books
+      if (bookCategory === "Bolt") {
+        if (bookQuantity && bookPrice) {
+          bookData.quantity = parseInt(bookQuantity);
+          bookData.price = parseFloat(bookPrice);
+          bookData.status = "Raktáron";
+        } else {
+          alert(
+            "Könyvesbolt könyvek esetében meg kell adni a mennyiséget és az árat!",
+          );
+          return;
+        }
       }
 
-      return null;
+      const booksRef = ref(database, "books");
+      push(booksRef, bookData);
+
+      // Reset form
+      setTitle("");
+      setAuthor("");
+      setYear("");
+      setGenre("");
+      setCategory("Bolt");
+      setDescription("");
+      setIsbn("");
+      setThumbnail("");
+      setThumbnailPreview(null);
+      setBookUrl("");
+      setOriginalTitle("");
+      setPageCount("");
+      setPublisher("");
+      setBookQuantity("");
+      setBookPrice("");
+      setSuccessMessage("");
+      setShowAddForm(false);
+    }
+  };
+
+  // Sell book function (decrease quantity)
+  const sellBook = (bookId, currentQuantity) => {
+    if (currentQuantity <= 0) {
+      alert("Nem lehet eladni ezt a könyvet, mert nincs raktáron!");
+      return;
+    }
+
+    const bookRef = ref(database, `books/${bookId}`);
+    const updatedQuantity = currentQuantity - 1;
+
+    update(bookRef, {
+      quantity: updatedQuantity,
+      status: updatedQuantity > 0 ? "Raktáron" : "Nincs raktáron",
+    })
+      .then(() => {
+        console.log("Book sold successfully");
+      })
+      .catch((error) => {
+        console.error("Error selling book:", error);
+        alert("Hiba történt a könyv eladása során!");
+      });
+  };
+
+  // Handle sorting for table
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
     }
   };
 
@@ -1329,6 +1220,14 @@ function App() {
     setOriginalTitle(book.originalTitle || "");
     setPageCount(book.pageCount || "");
     setPublisher(book.publisher || "");
+    // Pre-fill quantity and price for bookstore books
+    if (book.category === "Bolt") {
+      setBookQuantity(book.quantity?.toString() || "");
+      setBookPrice(book.price?.toString() || "");
+    } else {
+      setBookQuantity("");
+      setBookPrice("");
+    }
   };
 
   // Cancel edit mode
@@ -1347,14 +1246,16 @@ function App() {
     setOriginalTitle("");
     setPageCount("");
     setPublisher("");
+    setBookQuantity("");
+    setBookPrice("");
   };
 
   // Update book in database
   const updateBook = () => {
     if (!editingBook || !title || !author) return;
 
-    const bookRef = ref(database, `books/${editingBook.id}`);
-    update(bookRef, {
+    // Prepare update data
+    const updateData = {
       title,
       author,
       year,
@@ -1366,22 +1267,25 @@ function App() {
       pageCount,
       publisher,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    // Add quantity and price for bookstore books
+    if (editingBook.category === "Bolt") {
+      if (bookQuantity && bookPrice) {
+        updateData.quantity = parseInt(bookQuantity);
+        updateData.price = parseFloat(bookPrice);
+        updateData.status =
+          parseInt(bookQuantity) > 0 ? "Raktáron" : "Nincs raktáron";
+      }
+    }
+
+    const bookRef = ref(database, `books/${editingBook.id}`);
+    update(bookRef, updateData);
 
     // Update the selectedBook with new data
     setSelectedBook({
       ...selectedBook,
-      title,
-      author,
-      year,
-      genre,
-      description,
-      isbn,
-      thumbnail,
-      originalTitle,
-      pageCount,
-      publisher,
-      updatedAt: new Date().toISOString(),
+      ...updateData,
     });
 
     // Exit edit mode and reset form
@@ -1394,9 +1298,12 @@ function App() {
     setDescription("");
     setIsbn("");
     setThumbnail("");
+    setThumbnailPreview(null);
     setOriginalTitle("");
     setPageCount("");
     setPublisher("");
+    setBookQuantity("");
+    setBookPrice("");
   };
 
   // Close book detail modal
@@ -1641,55 +1548,209 @@ function App() {
                     )}
                   </div>
                 ) : (
-                  filteredBooks.map((book) => (
-                    <div
-                      key={book.id}
-                      className="book-card"
-                      onClick={() => handleBookClick(book)}
-                    >
-                      <div className="book-thumbnail-container">
-                        {book.thumbnail ? (
-                          <img
-                            src={book.thumbnail}
-                            alt={book.title}
-                            className="book-thumbnail"
-                          />
-                        ) : (
-                          <svg
-                            className="book-thumbnail-placeholder"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 2L2 7L12 12L22 7L12 2Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M2 17L12 22L22 17"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M2 12L12 17L22 12"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
+                  <>
+                    {getCategoryFilter(activeTab) === "Bolt" ? (
+                      // Table view for bookstore
+                      <div className="bookstore-table-container">
+                        <table className="bookstore-table">
+                          <thead>
+                            <tr>
+                              <th className="table-header-cover">Borító</th>
+                              <th
+                                className="table-header-title"
+                                onClick={() => handleSort("title")}
+                              >
+                                Cím{" "}
+                                {sortField === "title" &&
+                                  (sortOrder === "asc" ? "↑" : "↓")}
+                              </th>
+                              <th
+                                className="table-header-author"
+                                onClick={() => handleSort("author")}
+                              >
+                                Szerző{" "}
+                                {sortField === "author" &&
+                                  (sortOrder === "asc" ? "↑" : "↓")}
+                              </th>
+                              <th
+                                className="table-header-price"
+                                onClick={() => handleSort("price")}
+                              >
+                                Ár{" "}
+                                {sortField === "price" &&
+                                  (sortOrder === "asc" ? "↑" : "↓")}
+                              </th>
+                              <th
+                                className="table-header-quantity"
+                                onClick={() => handleSort("quantity")}
+                              >
+                                Készlet{" "}
+                                {sortField === "quantity" &&
+                                  (sortOrder === "asc" ? "↑" : "↓")}
+                              </th>
+                              <th className="table-header-status">Állapot</th>
+                              <th className="table-header-actions">
+                                Műveletek
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredBooks.map((book) => (
+                              <tr key={book.id} className="table-row">
+                                <td className="table-cell-cover">
+                                  <div className="table-thumbnail">
+                                    {book.thumbnail ? (
+                                      <img
+                                        src={book.thumbnail}
+                                        alt={book.title}
+                                        className="table-thumbnail-img"
+                                      />
+                                    ) : (
+                                      <div className="table-thumbnail-placeholder">
+                                        📚
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td
+                                  className="table-cell-title"
+                                  onClick={() => handleBookClick(book)}
+                                >
+                                  <div className="table-title">
+                                    {book.title}
+                                  </div>
+                                  {book.year && (
+                                    <div className="table-year">
+                                      {book.year}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="table-cell-author">
+                                  {book.author}
+                                </td>
+                                <td className="table-cell-price">
+                                  {book.price
+                                    ? `${book.price.toLocaleString("hu-HU")} Ft`
+                                    : "N/A"}
+                                </td>
+                                <td className="table-cell-quantity">
+                                  <span
+                                    className={`quantity-badge ${book.quantity > 5 ? "high" : book.quantity > 0 ? "low" : "out"}`}
+                                  >
+                                    {book.quantity || 0} db
+                                  </span>
+                                </td>
+                                <td className="table-cell-status">
+                                  <span
+                                    className={`status-badge ${(book.quantity || 0) > 0 ? "in-stock" : "out-of-stock"}`}
+                                  >
+                                    {(book.quantity || 0) > 0
+                                      ? "Raktáron"
+                                      : "Nincs raktáron"}
+                                  </span>
+                                </td>
+                                <td className="table-cell-actions">
+                                  <div className="table-actions">
+                                    <button
+                                      className="table-action-btn sell-btn"
+                                      onClick={() =>
+                                        sellBook(book.id, book.quantity || 0)
+                                      }
+                                      disabled={
+                                        !book.quantity || book.quantity <= 0
+                                      }
+                                      title="Eladás"
+                                    >
+                                      Eladás
+                                    </button>
+                                    <button
+                                      className="table-action-btn edit-btn"
+                                      onClick={() => handleBookClick(book)}
+                                      title="Részletek"
+                                    >
+                                      Részletek
+                                    </button>
+                                    <button
+                                      className="table-action-btn delete-btn"
+                                      onClick={() => handleDeleteClick(book)}
+                                      title="Törlés"
+                                    >
+                                      Törlés
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                      <div className="book-info">
-                        <h3 className="book-title">{book.title}</h3>
-                      </div>
-                    </div>
-                  ))
+                    ) : (
+                      // Card view for library
+                      filteredBooks.map((book) => (
+                        <div
+                          key={book.id}
+                          className="book-card"
+                          onClick={() => handleBookClick(book)}
+                        >
+                          <div className="book-thumbnail-container">
+                            {book.thumbnail ? (
+                              <img
+                                src={book.thumbnail}
+                                alt={book.title}
+                                className="book-thumbnail"
+                              />
+                            ) : (
+                              <svg
+                                className="book-thumbnail-placeholder"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 2L2 7L12 12L22 7L12 2Z"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M2 17L12 22L22 17"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M2 12L12 17L22 12"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="book-info">
+                            <h3 className="book-title">{book.title}</h3>
+                            {book.category === "Bolt" && (
+                              <div className="bookstore-info">
+                                {book.quantity !== undefined && (
+                                  <span className="book-quantity">
+                                    Készlet: {book.quantity} db
+                                  </span>
+                                )}
+                                {book.price !== undefined && (
+                                  <span className="book-price">
+                                    {book.price.toLocaleString("hu-HU")} Ft
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </>
                 )}
               </div>
             </main>
@@ -2727,6 +2788,20 @@ function App() {
                       </div>
                       <div className="book-info">
                         <h3 className="book-title">{book.title}</h3>
+                        {book.category === "Bolt" && (
+                          <div className="bookstore-info">
+                            {book.quantity !== undefined && (
+                              <span className="book-quantity">
+                                Készlet: {book.quantity} db
+                              </span>
+                            )}
+                            {book.price !== undefined && (
+                              <span className="book-price">
+                                {book.price.toLocaleString("hu-HU")} Ft
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
@@ -3024,6 +3099,37 @@ function App() {
                     className="form-input"
                   />
                 </div>
+
+                {/* Bookstore specific fields - only show for Bolt category */}
+                {getCategoryFilter(activeTab) === "Bolt" && (
+                  <>
+                    <div className="form-field">
+                      <label className="field-label">Mennyiség</label>
+                      <input
+                        type="number"
+                        placeholder="Add meg a mennyiséget"
+                        value={bookQuantity}
+                        onChange={(e) => setBookQuantity(e.target.value)}
+                        className="form-input"
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label className="field-label">Eladási ár (Ft)</label>
+                      <input
+                        type="number"
+                        placeholder="Add meg az eladási árat (Ft)"
+                        value={bookPrice}
+                        onChange={(e) => setBookPrice(e.target.value)}
+                        className="form-input"
+                        min="0"
+                        step="1"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div
@@ -3076,6 +3182,8 @@ function App() {
                     setOriginalTitle("");
                     setPageCount("");
                     setPublisher("");
+                    setBookQuantity("");
+                    setBookPrice("");
                     setCategory("Bolt");
                     setSuccessMessage("");
                   }}
@@ -3346,6 +3454,31 @@ function App() {
                           className="edit-input"
                         />
                       </div>
+                      {editingBook?.category === "Bolt" && (
+                        <>
+                          <div className="book-detail-field">
+                            <strong>Mennyiség:</strong>
+                            <input
+                              type="number"
+                              value={bookQuantity}
+                              onChange={(e) => setBookQuantity(e.target.value)}
+                              className="edit-input"
+                              min="0"
+                            />
+                          </div>
+                          <div className="book-detail-field">
+                            <strong>Eladási ár (Ft):</strong>
+                            <input
+                              type="number"
+                              value={bookPrice}
+                              onChange={(e) => setBookPrice(e.target.value)}
+                              className="edit-input"
+                              min="0"
+                              step="1"
+                            />
+                          </div>
+                        </>
+                      )}
                       <div className="book-detail-field">
                         <strong>Borítókép:</strong>
                         <div className="thumbnail-upload-section">
@@ -3433,6 +3566,38 @@ function App() {
                       <div className="book-detail-field">
                         <strong>ISBN:</strong> {selectedBook.isbn || "N/A"}
                       </div>
+                      {selectedBook.category === "Bolt" && (
+                        <>
+                          <div className="book-detail-field">
+                            <strong>Készlet:</strong>{" "}
+                            <span
+                              style={{
+                                color:
+                                  selectedBook.quantity > 0
+                                    ? "#28a745"
+                                    : "#dc3545",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {selectedBook.quantity || 0} db
+                            </span>
+                          </div>
+                          <div className="book-detail-field">
+                            <strong>Eladási ár:</strong>{" "}
+                            <span
+                              style={{
+                                color: "#844a59",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {selectedBook.price
+                                ? selectedBook.price.toLocaleString("hu-HU")
+                                : "N/A"}{" "}
+                              Ft
+                            </span>
+                          </div>
+                        </>
+                      )}
                       <div className="book-detail-field">
                         <strong>Leírás:</strong>
                         <p>{selectedBook.description || "N/A"}</p>
@@ -3453,6 +3618,25 @@ function App() {
                   <button onClick={() => handleBookEdit(selectedBook)}>
                     Szerkesztés
                   </button>
+                  {selectedBook.category === "Bolt" &&
+                    selectedBook.quantity > 0 && (
+                      <button
+                        onClick={() =>
+                          sellBook(selectedBook.id, selectedBook.quantity)
+                        }
+                        style={{
+                          backgroundColor: "#28a745",
+                          color: "white",
+                          border: "none",
+                          padding: "8px 16px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Eladás ({selectedBook.quantity} db raktáron)
+                      </button>
+                    )}
                   <button
                     onClick={() => handleDeleteClick(selectedBook)}
                     className="delete-btn"

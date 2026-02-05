@@ -636,6 +636,352 @@ body {
   min-height: calc(42px - (var(--card-density) - 7) * 2px);
 }
 
+.bookstore-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.book-quantity {
+  font-size: calc(
+    (14px - (var(--card-density) - 7) * 0.3px) * var(--font-scale-factor, 1)
+  );
+  color: #28a745;
+  font-weight: 500;
+}
+
+.book-price {
+  font-size: calc(
+    (15px - (var(--card-density) - 7) * 0.4px) * var(--font-scale-factor, 1)
+  );
+  color: #844a59;
+  font-weight: 600;
+}
+
+/* Bookstore Table Styles */
+.bookstore-table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.bookstore-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.bookstore-table th {
+  background: #f8fafc;
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.bookstore-table th.table-header-cover {
+  width: 80px;
+  text-align: center;
+}
+
+.bookstore-table th.table-header-title {
+  width: 350px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.bookstore-table th.table-header-title:hover {
+  background: #e2e8f0;
+}
+
+.bookstore-table th.table-header-author {
+  width: 220px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.bookstore-table th.table-header-author:hover {
+  background: #e2e8f0;
+}
+
+.bookstore-table th.table-header-price {
+  width: 130px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.bookstore-table th.table-header-price:hover {
+  background: #e2e8f0;
+}
+
+.bookstore-table th.table-header-quantity {
+  width: 110px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.bookstore-table th.table-header-quantity:hover {
+  background: #e2e8f0;
+}
+
+.bookstore-table th.table-header-status {
+  width: 130px;
+}
+
+.bookstore-table th.table-header-actions {
+  width: 280px;
+  text-align: center;
+}
+
+.bookstore-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.bookstore-table tr:hover {
+  background: #f8fafc;
+}
+
+.table-row {
+  transition: background-color 0.2s ease;
+}
+
+.table-cell-cover {
+  text-align: center;
+}
+
+.table-thumbnail {
+  width: 50px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.table-thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table-thumbnail-placeholder {
+  width: 50px;
+  height: 70px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #64748b;
+}
+
+.table-cell-title {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.table-cell-title:hover {
+  color: #844a59;
+}
+
+.table-title {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.table-year {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.table-cell-author {
+  color: #475569;
+}
+
+.table-cell-price {
+  font-weight: 600;
+  color: #844a59;
+  white-space: nowrap;
+}
+
+.table-cell-quantity {
+  text-align: center;
+}
+
+.quantity-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.quantity-badge.high {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.quantity-badge.low {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.quantity-badge.out {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.table-cell-status {
+  text-align: center;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.status-badge.in-stock {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.out-of-stock {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.table-cell-actions {
+  text-align: center;
+}
+
+.table-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.table-action-btn {
+  padding: 10px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family:
+    "Source Sans Pro",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 70px;
+  max-width: 85px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.table-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.table-action-btn.sell-btn {
+  background: #28a745;
+  color: white;
+}
+
+.table-action-btn.sell-btn:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.table-action-btn.edit-btn {
+  background: #844a59;
+  color: white;
+}
+
+.table-action-btn.edit-btn:hover {
+  background: #6b3a48;
+  transform: translateY(-1px);
+}
+
+.table-action-btn.delete-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.table-action-btn.delete-btn:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1024px) {
+  .table-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .table-action-btn {
+    width: 100%;
+    max-width: none;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .bookstore-table-container {
+    overflow-x: auto;
+  }
+
+  .bookstore-table {
+    min-width: 900px;
+  }
+
+  .table-actions {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .table-action-btn {
+    font-size: 12px;
+    padding: 8px 10px;
+    width: 100%;
+    max-width: none;
+  }
+}
+
 /* Set default card density and font scaling */
 :root {
   --card-density: 4;
