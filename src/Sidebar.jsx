@@ -23,12 +23,48 @@ function Sidebar({
   }, [isCollapsed]);
 
   const tabs = [
-    { id: "books", label: "Könyvesbolt", icon: "📚", mode: "bolt" },
-    { id: "gifts", label: "Ajándéktárgyak", icon: "🎁", mode: "bolt" },
-    { id: "library", label: "Könyvtár", icon: "🏛️", mode: "könyvtár" },
-    { id: "lending", label: "Kölcsönzés", icon: "📖", mode: "könyvtár" },
-    { id: "users", label: "Felhasználók", icon: "👥", mode: null }, // Always visible
-    { id: "logout", label: "Kijelentkezés", icon: "🚪", mode: null }, // Always visible
+    {
+      id: "books",
+      label: "Könyvesbolt",
+      icon: "📚",
+      mode: "bolt",
+      requiresRole: null,
+    },
+    {
+      id: "gifts",
+      label: "Ajándéktárgyak",
+      icon: "🎁",
+      mode: "bolt",
+      requiresRole: null,
+    },
+    {
+      id: "library",
+      label: "Könyvtár",
+      icon: "🏛️",
+      mode: "könyvtár",
+      requiresRole: null,
+    },
+    {
+      id: "lending",
+      label: "Kölcsönzés",
+      icon: "📖",
+      mode: "könyvtár",
+      requiresRole: "admin",
+    }, // Requires admin role
+    {
+      id: "users",
+      label: "Felhasználók",
+      icon: "👥",
+      mode: null,
+      requiresRole: "admin",
+    }, // Requires admin role
+    {
+      id: "logout",
+      label: "Kijelentkezés",
+      icon: "🚪",
+      mode: null,
+      requiresRole: null,
+    }, // Always visible
   ];
 
   const handleTabClick = (tabId) => {
@@ -161,7 +197,14 @@ function Sidebar({
 
         <nav className="sidebar-nav">
           {tabs
-            .filter((tab) => tab.mode === null || tab.mode === activeMode)
+            .filter((tab) => {
+              // Filter by mode
+              const modeMatch = tab.mode === null || tab.mode === activeMode;
+              // Filter by role
+              const roleMatch =
+                tab.requiresRole === null || user?.role === tab.requiresRole;
+              return modeMatch && roleMatch;
+            })
             .map((tab) => (
               <button
                 key={tab.id}

@@ -83,13 +83,15 @@ function MobileNav({ user, onLogout, activeTab, onTabChange }) {
             <span className="mobile-nav-label">Olvasókártya</span>
           </button>
 
-          <button
-            className={`mobile-nav-tab ${activeTab === "users" ? "active" : ""}`}
-            onClick={() => handleTabClick("users")}
-          >
-            <span className="mobile-nav-icon">👥</span>
-            <span className="mobile-nav-label">Felhasználók</span>
-          </button>
+          {user?.role === "admin" && (
+            <button
+              className={`mobile-nav-tab ${activeTab === "users" ? "active" : ""}`}
+              onClick={() => handleTabClick("users")}
+            >
+              <span className="mobile-nav-icon">👥</span>
+              <span className="mobile-nav-label">Felhasználók</span>
+            </button>
+          )}
 
           <button
             className="mobile-nav-tab logout-tab"

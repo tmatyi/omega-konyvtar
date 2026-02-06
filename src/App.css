@@ -604,6 +604,33 @@ body {
   cursor: pointer;
 }
 
+.book-card.lent-out {
+  background: #fff5f5;
+  border-color: #feb2b2;
+  opacity: 0.8;
+}
+
+.book-card.lent-out:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(254, 43, 43, 0.15);
+  border-color: #dc3545;
+}
+
+.lent-out-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #dc3545;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
 .book-thumbnail-placeholder {
   width: 60px;
   height: 60px;
@@ -657,6 +684,19 @@ body {
   );
   color: #844a59;
   font-weight: 600;
+}
+
+.book-info p {
+  color: #6c757d;
+  font-size: calc(
+    (14px - (var(--card-density) - 7) * 0.3px) * var(--font-scale-factor, 1)
+  );
+  margin: 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* Bookstore Table Styles */
@@ -2783,6 +2823,31 @@ body {
 .status.low-stock {
   background: #fef3c7;
   color: #d97706;
+}
+
+.status.warning-stock {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status.critical-stock {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.quantity.quantity-warning {
+  color: #d97706;
+  background: #fef3c7;
+}
+
+.quantity.quantity-critical {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.quantity.quantity-good {
+  color: #16a34a;
+  background: #dcfce7;
 }
 
 .action-buttons {

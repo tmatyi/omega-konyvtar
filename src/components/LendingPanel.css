@@ -405,6 +405,25 @@
   color: #28a745;
 }
 
+.search-result-item.lent-out {
+  background: #fff5f5;
+  border-color: #feb2b2;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.search-result-item.lent-out:hover {
+  background: #fff5f5;
+  border-color: #feb2b2;
+  transform: none;
+  box-shadow: none;
+}
+
+.search-result-item.lent-out .result-action {
+  color: #dc3545;
+  font-weight: 600;
+}
+
 .no-results {
   text-align: center;
   color: #6c757d;

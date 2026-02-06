@@ -33,6 +33,7 @@ function App() {
   });
   const [books, setBooks] = useState([]);
   const [users, setUsers] = useState([]);
+  const [loans, setLoans] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -281,7 +282,26 @@ function App() {
       }
     });
 
-    return () => unsubscribe();
+    return () => off(usersRef);
+  }, []);
+
+  // Load loans from Firebase
+  useEffect(() => {
+    const loansRef = ref(database, "loans");
+    const unsubscribe = onValue(loansRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const loansArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setLoans(loansArray);
+      } else {
+        setLoans([]);
+      }
+    });
+
+    return () => off(loansRef);
   }, []);
 
   // Save active tab to localStorage
@@ -354,6 +374,19 @@ function App() {
   const uniqueAuthors = [
     ...new Set(books.map((book) => book.author).filter(Boolean)),
   ].sort();
+
+  // Reset filters when switching to library tab
+  useEffect(() => {
+    if (activeTab === "library") {
+      setFilterText("");
+      setFilterGenre("");
+      setFilterAuthor("");
+    }
+  }, [activeTab]);
+
+  // Check which books are currently lent out
+  const activeLoans = loans.filter((loan) => loan.status === "active");
+  const lentOutBookIds = new Set(activeLoans.map((loan) => loan.bookId));
 
   // Process book URL and extract data
   const processBookUrl = async () => {
@@ -1499,31 +1532,6 @@ function App() {
             </div>
 
             <main className="main-content">
-              <div className="density-buttons-wrapper">
-                <div className="density-buttons">
-                  <button
-                    className={`density-btn ${cardDensity === 4 ? "active" : ""}`}
-                    onClick={() => handleDensityChange(4)}
-                    title="Compact - 4 cards per row"
-                  >
-                    <span className="density-icon">📚</span>
-                  </button>
-                  <button
-                    className={`density-btn ${cardDensity === 7 ? "active" : ""}`}
-                    onClick={() => handleDensityChange(7)}
-                    title="Balanced - 7 cards per row"
-                  >
-                    <span className="density-icon">📖</span>
-                  </button>
-                  <button
-                    className={`density-btn ${cardDensity === 10 ? "active" : ""}`}
-                    onClick={() => handleDensityChange(10)}
-                    title="Spacious - 10 cards per row"
-                  >
-                    <span className="density-icon">📄</span>
-                  </button>
-                </div>
-              </div>
               <div
                 className="books-container"
                 style={{ "--card-density": cardDensity }}
@@ -1801,78 +1809,105 @@ function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {gifts.map((gift) => (
-                          <tr key={gift.id} className="inventory-item">
-                            <td>
-                              <div className="item-image">
-                                {gift.image &&
-                                (gift.image.startsWith("data:image/") ||
-                                  gift.image.startsWith("blob:")) ? (
-                                  <img
-                                    src={gift.image}
-                                    alt={gift.name}
-                                    style={{
-                                      width: "40px",
-                                      height: "40px",
-                                      objectFit: "cover",
-                                      borderRadius: "8px",
+                        {gifts.map((gift) => {
+                          const isAboveRecommendedStock =
+                            gift.recommendedStock &&
+                            gift.quantity > gift.recommendedStock;
+                          const isAtRecommendedStock =
+                            gift.recommendedStock &&
+                            gift.quantity === gift.recommendedStock;
+                          const isBelowRecommendedStock =
+                            gift.recommendedStock &&
+                            gift.quantity < gift.recommendedStock;
+                          const statusClass = isBelowRecommendedStock
+                            ? "critical-stock"
+                            : isAtRecommendedStock
+                              ? "warning-stock"
+                              : "in-stock";
+                          const statusText = isBelowRecommendedStock
+                            ? "Töltés szükséges"
+                            : isAtRecommendedStock
+                              ? "Fogyóban"
+                              : "Készleten";
+                          const quantityClass = isBelowRecommendedStock
+                            ? "quantity-critical"
+                            : isAtRecommendedStock
+                              ? "quantity-warning"
+                              : "quantity-good";
+
+                          return (
+                            <tr key={gift.id} className="inventory-item">
+                              <td>
+                                <div className="item-image">
+                                  {gift.image &&
+                                  (gift.image.startsWith("data:image/") ||
+                                    gift.image.startsWith("blob:")) ? (
+                                    <img
+                                      src={gift.image}
+                                      alt={gift.name}
+                                      style={{
+                                        width: "40px",
+                                        height: "40px",
+                                        objectFit: "cover",
+                                        borderRadius: "8px",
+                                      }}
+                                    />
+                                  ) : gift.image &&
+                                    gift.image.startsWith("http") ? (
+                                    <img
+                                      src={gift.image}
+                                      alt={gift.name}
+                                      style={{
+                                        width: "40px",
+                                        height: "40px",
+                                        objectFit: "cover",
+                                        borderRadius: "8px",
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="placeholder-icon">
+                                      {gift.image || "🎁"}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td>{gift.name}</td>
+                              <td>
+                                <span className={`quantity ${quantityClass}`}>
+                                  {gift.quantity}
+                                </span>
+                              </td>
+                              <td>{gift.price} Ft</td>
+                              <td>
+                                <span className={`status ${statusClass}`}>
+                                  {statusText}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="action-buttons">
+                                  <button
+                                    className="edit-btn"
+                                    onClick={() => {
+                                      setEditingGift(gift);
+                                      setShowEditGiftForm(true);
                                     }}
-                                  />
-                                ) : gift.image &&
-                                  gift.image.startsWith("http") ? (
-                                  <img
-                                    src={gift.image}
-                                    alt={gift.name}
-                                    style={{
-                                      width: "40px",
-                                      height: "40px",
-                                      objectFit: "cover",
-                                      borderRadius: "8px",
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    className="delete-btn"
+                                    onClick={() => {
+                                      setGiftToDelete(gift);
+                                      setShowDeleteGiftConfirm(true);
                                     }}
-                                  />
-                                ) : (
-                                  <span className="placeholder-icon">
-                                    {gift.image || "🎁"}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td>{gift.name}</td>
-                            <td>
-                              <span className="quantity">{gift.quantity}</span>
-                            </td>
-                            <td>{gift.price} Ft</td>
-                            <td>
-                              <span
-                                className={`status ${gift.status === "Raktáron" ? "in-stock" : "low-stock"}`}
-                              >
-                                {gift.status}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="action-buttons">
-                                <button
-                                  className="edit-btn"
-                                  onClick={() => {
-                                    setEditingGift(gift);
-                                    setShowEditGiftForm(true);
-                                  }}
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  className="delete-btn"
-                                  onClick={() => {
-                                    setGiftToDelete(gift);
-                                    setShowDeleteGiftConfirm(true);
-                                  }}
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -2512,6 +2547,48 @@ function App() {
                     }}
                   />
                 </div>
+
+                <div style={{ marginBottom: "15px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    Ajánlott készlet
+                  </label>
+                  <input
+                    type="number"
+                    defaultValue={editingGift.recommendedStock || ""}
+                    id="edit-gift-recommended-stock"
+                    min="1"
+                    placeholder="Ajánlott készlet mennyisége"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
               </div>
 
               <div
@@ -2530,12 +2607,18 @@ function App() {
                       document.getElementById("edit-gift-quantity").value;
                     const price =
                       document.getElementById("edit-gift-price").value;
+                    const recommendedStock = document.getElementById(
+                      "edit-gift-recommended-stock",
+                    ).value;
 
                     if (name && quantity && price) {
                       updateGift(editingGift.id, {
                         name,
                         quantity: parseInt(quantity),
                         price: parseFloat(price),
+                        recommendedStock: recommendedStock
+                          ? parseInt(recommendedStock)
+                          : null,
                       });
                     }
                   }}
@@ -2769,42 +2852,51 @@ function App() {
                     )}
                   </div>
                 ) : (
-                  filteredBooks.map((book) => (
-                    <div
-                      key={book.id}
-                      className="book-card"
-                      onClick={() => handleBookClick(book)}
-                    >
-                      <div className="book-thumbnail-container">
-                        {book.thumbnail ? (
-                          <img
-                            src={book.thumbnail}
-                            alt={book.title}
-                            className="book-thumbnail"
-                          />
-                        ) : (
-                          <div className="book-thumbnail-placeholder">📚</div>
-                        )}
+                  filteredBooks.map((book) => {
+                    const isLentOut = lentOutBookIds.has(book.id);
+                    return (
+                      <div
+                        key={book.id}
+                        className={`book-card ${isLentOut ? "lent-out" : ""}`}
+                        onClick={() => handleBookClick(book)}
+                      >
+                        <div className="book-thumbnail-container">
+                          {book.thumbnail ? (
+                            <img
+                              src={book.thumbnail}
+                              alt={book.title}
+                              className="book-thumbnail"
+                            />
+                          ) : (
+                            <div className="book-thumbnail-placeholder">📚</div>
+                          )}
+                          {isLentOut && (
+                            <div className="lent-out-badge">
+                              📚 Kikölcsönözve
+                            </div>
+                          )}
+                        </div>
+                        <div className="book-info">
+                          <h3 className="book-title">{book.title}</h3>
+                          {book.category === "Bolt" && (
+                            <div className="bookstore-info">
+                              {book.quantity !== undefined && (
+                                <span className="book-quantity">
+                                  Készlet: {book.quantity} db
+                                </span>
+                              )}
+                              {book.price !== undefined && (
+                                <span className="book-price">
+                                  {book.price.toLocaleString("hu-HU")} Ft
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <p className="book-author">{book.author}</p>
+                        </div>
                       </div>
-                      <div className="book-info">
-                        <h3 className="book-title">{book.title}</h3>
-                        {book.category === "Bolt" && (
-                          <div className="bookstore-info">
-                            {book.quantity !== undefined && (
-                              <span className="book-quantity">
-                                Készlet: {book.quantity} db
-                              </span>
-                            )}
-                            {book.price !== undefined && (
-                              <span className="book-price">
-                                {book.price.toLocaleString("hu-HU")} Ft
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </main>

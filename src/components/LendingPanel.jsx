@@ -205,10 +205,17 @@ const LendingPanel = ({ books, users }) => {
     (loan) => new Date(loan.dueDate) < new Date(),
   );
 
+  // Check which books are currently lent out
+  const lentOutBookIds = new Set(activeLoans.map((loan) => loan.bookId));
+
   // Debug logging
   console.log("showLoanModal:", showLoanModal);
 
   const handleBookSelect = (book) => {
+    // Prevent selection if book is already lent out
+    if (lentOutBookIds.has(book.id)) {
+      return;
+    }
     setSelectedBook(book);
   };
 
@@ -274,24 +281,29 @@ const LendingPanel = ({ books, users }) => {
                 <p className="no-results">Nincs találat a keresésre.</p>
               ) : (
                 <div className="results-list">
-                  {filteredBooks.map((book) => (
-                    <div
-                      key={book.id}
-                      className={`search-result-item ${selectedBook?.id === book.id ? "selected" : ""}`}
-                      onClick={() => handleBookSelect(book)}
-                    >
-                      <div className="result-info">
-                        <h4>{book.title}</h4>
-                        <p>{book.author}</p>
-                        {book.year && <small>{book.year}</small>}
+                  {filteredBooks.map((book) => {
+                    const isLentOut = lentOutBookIds.has(book.id);
+                    return (
+                      <div
+                        key={book.id}
+                        className={`search-result-item ${selectedBook?.id === book.id ? "selected" : ""} ${isLentOut ? "lent-out" : ""}`}
+                        onClick={() => !isLentOut && handleBookSelect(book)}
+                      >
+                        <div className="result-info">
+                          <h4>{book.title}</h4>
+                          <p>{book.author}</p>
+                          {book.year && <small>{book.year}</small>}
+                        </div>
+                        <div className="result-action">
+                          {isLentOut
+                            ? "📚 Kikölcsönözve"
+                            : selectedBook?.id === book.id
+                              ? "✓ Kiválasztva"
+                              : "Kiválasztás"}
+                        </div>
                       </div>
-                      <div className="result-action">
-                        {selectedBook?.id === book.id
-                          ? "✓ Kiválasztva"
-                          : "Kiválasztás"}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
