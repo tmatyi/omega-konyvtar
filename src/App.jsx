@@ -20,6 +20,8 @@ import MobileNav from "./MobileNav.jsx";
 import Profile from "./Profile.jsx";
 import UsersPanel from "./components/UsersPanel.jsx";
 import LendingPanel from "./components/LendingPanel.jsx";
+import KasszaPanel from "./components/KasszaPanel.jsx";
+import "./components/KasszaPanel.css";
 import "./App.css";
 
 function App() {
@@ -1437,6 +1439,7 @@ function App() {
         onLogout={handleLogout}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        activeMode={activeMode}
       />
       <div className="main-content-with-sidebar">
         {activeTab === "books" && (
@@ -1871,14 +1874,13 @@ function App() {
                                 <div
                                   className="item-image"
                                   onClick={() =>
-                                    user?.role !== "admin" &&
+                                    gift.image &&
+                                    gift.image !== "" &&
                                     handleGiftImageClick(gift)
                                   }
                                   style={{
                                     cursor:
-                                      user?.role !== "admin" &&
-                                      gift.image &&
-                                      gift.image !== "🎁"
+                                      gift.image && gift.image !== ""
                                         ? "pointer"
                                         : "default",
                                   }}
@@ -2956,6 +2958,11 @@ function App() {
         {activeTab === "users" && (
           <div className="tab-content custom-scrollbar">
             <UsersPanel user={user} />
+          </div>
+        )}
+        {activeTab === "kassza" && (
+          <div className="tab-content custom-scrollbar">
+            <KasszaPanel user={user} />
           </div>
         )}
       </div>

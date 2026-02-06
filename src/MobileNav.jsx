@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "./MobileNav.css";
 
-function MobileNav({ user, onLogout, activeTab, onTabChange }) {
+function MobileNav({ user, onLogout, activeTab, onTabChange, activeMode }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleTabClick = (tabId) => {
@@ -74,6 +74,16 @@ function MobileNav({ user, onLogout, activeTab, onTabChange }) {
             <span className="mobile-nav-icon">🏛️</span>
             <span className="mobile-nav-label">Könyvtár</span>
           </button>
+
+          {activeMode === "bolt" && (
+            <button
+              className={`mobile-nav-tab ${activeTab === "kassza" ? "active" : ""}`}
+              onClick={() => handleTabClick("kassza")}
+            >
+              <span className="mobile-nav-icon">💰</span>
+              <span className="mobile-nav-label">Kassza</span>
+            </button>
+          )}
 
           <button
             className={`mobile-nav-tab ${activeTab === "passcard" ? "active" : ""}`}

@@ -38,6 +38,13 @@ function Sidebar({
       requiresRole: null,
     },
     {
+      id: "kassza",
+      label: "Kassza",
+      icon: "💰",
+      mode: "bolt",
+      requiresRole: null,
+    },
+    {
       id: "library",
       label: "Könyvtár",
       icon: "🏛️",
