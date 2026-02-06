@@ -2882,3 +2882,8 @@ body {
 .delete-btn:hover {
   background: #dc2626;
 }
+
+/* Additional padding for gifts section */
+.App-main.gifts-padding {
+  padding-top: 20px;
+}

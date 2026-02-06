@@ -75,6 +75,8 @@ function App() {
   const [showDeleteGiftConfirm, setShowDeleteGiftConfirm] = useState(false);
   const [showEditGiftForm, setShowEditGiftForm] = useState(false);
   const [editingGift, setEditingGift] = useState(null);
+  const [showImagePopup, setShowImagePopup] = useState(false);
+  const [popupImage, setPopupImage] = useState(null);
 
   // Bookstore inventory management
   const [bookQuantity, setBookQuantity] = useState("");
@@ -1349,6 +1351,20 @@ function App() {
     }
   };
 
+  // Handle gift image click for popup
+  const handleGiftImageClick = (gift) => {
+    if (gift.image && gift.image !== "🎁") {
+      setPopupImage(gift.image);
+      setShowImagePopup(true);
+    }
+  };
+
+  // Close image popup
+  const closeImagePopup = () => {
+    setShowImagePopup(false);
+    setPopupImage(null);
+  };
+
   // Delete book functions
   const handleDeleteClick = (book) => {
     setBookToDelete(book);
@@ -1454,12 +1470,14 @@ function App() {
                   >
                     🔍 {showFilters ? "Szűrők Elrejtése" : "Szűrők Mutatása"}
                   </button>
-                  <button
-                    className="add-book-btn"
-                    onClick={() => setShowAddForm(true)}
-                  >
-                    + Új Könyv Hozzáadása
-                  </button>
+                  {user?.role === "admin" && (
+                    <button
+                      className="add-book-btn"
+                      onClick={() => setShowAddForm(true)}
+                    >
+                      + Új Könyv Hozzáadása
+                    </button>
+                  )}
                 </div>
               </div>
             </header>
@@ -1588,18 +1606,22 @@ function App() {
                                 {sortField === "price" &&
                                   (sortOrder === "asc" ? "↑" : "↓")}
                               </th>
-                              <th
-                                className="table-header-quantity"
-                                onClick={() => handleSort("quantity")}
-                              >
-                                Készlet{" "}
-                                {sortField === "quantity" &&
-                                  (sortOrder === "asc" ? "↑" : "↓")}
-                              </th>
+                              {user?.role === "admin" && (
+                                <th
+                                  className="table-header-quantity"
+                                  onClick={() => handleSort("quantity")}
+                                >
+                                  Készlet{" "}
+                                  {sortField === "quantity" &&
+                                    (sortOrder === "asc" ? "↑" : "↓")}
+                                </th>
+                              )}
                               <th className="table-header-status">Állapot</th>
-                              <th className="table-header-actions">
-                                Műveletek
-                              </th>
+                              {user?.role === "admin" && (
+                                <th className="table-header-actions">
+                                  Műveletek
+                                </th>
+                              )}
                             </tr>
                           </thead>
                           <tbody>
@@ -1641,13 +1663,15 @@ function App() {
                                     ? `${book.price.toLocaleString("hu-HU")} Ft`
                                     : "N/A"}
                                 </td>
-                                <td className="table-cell-quantity">
-                                  <span
-                                    className={`quantity-badge ${book.quantity > 5 ? "high" : book.quantity > 0 ? "low" : "out"}`}
-                                  >
-                                    {book.quantity || 0} db
-                                  </span>
-                                </td>
+                                {user?.role === "admin" && (
+                                  <td className="table-cell-quantity">
+                                    <span
+                                      className={`quantity-badge ${book.quantity > 5 ? "high" : book.quantity > 0 ? "low" : "out"}`}
+                                    >
+                                      {book.quantity || 0} db
+                                    </span>
+                                  </td>
+                                )}
                                 <td className="table-cell-status">
                                   <span
                                     className={`status-badge ${(book.quantity || 0) > 0 ? "in-stock" : "out-of-stock"}`}
@@ -1657,36 +1681,38 @@ function App() {
                                       : "Nincs raktáron"}
                                   </span>
                                 </td>
-                                <td className="table-cell-actions">
-                                  <div className="table-actions">
-                                    <button
-                                      className="table-action-btn sell-btn"
-                                      onClick={() =>
-                                        sellBook(book.id, book.quantity || 0)
-                                      }
-                                      disabled={
-                                        !book.quantity || book.quantity <= 0
-                                      }
-                                      title="Eladás"
-                                    >
-                                      Eladás
-                                    </button>
-                                    <button
-                                      className="table-action-btn edit-btn"
-                                      onClick={() => handleBookClick(book)}
-                                      title="Részletek"
-                                    >
-                                      Részletek
-                                    </button>
-                                    <button
-                                      className="table-action-btn delete-btn"
-                                      onClick={() => handleDeleteClick(book)}
-                                      title="Törlés"
-                                    >
-                                      Törlés
-                                    </button>
-                                  </div>
-                                </td>
+                                {user?.role === "admin" && (
+                                  <td className="table-cell-actions">
+                                    <div className="table-actions">
+                                      <button
+                                        className="table-action-btn sell-btn"
+                                        onClick={() =>
+                                          sellBook(book.id, book.quantity || 0)
+                                        }
+                                        disabled={
+                                          !book.quantity || book.quantity <= 0
+                                        }
+                                        title="Eladás"
+                                      >
+                                        Eladás
+                                      </button>
+                                      <button
+                                        className="table-action-btn edit-btn"
+                                        onClick={() => handleBookClick(book)}
+                                        title="Részletek"
+                                      >
+                                        Részletek
+                                      </button>
+                                      <button
+                                        className="table-action-btn delete-btn"
+                                        onClick={() => handleDeleteClick(book)}
+                                        title="Törlés"
+                                      >
+                                        Törlés
+                                      </button>
+                                    </div>
+                                  </td>
+                                )}
                               </tr>
                             ))}
                           </tbody>
@@ -1777,9 +1803,11 @@ function App() {
               <div className="header-section header-controls">
                 <div className="controls-left">
                   <div className="book-stats">
-                    <span className="total-books">
-                      Raktáron: {gifts.length} ajándéktárgy
-                    </span>
+                    {user?.role === "admin" && (
+                      <span className="total-books">
+                        Raktáron: {gifts.length} ajándéktárgy
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="controls-right">
@@ -1792,7 +1820,9 @@ function App() {
                 </div>
               </div>
             </header>
-            <main className="App-main">
+            <main
+              className={`App-main ${activeTab === "gifts" ? "gifts-padding" : ""}`}
+            >
               <div className="content-wrapper">
                 <div className="inventory-table">
                   <h2>Raktárkészlet</h2>
@@ -1802,10 +1832,10 @@ function App() {
                         <tr>
                           <th>Kép</th>
                           <th>Név</th>
-                          <th>Mennyiség</th>
+                          {user?.role === "admin" && <th>Mennyiség</th>}
                           <th>Eladási ár</th>
                           <th>Státusz</th>
-                          <th>Műveletek</th>
+                          {user?.role === "admin" && <th>Műveletek</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -1838,7 +1868,21 @@ function App() {
                           return (
                             <tr key={gift.id} className="inventory-item">
                               <td>
-                                <div className="item-image">
+                                <div
+                                  className="item-image"
+                                  onClick={() =>
+                                    user?.role !== "admin" &&
+                                    handleGiftImageClick(gift)
+                                  }
+                                  style={{
+                                    cursor:
+                                      user?.role !== "admin" &&
+                                      gift.image &&
+                                      gift.image !== "🎁"
+                                        ? "pointer"
+                                        : "default",
+                                  }}
+                                >
                                   {gift.image &&
                                   (gift.image.startsWith("data:image/") ||
                                     gift.image.startsWith("blob:")) ? (
@@ -1872,39 +1916,43 @@ function App() {
                                 </div>
                               </td>
                               <td>{gift.name}</td>
-                              <td>
-                                <span className={`quantity ${quantityClass}`}>
-                                  {gift.quantity}
-                                </span>
-                              </td>
+                              {user?.role === "admin" && (
+                                <td>
+                                  <span className={`quantity ${quantityClass}`}>
+                                    {gift.quantity}
+                                  </span>
+                                </td>
+                              )}
                               <td>{gift.price} Ft</td>
                               <td>
                                 <span className={`status ${statusClass}`}>
                                   {statusText}
                                 </span>
                               </td>
-                              <td>
-                                <div className="action-buttons">
-                                  <button
-                                    className="edit-btn"
-                                    onClick={() => {
-                                      setEditingGift(gift);
-                                      setShowEditGiftForm(true);
-                                    }}
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    className="delete-btn"
-                                    onClick={() => {
-                                      setGiftToDelete(gift);
-                                      setShowDeleteGiftConfirm(true);
-                                    }}
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
-                              </td>
+                              {user?.role === "admin" && (
+                                <td>
+                                  <div className="action-buttons">
+                                    <button
+                                      className="edit-btn"
+                                      onClick={() => {
+                                        setEditingGift(gift);
+                                        setShowEditGiftForm(true);
+                                      }}
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      className="delete-btn"
+                                      onClick={() => {
+                                        setGiftToDelete(gift);
+                                        setShowDeleteGiftConfirm(true);
+                                      }}
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
@@ -2725,12 +2773,14 @@ function App() {
                   >
                     🔍 {showFilters ? "Szűrők Elrejtése" : "Szűrők Mutatása"}
                   </button>
-                  <button
-                    className="add-book-btn"
-                    onClick={() => setShowAddForm(true)}
-                  >
-                    + Új Könyv Hozzáadása
-                  </button>
+                  {user?.role === "admin" && (
+                    <button
+                      className="add-book-btn"
+                      onClick={() => setShowAddForm(true)}
+                    >
+                      + Új Könyv Hozzáadása
+                    </button>
+                  )}
                 </div>
               </div>
             </header>
@@ -3658,38 +3708,39 @@ function App() {
                       <div className="book-detail-field">
                         <strong>ISBN:</strong> {selectedBook.isbn || "N/A"}
                       </div>
-                      {selectedBook.category === "Bolt" && (
-                        <>
-                          <div className="book-detail-field">
-                            <strong>Készlet:</strong>{" "}
-                            <span
-                              style={{
-                                color:
-                                  selectedBook.quantity > 0
-                                    ? "#28a745"
-                                    : "#dc3545",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {selectedBook.quantity || 0} db
-                            </span>
-                          </div>
-                          <div className="book-detail-field">
-                            <strong>Eladási ár:</strong>{" "}
-                            <span
-                              style={{
-                                color: "#844a59",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {selectedBook.price
-                                ? selectedBook.price.toLocaleString("hu-HU")
-                                : "N/A"}{" "}
-                              Ft
-                            </span>
-                          </div>
-                        </>
-                      )}
+                      {selectedBook.category === "Bolt" &&
+                        user?.role === "admin" && (
+                          <>
+                            <div className="book-detail-field">
+                              <strong>Készlet:</strong>{" "}
+                              <span
+                                style={{
+                                  color:
+                                    selectedBook.quantity > 0
+                                      ? "#28a745"
+                                      : "#dc3545",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {selectedBook.quantity || 0} db
+                              </span>
+                            </div>
+                            <div className="book-detail-field">
+                              <strong>Eladási ár:</strong>{" "}
+                              <span
+                                style={{
+                                  color: "#844a59",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {selectedBook.price
+                                  ? selectedBook.price.toLocaleString("hu-HU")
+                                  : "N/A"}{" "}
+                                Ft
+                              </span>
+                            </div>
+                          </>
+                        )}
                       <div className="book-detail-field">
                         <strong>Leírás:</strong>
                         <p>{selectedBook.description || "N/A"}</p>
@@ -3699,46 +3750,48 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="modal-buttons">
-              {isEditMode ? (
-                <>
-                  <button onClick={updateBook}>Könyv Frissítése</button>
-                  <button onClick={cancelEditMode}>Mégse</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => handleBookEdit(selectedBook)}>
-                    Szerkesztés
-                  </button>
-                  {selectedBook.category === "Bolt" &&
-                    selectedBook.quantity > 0 && (
-                      <button
-                        onClick={() =>
-                          sellBook(selectedBook.id, selectedBook.quantity)
-                        }
-                        style={{
-                          backgroundColor: "#28a745",
-                          color: "white",
-                          border: "none",
-                          padding: "8px 16px",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Eladás ({selectedBook.quantity} db raktáron)
-                      </button>
-                    )}
-                  <button
-                    onClick={() => handleDeleteClick(selectedBook)}
-                    className="delete-btn"
-                  >
-                    Törlés
-                  </button>
-                  <button onClick={closeBookDetail}>Bezárás</button>
-                </>
-              )}
-            </div>
+            {user?.role === "admin" && (
+              <div className="modal-buttons">
+                {isEditMode ? (
+                  <>
+                    <button onClick={updateBook}>Könyv Frissítése</button>
+                    <button onClick={cancelEditMode}>Mégse</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => handleBookEdit(selectedBook)}>
+                      Szerkesztés
+                    </button>
+                    {selectedBook.category === "Bolt" &&
+                      selectedBook.quantity > 0 && (
+                        <button
+                          onClick={() =>
+                            sellBook(selectedBook.id, selectedBook.quantity)
+                          }
+                          style={{
+                            backgroundColor: "#28a745",
+                            color: "white",
+                            border: "none",
+                            padding: "8px 16px",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                          }}
+                        >
+                          Eladás ({selectedBook.quantity} db raktáron)
+                        </button>
+                      )}
+                    <button
+                      onClick={() => handleDeleteClick(selectedBook)}
+                      className="delete-btn"
+                    >
+                      Törlés
+                    </button>
+                    <button onClick={closeBookDetail}>Bezárás</button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -3785,6 +3838,67 @@ function App() {
                 Mégse
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gift Image Popup Modal */}
+      {showImagePopup && popupImage && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+            cursor: "pointer",
+          }}
+          onClick={closeImagePopup}
+        >
+          <div
+            style={{
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={popupImage}
+              alt="Gift Image"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "90vh",
+                borderRadius: "12px",
+                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+              }}
+            />
+            <button
+              onClick={closeImagePopup}
+              style={{
+                position: "absolute",
+                top: "-15px",
+                right: "-15px",
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "#fff",
+                border: "none",
+                fontSize: "20px",
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+              }}
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
