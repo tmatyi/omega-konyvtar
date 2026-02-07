@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   database,
   ref,
@@ -24,9 +24,53 @@ const KasszaPanel = ({ user }) => {
     itemName: "",
     quantity: "",
     price: "",
-    customerName: "",
     paymentMethod: "cash",
   });
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const [isToastExiting, setIsToastExiting] = useState(false);
+  const [viewMode, setViewMode] = useState("all"); // "all" or "monthly"
+  const [selectedMonth, setSelectedMonth] = useState(
+    new Date().toISOString().slice(0, 7),
+  ); // YYYY-MM format
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [saleToDelete, setSaleToDelete] = useState(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowProductDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const showToastNotification = (message, type = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setIsToastExiting(false);
+    setShowToast(true);
+
+    // Start exit animation after 2.5 seconds
+    setTimeout(() => {
+      setIsToastExiting(true);
+    }, 2500);
+
+    // Actually hide after 3 seconds (allows exit animation to complete)
+    setTimeout(() => {
+      setShowToast(false);
+      setIsToastExiting(false);
+    }, 3000);
+  };
 
   useEffect(() => {
     const salesRef = ref(database, "sales");
@@ -85,8 +129,7 @@ const KasszaPanel = ({ user }) => {
       !saleData.itemId ||
       !saleData.itemName ||
       !saleData.quantity ||
-      !saleData.price ||
-      !saleData.customerName
+      !saleData.price
     ) {
       alert("Kérjük, töltse ki az összes szükséges mezőt!");
       return;
@@ -135,7 +178,6 @@ const KasszaPanel = ({ user }) => {
         itemName: saleData.itemName,
         quantity: parseInt(saleData.quantity),
         price: parseFloat(saleData.price),
-        customerName: saleData.customerName,
         paymentMethod: saleData.paymentMethod || "cash",
         timestamp: editingSale.timestamp, // Keep original timestamp
         seller: user?.email || "ismeretlen",
@@ -158,7 +200,6 @@ const KasszaPanel = ({ user }) => {
         itemName: saleData.itemName,
         quantity: parseInt(saleData.quantity),
         price: parseFloat(saleData.price),
-        customerName: saleData.customerName,
         paymentMethod: saleData.paymentMethod || "cash",
         timestamp: new Date().toISOString(),
         seller: user?.email || "ismeretlen",
@@ -184,11 +225,17 @@ const KasszaPanel = ({ user }) => {
       itemName: "",
       quantity: "",
       price: "",
-      customerName: "",
       paymentMethod: "cash",
     });
+    setProductSearchTerm(""); // Clear the search input
     setShowSaleForm(false);
     setEditingSale(null);
+
+    // Show success toast
+    showToastNotification(
+      `${saleData.itemName} (${saleData.quantity} db) sikeresen eladva!`,
+      "success",
+    );
   };
 
   const handleSaleEdit = (sale) => {
@@ -199,43 +246,79 @@ const KasszaPanel = ({ user }) => {
       itemName: sale.itemName || "",
       quantity: sale.quantity || "",
       price: sale.price || "",
-      customerName: sale.customerName || "",
       paymentMethod: sale.paymentMethod || "cash",
     });
     setShowSaleForm(true);
   };
 
   const handleSaleDelete = (sale) => {
-    if (window.confirm("Biztosan törölni szeretnéd ezt az eladást?")) {
+    setSaleToDelete(sale);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (saleToDelete) {
       // Restore stock first
       const itemRef = ref(
         database,
-        `${sale.itemType === "book" ? "books" : "gifts"}/${sale.itemId}`,
+        `${saleToDelete.itemType === "book" ? "books" : "gifts"}/${saleToDelete.itemId}`,
       );
+
+      // Get current item to restore stock
       const item =
-        sale.itemType === "book"
-          ? books.find((b) => b.id === sale.itemId)
-          : gifts.find((g) => g.id === sale.itemId);
+        saleToDelete.itemType === "book"
+          ? books.find((b) => b.id === saleToDelete.itemId)
+          : gifts.find((g) => g.id === saleToDelete.itemId);
 
       if (item) {
         update(itemRef, {
-          quantity: item.quantity + sale.quantity,
+          quantity: item.quantity + saleToDelete.quantity,
         });
       }
 
       // Then delete the sale
-      const saleRef = ref(database, `sales/${sale.id}`);
+      const saleRef = ref(database, `sales/${saleToDelete.id}`);
       remove(saleRef);
+
+      // Show success toast
+      showToastNotification(
+        `${saleToDelete.itemName} (${saleToDelete.quantity} db) eladása törölve, készlet helyreállítva!`,
+        "success",
+      );
     }
+    setShowDeleteConfirm(false);
+    setSaleToDelete(null);
   };
 
-  const filteredSales = sales.filter(
-    (sale) =>
-      sale.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.customerName.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setSaleToDelete(null);
+  };
 
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+  // Calculate monthly revenue if in monthly view
+  const monthlySales =
+    viewMode === "monthly"
+      ? sales.filter((sale) => sale.timestamp.startsWith(selectedMonth))
+      : [];
+
+  const monthlyRevenue = monthlySales.reduce(
+    (sum, sale) => sum + sale.totalAmount,
+    0,
+  );
+  const totalRevenue =
+    viewMode === "monthly"
+      ? monthlyRevenue
+      : sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+  const totalSales =
+    viewMode === "monthly" ? monthlySales.length : sales.length;
+
+  const filteredSales = (viewMode === "monthly" ? monthlySales : sales)
+    .filter(
+      (sale) =>
+        sale.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sale.customerName?.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   if (loading) {
     return (
@@ -247,208 +330,45 @@ const KasszaPanel = ({ user }) => {
 
   return (
     <div className="kassza-panel">
-      <div className="kassza-header">
-        <h2>Kassza</h2>
-        <p>Értékesítési és bevételi nyilvántartás</p>
-      </div>
-
-      <div className="kassza-controls">
-        <div className="kassza-section">
-          <h3>Új Eladás</h3>
-          <button
-            onClick={() => setShowSaleForm(true)}
-            className="kassza-btn primary"
-          >
-            + Új Eladás Rögzítése
-          </button>
-        </div>
-
-        <div className="kassza-section">
-          <h3>Keresés</h3>
-          <input
-            type="text"
-            placeholder="Keresés könyv cím vagy vásárló szerint..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="kassza-search"
-          />
-        </div>
-      </div>
-
-      {showSaleForm && (
-        <div className="kassza-modal">
-          <div className="kassza-modal-content">
-            <h3>{editingSale ? "Eladás Szerkesztése" : "Új Eladás"}</h3>
-            <form onSubmit={handleSaleSubmit}>
-              <div className="form-group">
-                <label>Termék Típusa:</label>
-                <select
-                  value={saleData.itemType}
-                  onChange={(e) => {
-                    const newType = e.target.value;
-                    setSaleData({
-                      ...saleData,
-                      itemType: newType,
-                      itemId: "",
-                      itemName: "",
-                      price: "",
-                    });
-                  }}
-                  className="kassza-select"
-                >
-                  <option value="book">Könyv</option>
-                  <option value="gift">Ajándéktárgy</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>
-                  {saleData.itemType === "book"
-                    ? "Könyv Kiválasztása:"
-                    : "Ajándéktárgy Kiválasztása:"}
-                </label>
-                <select
-                  value={saleData.itemId}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedItem =
-                      saleData.itemType === "book"
-                        ? books.find((b) => b.id === selectedId)
-                        : gifts.find((g) => g.id === selectedId);
-
-                    if (selectedItem) {
-                      setSaleData({
-                        ...saleData,
-                        itemId: selectedId,
-                        itemName: selectedItem.name || selectedItem.title,
-                        price: selectedItem.price || 0,
-                      });
-                    }
-                  }}
-                  className="kassza-select"
-                  required
-                >
-                  <option value="">Válassz terméket...</option>
-                  {saleData.itemType === "book"
-                    ? books
-                        .filter((book) => book.category === "Bolt")
-                        .map((book) => (
-                          <option key={book.id} value={book.id}>
-                            {book.title} - {book.author} (Készlet:{" "}
-                            {book.quantity})
-                          </option>
-                        ))
-                    : gifts.map((gift) => (
-                        <option key={gift.id} value={gift.id}>
-                          {gift.name} (Készlet: {gift.quantity})
-                        </option>
-                      ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Termék Neve:</label>
-                <input
-                  type="text"
-                  value={saleData.itemName}
-                  onChange={(e) =>
-                    setSaleData({ ...saleData, itemName: e.target.value })
-                  }
-                  placeholder="Termék neve"
-                  readOnly
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Mennyiség:</label>
-                <input
-                  type="number"
-                  value={saleData.quantity}
-                  onChange={(e) =>
-                    setSaleData({ ...saleData, quantity: e.target.value })
-                  }
-                  placeholder="Add meg az eladott mennyiséget"
-                  min="1"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Eladási Ár (Ft):</label>
-                <input
-                  type="number"
-                  value={saleData.price}
-                  onChange={(e) =>
-                    setSaleData({ ...saleData, price: e.target.value })
-                  }
-                  placeholder="Add meg az eladási árat"
-                  min="0"
-                  step="1"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Vásárló Neve:</label>
-                <input
-                  type="text"
-                  value={saleData.customerName}
-                  onChange={(e) =>
-                    setSaleData({ ...saleData, customerName: e.target.value })
-                  }
-                  placeholder="Add meg a vásárló nevét"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Fizetési Mód:</label>
-                <select
-                  value={saleData.paymentMethod}
-                  onChange={(e) =>
-                    setSaleData({ ...saleData, paymentMethod: e.target.value })
-                  }
-                  className="kassza-select"
-                >
-                  <option value="cash">Készpénz</option>
-                  <option value="card">Bankkártya</option>
-                  <option value="transfer">Átutalás</option>
-                </select>
-              </div>
-
-              <div className="form-buttons">
-                <button type="submit" className="kassza-btn primary">
-                  {editingSale ? "Eladás Frissítése" : "Eladás Mentése"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSaleForm(false);
-                    setEditingSale(null);
-                    setSaleData({
-                      itemType: "book",
-                      itemId: "",
-                      itemName: "",
-                      quantity: "",
-                      price: "",
-                      customerName: "",
-                      paymentMethod: "cash",
-                    });
-                  }}
-                  className="kassza-btn secondary"
-                >
-                  Mégse
-                </button>
-              </div>
-            </form>
+      <header className="App-header">
+        <div className="header-section header-title">
+          <div className="title-container">
+            <h1>Kassza</h1>
+            <p>Értékesítési és bevételi nyilvántartás</p>
           </div>
         </div>
-      )}
+      </header>
 
       <div className="kassza-content">
         <div className="kassza-section">
           <h3>Eladási Történet</h3>
+          <div className="view-controls">
+            <div className="view-mode-buttons">
+              <button
+                className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`}
+                onClick={() => setViewMode("all")}
+              >
+                Összes
+              </button>
+              <button
+                className={`view-mode-btn ${viewMode === "monthly" ? "active" : ""}`}
+                onClick={() => setViewMode("monthly")}
+              >
+                Havi
+              </button>
+            </div>
+            {viewMode === "monthly" && (
+              <div className="month-picker">
+                <label>Válassz hónapot:</label>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="month-input"
+                />
+              </div>
+            )}
+          </div>
           <div className="sales-summary">
             <div className="summary-card">
               <h4>Összes Bevétel</h4>
@@ -458,78 +378,412 @@ const KasszaPanel = ({ user }) => {
             </div>
             <div className="summary-card">
               <h4>Eladások Száma</h4>
-              <p className="summary-count">{sales.length}</p>
+              <p className="summary-count">{totalSales}</p>
+            </div>
+          </div>
+
+          <div className="kassza-section">
+            <h3>Új Eladás</h3>
+            <button
+              onClick={() => setShowSaleForm(true)}
+              className="kassza-btn primary"
+            >
+              + Új Eladás Rögzítése
+            </button>
+          </div>
+
+          <div className="kassza-section">
+            <h3>Keresés</h3>
+            <input
+              type="text"
+              placeholder="Keresés könyv cím vagy vásárló szerint..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="kassza-search"
+            />
+          </div>
+
+          <div className="kassza-section sales-list-section">
+            <h3>Eladási Lista</h3>
+            <div className="sales-list">
+              {filteredSales.length === 0 ? (
+                <div className="no-sales">
+                  <p>Még nincsenek rögzített eladások.</p>
+                </div>
+              ) : (
+                filteredSales.map((sale) => (
+                  <div key={sale.id} className="sale-item">
+                    <div className="sale-info">
+                      <div className="sale-book">
+                        <h4>{sale.itemName}</h4>
+                        <div className="sale-badges">
+                          <span className="sale-date">
+                            {new Date(sale.timestamp).toLocaleString("hu-HU", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          <span
+                            className={`sale-type ${sale.itemType === "book" ? "book" : "gift"}`}
+                          >
+                            {sale.itemType === "book"
+                              ? "📚 Könyv"
+                              : "🎁 Ajándék"}
+                          </span>
+                          <span className="sale-quantity">
+                            {sale.quantity} db
+                          </span>
+                          <span className="sale-price">
+                            {parseInt(sale.price).toLocaleString("hu-HU")} Ft/db
+                          </span>
+                          <span className="sale-payment">
+                            {sale.paymentMethod === "cash"
+                              ? "Készpénz"
+                              : sale.paymentMethod === "card"
+                                ? "Bankkártya"
+                                : "Átutalás"}
+                          </span>
+                          <span className="sale-amount">
+                            {sale.totalAmount.toLocaleString("hu-HU")} Ft
+                          </span>
+                        </div>
+                      </div>
+                      <div className="sale-actions">
+                        <button
+                          onClick={() => handleSaleEdit(sale)}
+                          className="kassza-btn edit"
+                        >
+                          ✏️ Szerkesztés
+                        </button>
+                        <button
+                          onClick={() => handleSaleDelete(sale)}
+                          className="kassza-btn delete"
+                        >
+                          🗑️ Törlés
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="kassza-section">
-          <h3>Eladási Lista</h3>
-          <div className="sales-list">
-            {filteredSales.length === 0 ? (
-              <div className="no-sales">
-                <p>Még nincsenek rögzített eladások.</p>
-              </div>
-            ) : (
-              filteredSales.map((sale) => (
-                <div key={sale.id} className="sale-item">
-                  <div className="sale-info">
-                    <div className="sale-book">
-                      <h4>{sale.itemName}</h4>
-                      <p className="sale-customer">
-                        Vásárló: {sale.customerName}
-                      </p>
-                      <p className="sale-type">
-                        Típus:{" "}
-                        {sale.itemType === "book" ? "Könyv" : "Ajándéktárgy"}
-                      </p>
-                    </div>
-                    <div className="sale-details">
-                      <p>
-                        <strong>Mennyiség:</strong> {sale.quantity} db
-                      </p>
-                      <p>
-                        <strong>Ár:</strong>{" "}
-                        {parseInt(sale.price).toLocaleString("hu-HU")} Ft
-                      </p>
-                      <p>
-                        <strong>Összesen:</strong>{" "}
-                        {sale.totalAmount.toLocaleString("hu-HU")} Ft
-                      </p>
-                      <p>
-                        <strong>Fizetés:</strong>{" "}
-                        {sale.paymentMethod === "cash"
-                          ? "Készpénz"
-                          : sale.paymentMethod === "card"
-                            ? "Bankkártya"
-                            : "Átutalás"}
-                      </p>
-                      <p>
-                        <strong>Dátum:</strong>{" "}
-                        {new Date(sale.timestamp).toLocaleDateString("hu-HU")}
-                      </p>
-                    </div>
-                    <div className="sale-actions">
-                      <button
-                        onClick={() => handleSaleEdit(sale)}
-                        className="kassza-btn edit"
-                      >
-                        ✏️ Szerkesztés
-                      </button>
-                      <button
-                        onClick={() => handleSaleDelete(sale)}
-                        className="kassza-btn delete"
-                      >
-                        🗑️ Törlés
-                      </button>
-                    </div>
+      {showSaleForm && (
+        <div className="kassza-modal">
+          <div className="kassza-modal-content">
+            <h3>{editingSale ? "Eladás Szerkesztése" : "Új Eladás"}</h3>
+            <div className="kassza-modal-body">
+              <form onSubmit={handleSaleSubmit}>
+                <div className="form-group">
+                  <label>Termék Típusa:</label>
+                  <div className="product-type-buttons">
+                    <button
+                      type="button"
+                      className={`product-type-btn ${saleData.itemType === "book" ? "active" : ""}`}
+                      onClick={() => {
+                        setSaleData({
+                          ...saleData,
+                          itemType: "book",
+                          itemId: "",
+                          itemName: "",
+                          price: "",
+                        });
+                      }}
+                    >
+                      📚 Könyv
+                    </button>
+                    <button
+                      type="button"
+                      className={`product-type-btn ${saleData.itemType === "gift" ? "active" : ""}`}
+                      onClick={() => {
+                        setSaleData({
+                          ...saleData,
+                          itemType: "gift",
+                          itemId: "",
+                          itemName: "",
+                          price: "",
+                        });
+                      }}
+                    >
+                      🎁 Ajándéktárgy
+                    </button>
                   </div>
                 </div>
-              ))
-            )}
+
+                <div className="form-group">
+                  <label>
+                    {saleData.itemType === "book"
+                      ? "Könyv Kiválasztása:"
+                      : "Ajándéktárgy Kiválasztása:"}
+                  </label>
+                  <div className="searchable-dropdown" ref={dropdownRef}>
+                    <input
+                      type="text"
+                      className="searchable-input"
+                      placeholder={`Keresés ${saleData.itemType === "book" ? "könyv" : "ajándéktárgy"} szerint...`}
+                      value={productSearchTerm}
+                      onChange={(e) => setProductSearchTerm(e.target.value)}
+                      onFocus={() => setShowProductDropdown(true)}
+                      onClick={() => setShowProductDropdown(true)}
+                    />
+                    {showProductDropdown && (
+                      <div className="dropdown-options">
+                        {saleData.itemType === "book"
+                          ? books
+                              .filter((book) => book.category === "Bolt")
+                              .filter(
+                                (book) =>
+                                  book.title
+                                    .toLowerCase()
+                                    .includes(
+                                      productSearchTerm.toLowerCase(),
+                                    ) ||
+                                  book.author
+                                    .toLowerCase()
+                                    .includes(productSearchTerm.toLowerCase()),
+                              )
+                              .map((book) => (
+                                <div
+                                  key={book.id}
+                                  className="dropdown-option"
+                                  onClick={() => {
+                                    setSaleData({
+                                      ...saleData,
+                                      itemId: book.id,
+                                      itemName: book.title,
+                                      price: book.price || 0,
+                                    });
+                                    setProductSearchTerm(
+                                      `${book.title} - ${book.author}`,
+                                    );
+                                    setShowProductDropdown(false);
+                                  }}
+                                >
+                                  <div className="option-title">
+                                    {book.title}
+                                  </div>
+                                  <div className="option-subtitle">
+                                    {book.author}
+                                  </div>
+                                  <div className="option-stock">
+                                    Készlet: {book.quantity}
+                                  </div>
+                                </div>
+                              ))
+                          : gifts
+                              .filter((gift) =>
+                                gift.name
+                                  .toLowerCase()
+                                  .includes(productSearchTerm.toLowerCase()),
+                              )
+                              .map((gift) => (
+                                <div
+                                  key={gift.id}
+                                  className="dropdown-option"
+                                  onClick={() => {
+                                    setSaleData({
+                                      ...saleData,
+                                      itemId: gift.id,
+                                      itemName: gift.name,
+                                      price: gift.price || 0,
+                                    });
+                                    setProductSearchTerm(gift.name);
+                                    setShowProductDropdown(false);
+                                  }}
+                                >
+                                  <div className="option-title">
+                                    {gift.name}
+                                  </div>
+                                  <div className="option-stock">
+                                    Készlet: {gift.quantity}
+                                  </div>
+                                </div>
+                              ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Termék Neve:</label>
+                  <input
+                    type="text"
+                    value={saleData.itemName}
+                    onChange={(e) =>
+                      setSaleData({ ...saleData, itemName: e.target.value })
+                    }
+                    placeholder="Termék neve"
+                    readOnly
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Mennyiség:</label>
+                  <input
+                    type="number"
+                    value={saleData.quantity}
+                    onChange={(e) =>
+                      setSaleData({ ...saleData, quantity: e.target.value })
+                    }
+                    placeholder="Add meg az eladott mennyiséget"
+                    min="1"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Eladási Ár (Ft):</label>
+                  <input
+                    type="number"
+                    value={saleData.price}
+                    onChange={(e) =>
+                      setSaleData({ ...saleData, price: e.target.value })
+                    }
+                    placeholder="Add meg az eladási árat"
+                    min="0"
+                    step="1"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Fizetési Mód:</label>
+                  <select
+                    value={saleData.paymentMethod}
+                    onChange={(e) =>
+                      setSaleData({
+                        ...saleData,
+                        paymentMethod: e.target.value,
+                      })
+                    }
+                    className="kassza-select"
+                  >
+                    <option value="cash">Készpénz</option>
+                    <option value="card">Bankkártya</option>
+                    <option value="transfer">Átutalás</option>
+                  </select>
+                </div>
+              </form>
+            </div>
+            <div className="kassza-modal-footer">
+              <button
+                type="submit"
+                onClick={handleSaleSubmit}
+                className="kassza-btn primary"
+              >
+                {editingSale ? "Eladás Frissítése" : "Eladás Mentése"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSaleForm(false);
+                  setEditingSale(null);
+                  setSaleData({
+                    itemType: "book",
+                    itemId: "",
+                    itemName: "",
+                    quantity: "",
+                    price: "",
+                    paymentMethod: "cash",
+                  });
+                  setProductSearchTerm(""); // Clear the search input
+                }}
+                className="kassza-btn secondary"
+              >
+                Mégse
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="kassza-modal">
+          <div className="kassza-modal-content delete-modal">
+            <div className="delete-modal-header">
+              <h3>Eladás Törlése</h3>
+            </div>
+            <div className="delete-modal-body">
+              <div className="delete-warning-icon">⚠️</div>
+              <p>Biztosan törölni szeretnéd ezt az eladást?</p>
+              {saleToDelete && (
+                <div className="sale-preview">
+                  <h4>{saleToDelete.itemName}</h4>
+                  <div className="sale-details-preview">
+                    <span>Mennyiség: {saleToDelete.quantity} db</span>
+                    <span>
+                      Ár: {parseInt(saleToDelete.price).toLocaleString("hu-HU")}{" "}
+                      Ft/db
+                    </span>
+                    <span>
+                      Összesen:{" "}
+                      {saleToDelete.totalAmount.toLocaleString("hu-HU")} Ft
+                    </span>
+                  </div>
+                </div>
+              )}
+              <p className="delete-note">
+                A készlet automatikusan helyreállításra kerül.
+              </p>
+            </div>
+            <div className="delete-modal-footer">
+              <button onClick={cancelDelete} className="kassza-btn secondary">
+                Mégse
+              </button>
+              <button onClick={confirmDelete} className="kassza-btn delete">
+                Igen, Törlés
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            background:
+              toastType === "success"
+                ? "linear-gradient(135deg, #28a745, #20c997)"
+                : "linear-gradient(135deg, #dc3545, #c82333)",
+            color: "white",
+            padding: "16px 20px",
+            borderRadius: "12px",
+            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+            fontWeight: "500",
+            maxWidth: "400px",
+            wordWrap: "break-word",
+            animation: isToastExiting
+              ? "slideOutRight 0.3s ease-in forwards"
+              : "slideInRight 0.3s ease-out",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            zIndex: 9999,
+          }}
+        >
+          <span style={{ fontSize: "1.2rem" }}>
+            {toastType === "success" ? "✅" : "❌"}
+          </span>
+          <div>
+            <div style={{ fontWeight: "600", marginBottom: "4px" }}>
+              {toastType === "success" ? "Siker" : "Hiba"}
+            </div>
+            <div>{toastMessage}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

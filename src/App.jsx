@@ -1688,18 +1688,6 @@ function App() {
                                   <td className="table-cell-actions">
                                     <div className="table-actions">
                                       <button
-                                        className="table-action-btn sell-btn"
-                                        onClick={() =>
-                                          sellBook(book.id, book.quantity || 0)
-                                        }
-                                        disabled={
-                                          !book.quantity || book.quantity <= 0
-                                        }
-                                        title="Eladás"
-                                      >
-                                        Eladás
-                                      </button>
-                                      <button
                                         className="table-action-btn edit-btn"
                                         onClick={() => handleBookClick(book)}
                                         title="Részletek"
@@ -1971,35 +1959,12 @@ function App() {
         {showAddGiftForm && (
           <>
             <div
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: "rgba(0, 0, 0, 0.5)",
-                backdropFilter: "blur(5px)",
-                zIndex: 9999,
-              }}
+              className="gift-modal-backdrop"
               onClick={() => setShowAddGiftForm(false)}
             ></div>
 
             <div
-              style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                background: "white",
-                borderRadius: "16px",
-                padding: "40px",
-                maxWidth: "500px",
-                width: "90%",
-                maxHeight: "90vh",
-                overflowY: "auto",
-                zIndex: 10000,
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-              }}
+              className="gift-modal-content"
               onClick={(e) => e.stopPropagation()}
             >
               <h2
@@ -2305,33 +2270,12 @@ function App() {
         {showDeleteGiftConfirm && (
           <>
             <div
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: "rgba(0, 0, 0, 0.5)",
-                backdropFilter: "blur(5px)",
-                zIndex: 9999,
-              }}
+              className="gift-modal-backdrop"
               onClick={() => setShowDeleteGiftConfirm(false)}
             ></div>
 
             <div
-              style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                background: "white",
-                borderRadius: "16px",
-                padding: "40px",
-                maxWidth: "400px",
-                width: "90%",
-                zIndex: 10000,
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-              }}
+              className="gift-modal-content"
               onClick={(e) => e.stopPropagation()}
             >
               <h2
@@ -2431,35 +2375,12 @@ function App() {
         {showEditGiftForm && editingGift && (
           <>
             <div
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: "rgba(0, 0, 0, 0.5)",
-                backdropFilter: "blur(5px)",
-                zIndex: 9999,
-              }}
+              className="gift-modal-backdrop"
               onClick={() => setShowEditGiftForm(false)}
             ></div>
 
             <div
-              style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                background: "white",
-                borderRadius: "16px",
-                padding: "40px",
-                maxWidth: "500px",
-                width: "90%",
-                maxHeight: "90vh",
-                overflowY: "auto",
-                zIndex: 10000,
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-              }}
+              className="gift-modal-content"
               onClick={(e) => e.stopPropagation()}
             >
               <h2
@@ -3769,28 +3690,17 @@ function App() {
                     <button onClick={() => handleBookEdit(selectedBook)}>
                       Szerkesztés
                     </button>
-                    {selectedBook.category === "Bolt" &&
-                      selectedBook.quantity > 0 && (
-                        <button
-                          onClick={() =>
-                            sellBook(selectedBook.id, selectedBook.quantity)
-                          }
-                          style={{
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            border: "none",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Eladás ({selectedBook.quantity} db raktáron)
-                        </button>
-                      )}
                     <button
                       onClick={() => handleDeleteClick(selectedBook)}
-                      className="delete-btn"
+                      style={{
+                        backgroundColor: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontWeight: "600",
+                      }}
                     >
                       Törlés
                     </button>
