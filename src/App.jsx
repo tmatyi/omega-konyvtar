@@ -71,6 +71,7 @@ function App() {
   const [giftName, setGiftName] = useState("");
   const [giftQuantity, setGiftQuantity] = useState("");
   const [giftPrice, setGiftPrice] = useState("");
+  const [giftPurchasePrice, setGiftPurchasePrice] = useState("");
   const [giftImage, setGiftImage] = useState("");
   const [gifts, setGifts] = useState([]);
   const [giftToDelete, setGiftToDelete] = useState(null);
@@ -83,6 +84,7 @@ function App() {
   // Bookstore inventory management
   const [bookQuantity, setBookQuantity] = useState("");
   const [bookPrice, setBookPrice] = useState("");
+  const [bookPurchasePrice, setBookPurchasePrice] = useState("");
 
   // Sorting for table
   const [sortField, setSortField] = useState("title");
@@ -566,6 +568,7 @@ function App() {
         if (bookQuantity && bookPrice) {
           bookData.quantity = parseInt(bookQuantity);
           bookData.price = parseFloat(bookPrice);
+          bookData.purchasePrice = parseFloat(bookPurchasePrice) || 0;
           bookData.status = "Raktáron";
         } else {
           alert(
@@ -594,6 +597,7 @@ function App() {
       setPublisher("");
       setBookQuantity("");
       setBookPrice("");
+      setBookPurchasePrice("");
       setSuccessMessage("");
       setShowAddForm(false);
     }
@@ -1261,9 +1265,11 @@ function App() {
     if (book.category === "Bolt") {
       setBookQuantity(book.quantity?.toString() || "");
       setBookPrice(book.price?.toString() || "");
+      setBookPurchasePrice(book.purchasePrice?.toString() || "");
     } else {
       setBookQuantity("");
       setBookPrice("");
+      setBookPurchasePrice("");
     }
   };
 
@@ -1285,6 +1291,7 @@ function App() {
     setPublisher("");
     setBookQuantity("");
     setBookPrice("");
+    setBookPurchasePrice("");
   };
 
   // Update book in database
@@ -1311,6 +1318,7 @@ function App() {
       if (bookQuantity && bookPrice) {
         updateData.quantity = parseInt(bookQuantity);
         updateData.price = parseFloat(bookPrice);
+        updateData.purchasePrice = parseFloat(bookPurchasePrice) || 0;
         updateData.status =
           parseInt(bookQuantity) > 0 ? "Raktáron" : "Nincs raktáron";
       }
@@ -1341,6 +1349,7 @@ function App() {
     setPublisher("");
     setBookQuantity("");
     setBookPrice("");
+    setBookPurchasePrice("");
   };
 
   // Close book detail modal
@@ -1601,11 +1610,14 @@ function App() {
                                 {sortField === "author" &&
                                   (sortOrder === "asc" ? "↑" : "↓")}
                               </th>
+                              <th className="table-header-price">
+                                Beszerzési ár
+                              </th>
                               <th
                                 className="table-header-price"
                                 onClick={() => handleSort("price")}
                               >
-                                Ár{" "}
+                                Eladási ár{" "}
                                 {sortField === "price" &&
                                   (sortOrder === "asc" ? "↑" : "↓")}
                               </th>
@@ -1660,6 +1672,11 @@ function App() {
                                 </td>
                                 <td className="table-cell-author">
                                   {book.author}
+                                </td>
+                                <td className="table-cell-price">
+                                  {book.purchasePrice
+                                    ? `${book.purchasePrice.toLocaleString("hu-HU")} Ft`
+                                    : "N/A"}
                                 </td>
                                 <td className="table-cell-price">
                                   {book.price
@@ -1824,6 +1841,7 @@ function App() {
                           <th>Kép</th>
                           <th>Név</th>
                           {user?.role === "admin" && <th>Mennyiség</th>}
+                          <th>Beszerzési ár</th>
                           <th>Eladási ár</th>
                           <th>Státusz</th>
                           {user?.role === "admin" && <th>Műveletek</th>}
@@ -1913,6 +1931,7 @@ function App() {
                                   </span>
                                 </td>
                               )}
+                              <td>{gift.purchasePrice || 0} Ft</td>
                               <td>{gift.price} Ft</td>
                               <td>
                                 <span className={`status ${statusClass}`}>
@@ -2121,6 +2140,49 @@ function App() {
                       color: "#374151",
                     }}
                   >
+                    Beszerzési ár
+                  </label>
+                  <input
+                    type="number"
+                    value={giftPurchasePrice}
+                    onChange={(e) => setGiftPurchasePrice(e.target.value)}
+                    placeholder="Add meg a beszerzési árat (Ft)"
+                    min="0"
+                    step="1"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "20px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
                     Eladási ár
                   </label>
                   <input
@@ -2172,6 +2234,7 @@ function App() {
                         name: giftName,
                         quantity: parseInt(giftQuantity),
                         price: parseFloat(giftPrice),
+                        purchasePrice: parseFloat(giftPurchasePrice) || 0,
                         image: giftImage || "🎁",
                         status: "Raktáron",
                         createdAt: new Date().toISOString(),
@@ -2188,6 +2251,7 @@ function App() {
                       setGiftName("");
                       setGiftQuantity("");
                       setGiftPrice("");
+                      setGiftPurchasePrice("");
                       setGiftImage("");
                     }
                   }}
@@ -2234,6 +2298,7 @@ function App() {
                     setGiftName("");
                     setGiftQuantity("");
                     setGiftPrice("");
+                    setGiftPurchasePrice("");
                     setGiftImage("");
                   }}
                   style={{
@@ -2486,6 +2551,48 @@ function App() {
                       color: "#374151",
                     }}
                   >
+                    Beszerzési ár
+                  </label>
+                  <input
+                    type="number"
+                    defaultValue={editingGift.purchasePrice || 0}
+                    id="edit-gift-purchase-price"
+                    min="0"
+                    step="1"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e9ecef",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontFamily: '"Source Sans Pro", sans-serif',
+                      backgroundColor: "#f8fafc",
+                      transition: "all 0.3s ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#844a59";
+                      e.target.style.backgroundColor = "#fff";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#f8fafc";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "20px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
                     Eladási ár
                   </label>
                   <input
@@ -2576,6 +2683,9 @@ function App() {
                       document.getElementById("edit-gift-name").value;
                     const quantity =
                       document.getElementById("edit-gift-quantity").value;
+                    const purchasePrice = document.getElementById(
+                      "edit-gift-purchase-price",
+                    ).value;
                     const price =
                       document.getElementById("edit-gift-price").value;
                     const recommendedStock = document.getElementById(
@@ -2586,6 +2696,7 @@ function App() {
                       updateGift(editingGift.id, {
                         name,
                         quantity: parseInt(quantity),
+                        purchasePrice: parseFloat(purchasePrice) || 0,
                         price: parseFloat(price),
                         recommendedStock: recommendedStock
                           ? parseInt(recommendedStock)
@@ -3186,6 +3297,18 @@ function App() {
                       />
                     </div>
                     <div className="form-field">
+                      <label className="field-label">Beszerzési ár (Ft)</label>
+                      <input
+                        type="number"
+                        placeholder="Add meg a beszerzési árat (Ft)"
+                        value={bookPurchasePrice}
+                        onChange={(e) => setBookPurchasePrice(e.target.value)}
+                        className="form-input"
+                        min="0"
+                        step="1"
+                      />
+                    </div>
+                    <div className="form-field">
                       <label className="field-label">Eladási ár (Ft)</label>
                       <input
                         type="number"
@@ -3537,6 +3660,19 @@ function App() {
                             />
                           </div>
                           <div className="book-detail-field">
+                            <strong>Beszerzési ár (Ft):</strong>
+                            <input
+                              type="number"
+                              value={bookPurchasePrice}
+                              onChange={(e) =>
+                                setBookPurchasePrice(e.target.value)
+                              }
+                              className="edit-input"
+                              min="0"
+                              step="1"
+                            />
+                          </div>
+                          <div className="book-detail-field">
                             <strong>Eladási ár (Ft):</strong>
                             <input
                               type="number"
@@ -3651,6 +3787,22 @@ function App() {
                                 }}
                               >
                                 {selectedBook.quantity || 0} db
+                              </span>
+                            </div>
+                            <div className="book-detail-field">
+                              <strong>Beszerzési ár:</strong>{" "}
+                              <span
+                                style={{
+                                  color: "#6c757d",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {selectedBook.purchasePrice
+                                  ? selectedBook.purchasePrice.toLocaleString(
+                                      "hu-HU",
+                                    )
+                                  : "N/A"}{" "}
+                                Ft
                               </span>
                             </div>
                             <div className="book-detail-field">
