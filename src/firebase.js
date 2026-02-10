@@ -36,8 +36,8 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth = getAuth(app);
 
-// Set authentication persistence to session storage
-setPersistence(auth, browserSessionPersistence).catch((error) => {
+// Set authentication persistence to local storage (remembers login across app restarts)
+setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.error("Error setting auth persistence:", error);
 });
 

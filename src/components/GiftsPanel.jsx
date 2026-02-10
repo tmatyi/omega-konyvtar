@@ -4,6 +4,7 @@ import {
   updateGiftInDb,
   deleteGiftFromDb,
 } from "../services/firebaseService.js";
+import "./BooksTable.css";
 
 function GiftsPanel({ user, gifts }) {
   const [showAddGiftForm, setShowAddGiftForm] = useState(false);
@@ -19,6 +20,7 @@ function GiftsPanel({ user, gifts }) {
   const [editingGift, setEditingGift] = useState(null);
   const [showImagePopup, setShowImagePopup] = useState(false);
   const [popupImage, setPopupImage] = useState(null);
+  const [expandedGiftId, setExpandedGiftId] = useState(null);
 
   // Delete gift function
   const deleteGift = (giftId) => {
@@ -82,7 +84,9 @@ function GiftsPanel({ user, gifts }) {
           <div className="content-wrapper">
             <div className="inventory-table">
               <h2>Raktárkészlet</h2>
-              <div className="table-container">
+
+              {/* Desktop: original table */}
+              <div className="table-container gifts-table-desktop">
                 <table className="inventory-table">
                   <thead>
                     <tr>
@@ -98,9 +102,6 @@ function GiftsPanel({ user, gifts }) {
                   </thead>
                   <tbody>
                     {gifts.map((gift) => {
-                      const isAboveRecommendedStock =
-                        gift.recommendedStock &&
-                        gift.quantity > gift.recommendedStock;
                       const isAtRecommendedStock =
                         gift.recommendedStock &&
                         gift.quantity === gift.recommendedStock;
@@ -225,6 +226,154 @@ function GiftsPanel({ user, gifts }) {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile: expandable compact rows */}
+              <div className="compact-rows-container gifts-rows-mobile">
+                {gifts.map((gift) => {
+                  const isExpanded = expandedGiftId === gift.id;
+                  const isAtRecommendedStock =
+                    gift.recommendedStock &&
+                    gift.quantity === gift.recommendedStock;
+                  const isBelowRecommendedStock =
+                    gift.recommendedStock &&
+                    gift.quantity < gift.recommendedStock;
+                  const statusClass = isBelowRecommendedStock
+                    ? "critical-stock"
+                    : isAtRecommendedStock
+                      ? "warning-stock"
+                      : "in-stock";
+                  const statusText = isBelowRecommendedStock
+                    ? "Töltés szükséges"
+                    : isAtRecommendedStock
+                      ? "Fogyóban"
+                      : "Készleten";
+
+                  const giftThumb =
+                    gift.image &&
+                    (gift.image.startsWith("data:image/") ||
+                      gift.image.startsWith("blob:") ||
+                      gift.image.startsWith("http"));
+
+                  return (
+                    <div
+                      key={gift.id}
+                      className={`compact-row ${isExpanded ? "compact-row--expanded" : ""}`}
+                    >
+                      <div
+                        className="compact-row__summary"
+                        onClick={() =>
+                          setExpandedGiftId((prev) =>
+                            prev === gift.id ? null : gift.id,
+                          )
+                        }
+                      >
+                        <div className="compact-row__thumb">
+                          {giftThumb ? (
+                            <img src={gift.image} alt={gift.name} />
+                          ) : (
+                            <span className="compact-row__thumb-placeholder">
+                              {gift.image || "🎁"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="compact-row__info">
+                          <span className="compact-row__title">
+                            {gift.name}
+                          </span>
+                          <span className="compact-row__subtitle">
+                            {gift.price} Ft
+                          </span>
+                        </div>
+                        <div className="compact-row__end">
+                          <span
+                            className={`compact-row__badge ${statusClass === "in-stock" ? "in-stock" : "out-of-stock"}`}
+                          >
+                            {gift.quantity} db
+                          </span>
+                          <svg
+                            className={`compact-row__chevron ${isExpanded ? "compact-row__chevron--open" : ""}`}
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="compact-row__details">
+                        <div className="compact-row__details-inner">
+                          <div className="compact-row__detail-grid">
+                            <div className="compact-row__detail-item">
+                              <span className="compact-row__detail-label">
+                                Státusz
+                              </span>
+                              <span className={`status ${statusClass}`}>
+                                {statusText}
+                              </span>
+                            </div>
+                            <div className="compact-row__detail-item">
+                              <span className="compact-row__detail-label">
+                                Eladási ár
+                              </span>
+                              <span>{gift.price} Ft</span>
+                            </div>
+                            <div className="compact-row__detail-item">
+                              <span className="compact-row__detail-label">
+                                Beszerzési ár
+                              </span>
+                              <span>{gift.purchasePrice || 0} Ft</span>
+                            </div>
+                            {gift.barcode && (
+                              <div className="compact-row__detail-item">
+                                <span className="compact-row__detail-label">
+                                  Vonalkód
+                                </span>
+                                <span
+                                  style={{
+                                    fontFamily: '"SF Mono", "Menlo", monospace',
+                                    fontSize: "12px",
+                                  }}
+                                >
+                                  {gift.barcode}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {user?.role === "admin" && (
+                            <div className="compact-row__actions">
+                              <button
+                                className="compact-row__action-btn compact-row__action-btn--primary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingGift(gift);
+                                  setShowEditGiftForm(true);
+                                }}
+                              >
+                                Szerkesztés
+                              </button>
+                              <button
+                                className="compact-row__action-btn compact-row__action-btn--danger"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setGiftToDelete(gift);
+                                  setShowDeleteGiftConfirm(true);
+                                }}
+                              >
+                                Törlés
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
