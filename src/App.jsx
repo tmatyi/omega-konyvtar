@@ -3,7 +3,6 @@ import { useAuth } from "./hooks/useAuth.js";
 import { useDatabase } from "./hooks/useDatabase.js";
 import Login from "./Login.jsx";
 import Sidebar from "./Sidebar.jsx";
-import MobileNav from "./MobileNav.jsx";
 import Profile from "./Profile.jsx";
 import UsersPanel from "./components/UsersPanel.jsx";
 import LendingPanel from "./components/LendingPanel.jsx";
@@ -166,13 +165,6 @@ function App() {
         activeMode={activeMode}
         onTabChange={setActiveTab}
         onModeChange={setActiveMode}
-      />
-      <MobileNav
-        user={user}
-        onLogout={handleLogout}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        activeMode={activeMode}
       />
       <div className="main-content-with-sidebar">
         {activeTab === "books" && (

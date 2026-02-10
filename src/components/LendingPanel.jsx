@@ -270,7 +270,6 @@ const LendingPanel = ({ books, users }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
-              autoFocus
             />
           </div>
 
@@ -360,7 +359,6 @@ const LendingPanel = ({ books, users }) => {
                 value={userSearchTerm}
                 onChange={(e) => setUserSearchTerm(e.target.value)}
                 className="search-input"
-                autoFocus
               />
             </div>
 

@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import { addGiftToDb, updateGiftInDb, deleteGiftFromDb } from "../services/firebaseService.js";
+import {
+  addGiftToDb,
+  updateGiftInDb,
+  deleteGiftFromDb,
+} from "../services/firebaseService.js";
 
 function GiftsPanel({ user, gifts }) {
   const [showAddGiftForm, setShowAddGiftForm] = useState(false);
@@ -8,6 +12,7 @@ function GiftsPanel({ user, gifts }) {
   const [giftPrice, setGiftPrice] = useState("");
   const [giftPurchasePrice, setGiftPurchasePrice] = useState("");
   const [giftImage, setGiftImage] = useState("");
+  const [giftBarcode, setGiftBarcode] = useState("");
   const [giftToDelete, setGiftToDelete] = useState(null);
   const [showDeleteGiftConfirm, setShowDeleteGiftConfirm] = useState(false);
   const [showEditGiftForm, setShowEditGiftForm] = useState(false);
@@ -73,9 +78,7 @@ function GiftsPanel({ user, gifts }) {
             </div>
           </div>
         </header>
-        <main
-          className={`App-main gifts-padding`}
-        >
+        <main className={`App-main gifts-padding`}>
           <div className="content-wrapper">
             <div className="inventory-table">
               <h2>Raktárkészlet</h2>
@@ -85,6 +88,7 @@ function GiftsPanel({ user, gifts }) {
                     <tr>
                       <th>Kép</th>
                       <th>Név</th>
+                      <th>Vonalkód</th>
                       {user?.role === "admin" && <th>Mennyiség</th>}
                       <th>Beszerzési ár</th>
                       <th>Eladási ár</th>
@@ -169,6 +173,15 @@ function GiftsPanel({ user, gifts }) {
                             </div>
                           </td>
                           <td>{gift.name}</td>
+                          <td
+                            style={{
+                              fontFamily: '"SF Mono", "Menlo", monospace',
+                              fontSize: "12px",
+                              color: "#6b7280",
+                            }}
+                          >
+                            {gift.barcode || "—"}
+                          </td>
                           {user?.role === "admin" && (
                             <td>
                               <span className={`quantity ${quantityClass}`}>
@@ -460,6 +473,47 @@ function GiftsPanel({ user, gifts }) {
                   }}
                 />
               </div>
+
+              <div style={{ marginBottom: "15px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#374151",
+                  }}
+                >
+                  Vonalkód
+                </label>
+                <input
+                  type="text"
+                  value={giftBarcode}
+                  onChange={(e) => setGiftBarcode(e.target.value)}
+                  placeholder="Add meg a vonalkódot (opcionális)"
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    border: "2px solid #e9ecef",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontFamily: '"Source Sans Pro", sans-serif',
+                    backgroundColor: "#f8fafc",
+                    transition: "all 0.3s ease",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#844a59";
+                    e.target.style.backgroundColor = "#fff";
+                    e.target.style.boxShadow =
+                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#e9ecef";
+                    e.target.style.backgroundColor = "#f8fafc";
+                    e.target.style.boxShadow = "none";
+                  }}
+                />
+              </div>
             </div>
 
             <div
@@ -479,6 +533,7 @@ function GiftsPanel({ user, gifts }) {
                       quantity: parseInt(giftQuantity),
                       price: parseFloat(giftPrice),
                       purchasePrice: parseFloat(giftPurchasePrice) || 0,
+                      barcode: giftBarcode || "",
                       image: giftImage || "🎁",
                       status: "Raktáron",
                       createdAt: new Date().toISOString(),
@@ -495,6 +550,7 @@ function GiftsPanel({ user, gifts }) {
                     setGiftQuantity("");
                     setGiftPrice("");
                     setGiftPurchasePrice("");
+                    setGiftBarcode("");
                     setGiftImage("");
                   }
                 }}
@@ -521,8 +577,7 @@ function GiftsPanel({ user, gifts }) {
                   if (giftName && giftQuantity && giftPrice) {
                     e.target.style.backgroundColor = "#6b3a48";
                     e.target.style.transform = "translateY(-1px)";
-                    e.target.style.boxShadow =
-                      "0 4px 12px rgba(0, 0, 0, 0.15)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -542,6 +597,7 @@ function GiftsPanel({ user, gifts }) {
                   setGiftQuantity("");
                   setGiftPrice("");
                   setGiftPurchasePrice("");
+                  setGiftBarcode("");
                   setGiftImage("");
                 }}
                 style={{
@@ -910,6 +966,47 @@ function GiftsPanel({ user, gifts }) {
                   }}
                 />
               </div>
+
+              <div style={{ marginBottom: "15px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#374151",
+                  }}
+                >
+                  Vonalkód
+                </label>
+                <input
+                  type="text"
+                  defaultValue={editingGift.barcode || ""}
+                  id="edit-gift-barcode"
+                  placeholder="Vonalkód (opcionális)"
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    border: "2px solid #e9ecef",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontFamily: '"Source Sans Pro", sans-serif',
+                    backgroundColor: "#f8fafc",
+                    transition: "all 0.3s ease",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#844a59";
+                    e.target.style.backgroundColor = "#fff";
+                    e.target.style.boxShadow =
+                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#e9ecef";
+                    e.target.style.backgroundColor = "#f8fafc";
+                    e.target.style.boxShadow = "none";
+                  }}
+                />
+              </div>
             </div>
 
             <div
@@ -922,8 +1019,7 @@ function GiftsPanel({ user, gifts }) {
             >
               <button
                 onClick={() => {
-                  const name =
-                    document.getElementById("edit-gift-name").value;
+                  const name = document.getElementById("edit-gift-name").value;
                   const quantity =
                     document.getElementById("edit-gift-quantity").value;
                   const purchasePrice = document.getElementById(
@@ -934,6 +1030,8 @@ function GiftsPanel({ user, gifts }) {
                   const recommendedStock = document.getElementById(
                     "edit-gift-recommended-stock",
                   ).value;
+                  const barcode =
+                    document.getElementById("edit-gift-barcode").value;
 
                   if (name && quantity && price) {
                     updateGift(editingGift.id, {
@@ -941,6 +1039,7 @@ function GiftsPanel({ user, gifts }) {
                       quantity: parseInt(quantity),
                       purchasePrice: parseFloat(purchasePrice) || 0,
                       price: parseFloat(price),
+                      barcode: barcode || "",
                       recommendedStock: recommendedStock
                         ? parseInt(recommendedStock)
                         : null,

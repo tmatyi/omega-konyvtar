@@ -1,0 +1,286 @@
+.barcode-scanner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 20000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.barcode-scanner-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.barcode-scanner-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.barcode-scanner-title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.barcode-scanner-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.barcode-scanner-close-btn:hover,
+.barcode-scanner-close-btn:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.barcode-scanner-viewfinder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Corner markers for the viewfinder */
+.barcode-scanner-corners {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%;
+  height: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.barcode-scanner-corners::before,
+.barcode-scanner-corners::after,
+.barcode-scanner-corner-bl::before,
+.barcode-scanner-corner-br::before {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-color: #fff;
+  border-style: solid;
+}
+
+.barcode-scanner-corners::before {
+  top: 0;
+  left: 0;
+  border-width: 3px 0 0 3px;
+  border-radius: 4px 0 0 0;
+}
+
+.barcode-scanner-corners::after {
+  top: 0;
+  right: 0;
+  border-width: 3px 3px 0 0;
+  border-radius: 0 4px 0 0;
+}
+
+.barcode-scanner-corner-bl::before {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 3px 3px;
+  border-radius: 0 0 0 4px;
+}
+
+.barcode-scanner-corner-br::before {
+  bottom: 0;
+  right: 0;
+  border-width: 0 3px 3px 0;
+  border-radius: 0 0 4px 0;
+}
+
+/* Scanning line animation */
+.barcode-scanner-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 65%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #844a59, transparent);
+  z-index: 1;
+  animation: scanLine 2s ease-in-out infinite;
+  opacity: 0.8;
+}
+
+@keyframes scanLine {
+  0%,
+  100% {
+    transform: translate(-50%, -80px);
+  }
+  50% {
+    transform: translate(-50%, 80px);
+  }
+}
+
+.barcode-scanner-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+}
+
+.barcode-scanner-error {
+  color: #f87171;
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+  padding: 12px 16px;
+  background: rgba(248, 113, 113, 0.1);
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.barcode-scanner-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(52, 199, 89, 0.15);
+  border-radius: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  animation: successPop 0.3s ease-out;
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.barcode-scanner-success-icon {
+  color: #34c759;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.barcode-scanner-success-code {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "SF Mono", "Menlo", monospace;
+  letter-spacing: 0.5px;
+}
+
+/* Scan button for Kassza */
+.kassza-scan-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border: 2px dashed #844a59;
+  border-radius: 12px;
+  background: rgba(132, 74, 89, 0.05);
+  color: #844a59;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  margin-bottom: 16px;
+}
+
+.kassza-scan-btn:hover,
+.kassza-scan-btn:active {
+  background: rgba(132, 74, 89, 0.12);
+  border-style: solid;
+}
+
+.kassza-scan-btn svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Scan button in the ISBN field */
+.isbn-scan-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #844a59;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.isbn-scan-btn:hover,
+.isbn-scan-btn:active {
+  background: #844a59;
+  color: #fff;
+  border-color: #844a59;
+}
+
+.isbn-scan-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .barcode-scanner-overlay {
+    padding: 16px;
+  }
+
+  .barcode-scanner-container {
+    max-width: 100%;
+  }
+
+  .barcode-scanner-viewfinder {
+    border-radius: 12px;
+  }
+
+  .barcode-scanner-close-btn {
+    width: 52px;
+    height: 52px;
+    font-size: 26px;
+  }
+}

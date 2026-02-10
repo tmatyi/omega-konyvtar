@@ -33,8 +33,6 @@ export const processClcHungaryUrl = async (url) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    console.log("Processing CLC Hungary URL:", url);
-
     // Extract title
     const titleElement = doc.querySelector(".product_title.entry-title");
     const title = titleElement ? titleElement.textContent.trim() : "";
@@ -42,7 +40,7 @@ export const processClcHungaryUrl = async (url) => {
     // Extract author from product meta or description
     let author = "";
     const authorElement = doc.querySelector(
-      '.posted_in a, .tagged_as a, .product_meta .detail-value',
+      ".posted_in a, .tagged_as a, .product_meta .detail-value",
     );
     if (authorElement) {
       author = authorElement.textContent.trim();
@@ -130,18 +128,6 @@ export const processClcHungaryUrl = async (url) => {
       }
     }
 
-    console.log("CLC Hungary extracted data:", {
-      title,
-      author,
-      publisher,
-      description,
-      isbn,
-      thumbnail,
-      year,
-      originalTitle,
-      pageCount,
-    });
-
     return {
       title,
       author,
@@ -150,7 +136,6 @@ export const processClcHungaryUrl = async (url) => {
       isbn,
       thumbnail,
       year,
-      genre: "",
       originalTitle,
       pageCount,
     };
@@ -178,8 +163,6 @@ export const processBooklineUrl = async (url) => {
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
-
-    console.log("Processing Bookline URL:", url);
 
     // Extract title
     const titleElement = doc.querySelector(".c-product__title");
@@ -238,16 +221,6 @@ export const processBooklineUrl = async (url) => {
         year = yearMatch[0];
       }
     }
-
-    console.log("Bookline extracted data:", {
-      title,
-      author,
-      publisher,
-      description,
-      isbn,
-      thumbnail,
-      year,
-    });
 
     return {
       title,
@@ -346,9 +319,7 @@ const processMolyPublicationPage = (doc) => {
 
   // Try to extract description from text shrinkable shrunk paragraphs
   let description = "";
-  const descriptionElements = doc.querySelectorAll(
-    ".text.shrinkable.shrunk p",
-  );
+  const descriptionElements = doc.querySelectorAll(".text.shrinkable.shrunk p");
   if (descriptionElements.length > 0) {
     description = Array.from(descriptionElements)
       .map((p) => p.textContent.trim())
@@ -356,26 +327,15 @@ const processMolyPublicationPage = (doc) => {
       .join("\n\n");
   }
 
-  console.log("Moly.hu publication extracted data:", {
-    title,
-    author,
-    publisher,
-    year,
-    pageCount,
-    isbn,
-    thumbnail,
-    description,
-  });
-
   return {
     title,
     author,
     publisher,
-    description,
-    isbn,
-    thumbnail,
     year,
     pageCount,
+    isbn,
+    thumbnail,
+    description,
     genre: "",
     originalTitle: "",
   };
@@ -423,9 +383,7 @@ const processMolyBookPage = (doc) => {
 
   // Extract description from text shrinkable shrunk paragraphs
   let description = "";
-  const descriptionElements = doc.querySelectorAll(
-    ".text.shrinkable.shrunk p",
-  );
+  const descriptionElements = doc.querySelectorAll(".text.shrinkable.shrunk p");
   if (descriptionElements.length > 0) {
     description = Array.from(descriptionElements)
       .map((p) => p.textContent.trim())
@@ -456,16 +414,6 @@ const processMolyBookPage = (doc) => {
     year = yearElement.textContent.trim();
   }
 
-  console.log("Moly.hu book extracted data:", {
-    title,
-    author,
-    publisher,
-    description,
-    isbn,
-    thumbnail,
-    year,
-  });
-
   return {
     title,
     author,
@@ -488,8 +436,6 @@ export const processMolyHuUrl = async (url) => {
 
     const parser = new DOMParser();
     doc = parser.parseFromString(html, "text/html");
-
-    console.log("Processing Moly.hu URL:", url);
 
     // Check if this is a publication page (kiadasok) or book page (konyvek)
     const isPublicationPage = url.includes("/kiadasok/");
@@ -538,8 +484,7 @@ export const processOpenLibraryUrl = async (url) => {
 
     return {
       title: data.title || "",
-      author:
-        data.authors?.map((author) => author.name || "").join(", ") || "",
+      author: data.authors?.map((author) => author.name || "").join(", ") || "",
       year: data.first_publish_date?.split("-")[0] || "",
       genre: data.subjects?.[0] || "",
       description: data.description?.value || data.description || "",
@@ -571,8 +516,7 @@ export const processGoodreadsUrl = async (url) => {
     const doc = parser.parseFromString(html, "text/html");
 
     const title =
-      doc.querySelector('[data-testid="bookTitle"]')?.textContent?.trim() ||
-      "";
+      doc.querySelector('[data-testid="bookTitle"]')?.textContent?.trim() || "";
     const author =
       doc.querySelector('[data-testid="authorName"]')?.textContent?.trim() ||
       "";
@@ -617,8 +561,7 @@ export const processAmazonUrl = async (url) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    const title =
-      doc.querySelector("#productTitle")?.textContent?.trim() || "";
+    const title = doc.querySelector("#productTitle")?.textContent?.trim() || "";
     const author =
       doc.querySelector(".author .a-link-normal")?.textContent?.trim() || "";
     const year =

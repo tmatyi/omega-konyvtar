@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   database,
   ref,
@@ -9,6 +9,9 @@ import {
   push,
   set,
 } from "../firebase.js";
+
+import BarcodeScanner from "./BarcodeScanner.jsx";
+import "./BarcodeScanner.css";
 
 const KasszaPanel = ({ user }) => {
   const [sales, setSales] = useState([]);
@@ -39,6 +42,8 @@ const KasszaPanel = ({ user }) => {
   ); // YYYY-MM format
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -121,6 +126,68 @@ const KasszaPanel = ({ user }) => {
     onValue(booksRef, handleBooksData);
     onValue(giftsRef, handleGiftsData);
   }, []);
+
+  // Barcode scan handler — find book by ISBN or gift by barcode
+  const handleBarcodeScan = useCallback(
+    (scannedCode) => {
+      setShowScanner(false);
+      setScanResult(null);
+
+      // 1. Try to find a book with matching ISBN (Bolt category only)
+      const matchedBook = books.find(
+        (b) => b.isbn && b.isbn === scannedCode && b.category === "Bolt",
+      );
+
+      if (matchedBook) {
+        setSaleData({
+          itemType: "book",
+          itemId: matchedBook.id,
+          itemName: matchedBook.title,
+          quantity: "1",
+          price: matchedBook.price || "",
+          paymentMethod: "cash",
+        });
+        setProductSearchTerm(`${matchedBook.title} - ${matchedBook.author}`);
+        setScanResult({
+          type: "success",
+          message: `📚 ${matchedBook.title} (${matchedBook.author})`,
+        });
+        setShowSaleForm(true);
+        return;
+      }
+
+      // 2. Try to find a gift with matching barcode
+      const matchedGift = gifts.find(
+        (g) => g.barcode && g.barcode === scannedCode,
+      );
+
+      if (matchedGift) {
+        setSaleData({
+          itemType: "gift",
+          itemId: matchedGift.id,
+          itemName: matchedGift.name,
+          quantity: "1",
+          price: matchedGift.price || "",
+          paymentMethod: "cash",
+        });
+        setProductSearchTerm(matchedGift.name);
+        setScanResult({
+          type: "success",
+          message: `🎁 ${matchedGift.name}`,
+        });
+        setShowSaleForm(true);
+        return;
+      }
+
+      // 3. Not found
+      setScanResult({
+        type: "error",
+        message: `Nem található termék ezzel a vonalkóddal: ${scannedCode}`,
+      });
+      showToastNotification(`Nem található termék: ${scannedCode}`, "error");
+    },
+    [books, gifts],
+  );
 
   const handleSaleSubmit = (e) => {
     e.preventDefault();
@@ -384,6 +451,46 @@ const KasszaPanel = ({ user }) => {
 
           <div className="kassza-section">
             <h3>Új Eladás</h3>
+            <button
+              className="kassza-scan-btn"
+              onClick={() => setShowScanner(true)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                <line x1="7" y1="12" x2="17" y2="12" />
+              </svg>
+              Vonalkód Szkennelés
+            </button>
+            {scanResult && (
+              <div
+                className={`scan-result-banner ${scanResult.type}`}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: "10px",
+                  marginBottom: "12px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  background:
+                    scanResult.type === "success"
+                      ? "rgba(52, 199, 89, 0.1)"
+                      : "rgba(255, 59, 48, 0.1)",
+                  color: scanResult.type === "success" ? "#1d7a3a" : "#d32f2f",
+                  border: `1px solid ${scanResult.type === "success" ? "rgba(52, 199, 89, 0.3)" : "rgba(255, 59, 48, 0.3)"}`,
+                }}
+              >
+                {scanResult.message}
+              </div>
+            )}
             <button
               onClick={() => setShowSaleForm(true)}
               className="kassza-btn primary"
@@ -744,6 +851,14 @@ const KasszaPanel = ({ user }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Barcode Scanner */}
+      {showScanner && (
+        <BarcodeScanner
+          onScan={handleBarcodeScan}
+          onClose={() => setShowScanner(false)}
+        />
       )}
 
       {/* Toast Notification */}

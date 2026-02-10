@@ -37,13 +37,9 @@ const database = getDatabase(app);
 const auth = getAuth(app);
 
 // Set authentication persistence to session storage
-setPersistence(auth, browserSessionPersistence)
-  .then(() => {
-    console.log("Auth persistence set to SESSION");
-  })
-  .catch((error) => {
-    console.error("Error setting auth persistence:", error);
-  });
+setPersistence(auth, browserSessionPersistence).catch((error) => {
+  console.error("Error setting auth persistence:", error);
+});
 
 export {
   database,

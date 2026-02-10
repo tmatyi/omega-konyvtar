@@ -31,7 +31,6 @@ export function useAuth() {
         await update(userRef, {
           lastLogin: new Date().toISOString(),
         });
-        console.log("Last login timestamp updated");
       } catch (dbError) {
         console.warn("Could not update last login timestamp:", dbError);
         // Don't fail login if database update fails
@@ -67,7 +66,6 @@ export function useAuth() {
       };
 
       await set(userRef, userData);
-      console.log("User record created in database:", userData);
 
       return userCredential.user;
     } catch (error) {
@@ -92,7 +90,6 @@ export function useAuth() {
         ...profileData,
       };
       setUser(updatedUser);
-      console.log("User profile updated in App component");
     }
   };
 
@@ -100,13 +97,10 @@ export function useAuth() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        console.log("Auth state changed - user logged in:", user.email);
-
         // Load profile data from Firebase database
         const userRef = ref(database, `users/${user.uid}`);
         onValue(userRef, (snapshot) => {
           const dbProfileData = snapshot.val();
-          console.log("Database profile data:", dbProfileData);
 
           let enhancedUser = { ...user };
 
@@ -131,20 +125,11 @@ export function useAuth() {
           }
 
           setUser(enhancedUser);
-          console.log(
-            "User enhanced with profile data, displayName:",
-            enhancedUser.displayName,
-          );
-          console.log(
-            "User enhanced with profile data, name:",
-            enhancedUser.name,
-          );
           // Only set loading to false after profile data is loaded
           setLoading(false);
         });
       } else {
         setUser(null);
-        console.log("User is logged out");
         setLoading(false);
       }
     });

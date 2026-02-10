@@ -843,49 +843,227 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .lending-panel {
-    padding: 15px;
+    padding: 12px;
+  }
+
+  .lending-header {
+    margin-bottom: 16px;
+  }
+
+  .lending-header h2 {
+    font-size: 22px;
+    margin-bottom: 12px;
   }
 
   .lending-stats {
-    flex-direction: column;
+    flex-direction: row;
+    gap: 8px;
   }
 
   .stat-card {
     min-width: auto;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .stat-card .stat-number {
+    font-size: 20px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 11px;
+  }
+
+  .lending-content {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .books-section {
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .books-section h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  /* Prevent auto-focus zoom/layout shift */
+  .search-input {
+    font-size: 16px !important;
+  }
+
+  .search-bar {
+    margin-bottom: 12px;
   }
 
   .books-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 
+  .search-results {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .search-results h4 {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .search-result-item {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+  }
+
+  .result-info h4 {
+    font-size: 14px;
+  }
+
+  .result-info p {
+    font-size: 13px;
+  }
+
+  .result-action {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .search-prompt {
+    padding: 24px 16px;
+    font-size: 14px;
+  }
+
+  .selected-book-display,
+  .selected-user-display {
+    padding: 14px;
+    margin-top: 12px;
+    border-radius: 10px;
+  }
+
+  .selected-book-header h4,
+  .selected-user-display h4 {
+    font-size: 15px;
+  }
+
+  .selected-book-info p,
+  .selected-user-info p {
+    font-size: 13px;
+    margin: 3px 0;
+  }
+
+  .user-selection-section {
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .user-selection-header h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .final-confirm-btn {
+    padding: 12px 20px;
+    font-size: 15px;
+    width: 100%;
+  }
+
+  /* --- Active Loans: compact cards --- */
+  .loans-section {
+    padding: 14px;
+    border-radius: 10px;
+    margin-top: 12px;
+  }
+
+  .loans-section h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+  }
+
+  .loans-list {
+    max-height: none;
+  }
+
   .loan-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
+
+  .loan-card.overdue {
+    border-width: 1px;
+  }
+
+  .loan-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .loan-info h4 {
+    font-size: 14px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .loan-info p {
+    font-size: 12px;
+    margin: 1px 0;
+    line-height: 1.3;
+  }
+
+  .loan-info p[style] {
+    margin-bottom: 4px !important;
+  }
+
+  .overdue-text,
+  .warning-text {
+    font-size: 11px !important;
+    margin-top: 2px;
   }
 
   .loan-actions {
-    width: 100%;
-    justify-content: stretch;
+    flex-direction: column;
+    gap: 4px;
+    width: auto;
+    flex-shrink: 0;
   }
 
   .return-btn,
   .renew-btn {
-    flex: 1;
+    padding: 6px 12px;
+    font-size: 12px;
     text-align: center;
+    white-space: nowrap;
+    min-height: 32px;
+  }
+
+  .no-loans {
+    padding: 24px 16px;
+    font-size: 14px;
   }
 
   .modal-content {
-    padding: 30px 20px;
+    padding: 24px 16px;
   }
 
   .modal-actions {
     flex-direction: column;
+    gap: 8px;
   }
 
   .confirm-btn,
   .cancel-btn {
     width: 100%;
+    font-size: 15px;
+    padding: 12px 20px;
   }
 }
 

@@ -70,6 +70,8 @@ export default defineConfig({
         skipWaiting: true,
         // Add cache busting for development
         clientsClaim: true,
+        // Cache name for better version control
+        cacheId: "omega-konyvtar-v1",
         // Don't cache the service worker itself
         navigateFallback: "index.html",
         // Maximum entries to cache

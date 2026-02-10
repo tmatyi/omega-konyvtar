@@ -248,7 +248,10 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
           backdropFilter: "blur(5px)",
           zIndex: 9999,
         }}
-        onClick={() => { resetForm(); onClose(); }}
+        onClick={() => {
+          resetForm();
+          onClose();
+        }}
       ></div>
 
       <div
@@ -307,8 +310,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
               onFocus={(e) => {
                 e.target.style.borderColor = "#844a59";
                 e.target.style.backgroundColor = "#fff";
-                e.target.style.boxShadow =
-                  "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                e.target.style.boxShadow = "0 0 0 3px rgba(132, 74, 89, 0.1)";
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = "#e9ecef";
@@ -336,8 +338,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 if (!searchLoading) {
                   e.target.style.backgroundColor = "#6b3a48";
                   e.target.style.transform = "translateY(-1px)";
-                  e.target.style.boxShadow =
-                    "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                 }
               }}
               onMouseLeave={(e) => {
@@ -477,13 +478,18 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
             </div>
             <div className="form-field">
               <label className="field-label">ISBN</label>
-              <input
-                type="text"
-                placeholder="Add meg az ISBN-t"
-                value={isbn}
-                onChange={(e) => setIsbn(e.target.value)}
-                className="form-input"
-              />
+              <div
+                style={{ display: "flex", gap: "8px", alignItems: "center" }}
+              >
+                <input
+                  type="text"
+                  placeholder="Add meg az ISBN-t"
+                  value={isbn}
+                  onChange={(e) => setIsbn(e.target.value)}
+                  className="form-input"
+                  style={{ flex: 1 }}
+                />
+              </div>
             </div>
             <div className="form-field">
               <label className="field-label">Eredeti cím</label>
@@ -566,6 +572,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
               gap: "15px",
               justifyContent: "flex-end",
               marginTop: "20px",
+              flexWrap: "wrap",
             }}
           >
             <button
@@ -581,6 +588,8 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 cursor: "pointer",
                 transition: "all 0.3s ease",
                 whiteSpace: "nowrap",
+                flex: "1 1 auto",
+                minWidth: "140px",
               }}
               onMouseEnter={(e) => {
                 e.target.style.backgroundColor = "#6b3a48";
@@ -611,6 +620,8 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 cursor: "pointer",
                 transition: "all 0.3s ease",
                 whiteSpace: "nowrap",
+                flex: "1 1 auto",
+                minWidth: "140px",
               }}
               onMouseEnter={(e) => {
                 e.target.style.backgroundColor = "#e2e8f0";
