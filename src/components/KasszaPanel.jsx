@@ -36,7 +36,7 @@ const KasszaPanel = ({ user }) => {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
   const [isToastExiting, setIsToastExiting] = useState(false);
-  const [viewMode, setViewMode] = useState("all"); // "all" or "monthly"
+  const [viewMode, setViewMode] = useState("daily"); // "daily", "monthly", or "all"
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7),
   ); // YYYY-MM format
@@ -44,6 +44,17 @@ const KasszaPanel = ({ user }) => {
   const [saleToDelete, setSaleToDelete] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+
+  // Daily Balance state
+  const [dailyCloses, setDailyCloses] = useState([]);
+  const [extraTransactions, setExtraTransactions] = useState([]);
+  const [showExtraForm, setShowExtraForm] = useState(false);
+  const [extraData, setExtraData] = useState({
+    description: "",
+    amount: "",
+    type: "income", // "income" or "expense"
+  });
+  const [showDailyCloseConfirm, setShowDailyCloseConfirm] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -81,6 +92,8 @@ const KasszaPanel = ({ user }) => {
     const salesRef = ref(database, "sales");
     const booksRef = ref(database, "books");
     const giftsRef = ref(database, "gifts");
+    const dailyClosesRef = ref(database, "dailyCloses");
+    const extraTransRef = ref(database, "extraTransactions");
 
     const handleSalesData = (snapshot) => {
       const salesData = snapshot.val();
@@ -122,9 +135,31 @@ const KasszaPanel = ({ user }) => {
       }
     };
 
+    const handleDailyCloses = (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setDailyCloses(Object.keys(data).map((id) => ({ id, ...data[id] })));
+      } else {
+        setDailyCloses([]);
+      }
+    };
+
+    const handleExtraTransactions = (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setExtraTransactions(
+          Object.keys(data).map((id) => ({ id, ...data[id] })),
+        );
+      } else {
+        setExtraTransactions([]);
+      }
+    };
+
     onValue(salesRef, handleSalesData);
     onValue(booksRef, handleBooksData);
     onValue(giftsRef, handleGiftsData);
+    onValue(dailyClosesRef, handleDailyCloses);
+    onValue(extraTransRef, handleExtraTransactions);
   }, []);
 
   // Barcode scan handler — find book by ISBN or gift by barcode
@@ -248,6 +283,8 @@ const KasszaPanel = ({ user }) => {
         paymentMethod: saleData.paymentMethod || "cash",
         timestamp: editingSale.timestamp, // Keep original timestamp
         seller: user?.email || "ismeretlen",
+        sellerName:
+          user?.name || user?.displayName || user?.email || "ismeretlen",
         totalAmount: parseFloat(saleData.price) * parseInt(saleData.quantity),
       });
     } else {
@@ -270,6 +307,8 @@ const KasszaPanel = ({ user }) => {
         paymentMethod: saleData.paymentMethod || "cash",
         timestamp: new Date().toISOString(),
         seller: user?.email || "ismeretlen",
+        sellerName:
+          user?.name || user?.displayName || user?.email || "ismeretlen",
         totalAmount: parseFloat(saleData.price) * parseInt(saleData.quantity),
       };
 
@@ -362,28 +401,134 @@ const KasszaPanel = ({ user }) => {
     setSaleToDelete(null);
   };
 
-  // Calculate monthly revenue if in monthly view
-  const monthlySales =
-    viewMode === "monthly"
-      ? sales.filter((sale) => sale.timestamp.startsWith(selectedMonth))
-      : [];
+  // Extra Transaction handler
+  const handleExtraSubmit = () => {
+    if (!extraData.description || !extraData.amount) {
+      alert("Kérjük, töltse ki az összes mezőt!");
+      return;
+    }
+    const extraRef = ref(database, "extraTransactions");
+    const newRef = push(extraRef);
+    set(newRef, {
+      description: extraData.description,
+      amount: parseFloat(extraData.amount),
+      type: extraData.type,
+      timestamp: new Date().toISOString(),
+      recordedBy: user?.email || "ismeretlen",
+      sellerName:
+        user?.name || user?.displayName || user?.email || "ismeretlen",
+    });
+    setExtraData({ description: "", amount: "", type: "income" });
+    setShowExtraForm(false);
+    showToastNotification(
+      `${extraData.type === "income" ? "Bevétel" : "Kiadás"} rögzítve: ${extraData.description}`,
+      "success",
+    );
+  };
 
-  const monthlyRevenue = monthlySales.reduce(
-    (sum, sale) => sum + sale.totalAmount,
+  // Daily Close handler
+  const handleDailyClose = () => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // Check if already closed today
+    const alreadyClosed = dailyCloses.some((dc) => dc.date === todayStr);
+    if (alreadyClosed) {
+      showToastNotification("A mai nap már le van zárva!", "error");
+      setShowDailyCloseConfirm(false);
+      return;
+    }
+
+    const closingBalance =
+      todayOpeningBalance +
+      todaySalesTotal +
+      todayExtraIncome -
+      todayExtraExpense;
+
+    const closeRef = ref(database, "dailyCloses");
+    const newRef = push(closeRef);
+    set(newRef, {
+      date: todayStr,
+      openingBalance: todayOpeningBalance,
+      salesTotal: todaySalesTotal,
+      extraIncome: todayExtraIncome,
+      extraExpense: todayExtraExpense,
+      closingBalance,
+      closedBy: user?.email || "ismeretlen",
+      closedAt: new Date().toISOString(),
+    });
+
+    setShowDailyCloseConfirm(false);
+    showToastNotification(
+      `Napi zárás sikeres! Záró egyenleg: ${closingBalance.toLocaleString("hu-HU")} Ft`,
+      "success",
+    );
+  };
+
+  // --- Daily Balance calculations ---
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // Last daily close = opening balance for today
+  const sortedCloses = [...dailyCloses].sort(
+    (a, b) => new Date(b.date) - new Date(a.date),
+  );
+  const lastClose = sortedCloses[0];
+  const todayOpeningBalance = lastClose ? lastClose.closingBalance : 0;
+
+  // Today's sales (cash only for balance)
+  const todaySales = sales.filter(
+    (s) => s.timestamp && s.timestamp.startsWith(todayStr),
+  );
+  const todaySalesTotal = todaySales.reduce(
+    (sum, s) => sum + (s.totalAmount || 0),
     0,
   );
-  const totalRevenue =
-    viewMode === "monthly"
-      ? monthlyRevenue
-      : sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-  const totalSales =
-    viewMode === "monthly" ? monthlySales.length : sales.length;
 
-  const filteredSales = (viewMode === "monthly" ? monthlySales : sales)
+  // Today's extra transactions
+  const todayExtras = extraTransactions.filter(
+    (t) => t.timestamp && t.timestamp.startsWith(todayStr),
+  );
+  const todayExtraIncome = todayExtras
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const todayExtraExpense = todayExtras
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+  const todayClosingBalance =
+    todayOpeningBalance +
+    todaySalesTotal +
+    todayExtraIncome -
+    todayExtraExpense;
+
+  const isTodayClosed = dailyCloses.some((dc) => dc.date === todayStr);
+
+  // --- Filtered sales calculations ---
+  const dailySales = sales.filter(
+    (sale) => sale.timestamp && sale.timestamp.startsWith(todayStr),
+  );
+  const monthlySales = sales.filter(
+    (sale) => sale.timestamp && sale.timestamp.startsWith(selectedMonth),
+  );
+
+  const currentSales =
+    viewMode === "daily"
+      ? dailySales
+      : viewMode === "monthly"
+        ? monthlySales
+        : sales;
+
+  const totalRevenue = currentSales.reduce(
+    (sum, sale) => sum + (sale.totalAmount || 0),
+    0,
+  );
+  const totalSalesCount = currentSales.length;
+
+  const filteredSales = currentSales
     .filter(
       (sale) =>
-        sale.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.customerName?.toLowerCase().includes(searchTerm.toLowerCase()),
+        sale.itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sale.sellerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sale.seller?.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
@@ -407,21 +552,97 @@ const KasszaPanel = ({ user }) => {
       </header>
 
       <div className="kassza-content">
+        {/* Daily Balance Section */}
+        <div className="kassza-section daily-balance-section">
+          <h3>Napi Egyenleg</h3>
+          <div className="daily-balance-grid">
+            <div className="balance-card">
+              <span className="balance-label">Nyitó</span>
+              <span className="balance-value">
+                {todayOpeningBalance.toLocaleString("hu-HU")} Ft
+              </span>
+            </div>
+            <div className="balance-card positive">
+              <span className="balance-label">Eladások</span>
+              <span className="balance-value">
+                +{todaySalesTotal.toLocaleString("hu-HU")} Ft
+              </span>
+            </div>
+            <div className="balance-card positive">
+              <span className="balance-label">Egyéb bevétel</span>
+              <span className="balance-value">
+                +{todayExtraIncome.toLocaleString("hu-HU")} Ft
+              </span>
+            </div>
+            <div className="balance-card negative">
+              <span className="balance-label">Egyéb kiadás</span>
+              <span className="balance-value">
+                -{todayExtraExpense.toLocaleString("hu-HU")} Ft
+              </span>
+            </div>
+          </div>
+          <div className="balance-closing">
+            <span className="balance-closing-label">Záró egyenleg</span>
+            <span
+              className={`balance-closing-value ${todayClosingBalance >= 0 ? "positive" : "negative"}`}
+            >
+              {todayClosingBalance.toLocaleString("hu-HU")} Ft
+            </span>
+          </div>
+          <div className="daily-balance-actions">
+            <button
+              className="kassza-btn primary"
+              onClick={() => setShowExtraForm(true)}
+            >
+              + Egyéb Tétel
+            </button>
+            {user?.role === "admin" && (
+              <button
+                className={`kassza-btn ${isTodayClosed ? "secondary" : "daily-close"}`}
+                onClick={() => setShowDailyCloseConfirm(true)}
+                disabled={isTodayClosed}
+              >
+                {isTodayClosed ? "Mai nap lezárva" : "Napi Zárás"}
+              </button>
+            )}
+          </div>
+          {todayExtras.length > 0 && (
+            <div className="today-extras-list">
+              <h4>Mai egyéb tételek</h4>
+              {todayExtras.map((t) => (
+                <div key={t.id} className={`extra-item ${t.type}`}>
+                  <span className="extra-desc">{t.description}</span>
+                  <span className={`extra-amount ${t.type}`}>
+                    {t.type === "income" ? "+" : "-"}
+                    {t.amount.toLocaleString("hu-HU")} Ft
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="kassza-section">
           <h3>Eladási Történet</h3>
           <div className="view-controls">
             <div className="view-mode-buttons">
               <button
-                className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`}
-                onClick={() => setViewMode("all")}
+                className={`view-mode-btn ${viewMode === "daily" ? "active" : ""}`}
+                onClick={() => setViewMode("daily")}
               >
-                Összes
+                Napi
               </button>
               <button
                 className={`view-mode-btn ${viewMode === "monthly" ? "active" : ""}`}
                 onClick={() => setViewMode("monthly")}
               >
                 Havi
+              </button>
+              <button
+                className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`}
+                onClick={() => setViewMode("all")}
+              >
+                Összes
               </button>
             </div>
             {viewMode === "monthly" && (
@@ -445,7 +666,7 @@ const KasszaPanel = ({ user }) => {
             </div>
             <div className="summary-card">
               <h4>Eladások Száma</h4>
-              <p className="summary-count">{totalSales}</p>
+              <p className="summary-count">{totalSalesCount}</p>
             </div>
           </div>
 
@@ -556,6 +777,11 @@ const KasszaPanel = ({ user }) => {
                           <span className="sale-amount">
                             {sale.totalAmount.toLocaleString("hu-HU")} Ft
                           </span>
+                          {sale.sellerName && (
+                            <span className="sale-seller">
+                              {sale.sellerName}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="sale-actions">
@@ -847,6 +1073,135 @@ const KasszaPanel = ({ user }) => {
               </button>
               <button onClick={confirmDelete} className="kassza-btn delete">
                 Igen, Törlés
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extra Transaction Modal */}
+      {showExtraForm && (
+        <div className="kassza-modal">
+          <div className="kassza-modal-content">
+            <h3>Egyéb Tétel Rögzítése</h3>
+            <div className="kassza-modal-body">
+              <div className="form-group">
+                <label>Típus:</label>
+                <div className="product-type-buttons">
+                  <button
+                    type="button"
+                    className={`product-type-btn ${extraData.type === "income" ? "active" : ""}`}
+                    onClick={() =>
+                      setExtraData({ ...extraData, type: "income" })
+                    }
+                  >
+                    + Bevétel
+                  </button>
+                  <button
+                    type="button"
+                    className={`product-type-btn ${extraData.type === "expense" ? "active" : ""}`}
+                    onClick={() =>
+                      setExtraData({ ...extraData, type: "expense" })
+                    }
+                  >
+                    - Kiadás
+                  </button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Leírás:</label>
+                <input
+                  type="text"
+                  value={extraData.description}
+                  onChange={(e) =>
+                    setExtraData({ ...extraData, description: e.target.value })
+                  }
+                  placeholder="Pl. borravaló, irodaszer, stb."
+                />
+              </div>
+              <div className="form-group">
+                <label>Összeg (Ft):</label>
+                <input
+                  type="number"
+                  value={extraData.amount}
+                  onChange={(e) =>
+                    setExtraData({ ...extraData, amount: e.target.value })
+                  }
+                  placeholder="Add meg az összeget"
+                  min="0"
+                  step="1"
+                />
+              </div>
+            </div>
+            <div className="kassza-modal-footer">
+              <button
+                onClick={handleExtraSubmit}
+                className="kassza-btn primary"
+              >
+                Rögzítés
+              </button>
+              <button
+                onClick={() => {
+                  setShowExtraForm(false);
+                  setExtraData({ description: "", amount: "", type: "income" });
+                }}
+                className="kassza-btn secondary"
+              >
+                Mégse
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Close Confirmation Modal */}
+      {showDailyCloseConfirm && (
+        <div className="kassza-modal">
+          <div className="kassza-modal-content delete-modal">
+            <div className="delete-modal-header">
+              <h3>Napi Zárás</h3>
+            </div>
+            <div className="delete-modal-body">
+              <div className="delete-warning-icon">📋</div>
+              <p>Biztosan le szeretnéd zárni a mai napot?</p>
+              <div className="sale-preview">
+                <div className="sale-details-preview">
+                  <span>
+                    Nyitó egyenleg:{" "}
+                    {todayOpeningBalance.toLocaleString("hu-HU")} Ft
+                  </span>
+                  <span>
+                    Eladások: +{todaySalesTotal.toLocaleString("hu-HU")} Ft
+                  </span>
+                  <span>
+                    Egyéb bevétel: +{todayExtraIncome.toLocaleString("hu-HU")}{" "}
+                    Ft
+                  </span>
+                  <span>
+                    Egyéb kiadás: -{todayExtraExpense.toLocaleString("hu-HU")}{" "}
+                    Ft
+                  </span>
+                  <span>
+                    <strong>
+                      Záró egyenleg:{" "}
+                      {todayClosingBalance.toLocaleString("hu-HU")} Ft
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="delete-modal-footer">
+              <button
+                onClick={() => setShowDailyCloseConfirm(false)}
+                className="kassza-btn secondary"
+              >
+                Mégse
+              </button>
+              <button
+                onClick={handleDailyClose}
+                className="kassza-btn daily-close"
+              >
+                Napi Zárás Megerősítése
               </button>
             </div>
           </div>

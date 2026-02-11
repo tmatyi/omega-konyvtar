@@ -5,6 +5,7 @@ import {
   processMolyHuUrl,
 } from "../services/scrapingService.js";
 import { addBookToDb } from "../services/firebaseService.js";
+import { database, ref, push, set } from "../firebase.js";
 
 function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
   const [title, setTitle] = useState("");
@@ -21,6 +22,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
   const [bookQuantity, setBookQuantity] = useState("");
   const [bookPrice, setBookPrice] = useState("");
   const [bookPurchasePrice, setBookPurchasePrice] = useState("");
+  const [deductFromCashier, setDeductFromCashier] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
@@ -226,6 +228,23 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
       }
 
       addBookToDb(bookData);
+
+      // If deduct from cashier is enabled, create an expense record
+      if (deductFromCashier && bookCategory === "Bolt" && bookPurchasePrice) {
+        const totalCost =
+          parseFloat(bookPurchasePrice) * parseInt(bookQuantity);
+        const extraRef = ref(database, "extraTransactions");
+        const newRef = push(extraRef);
+        set(newRef, {
+          description: `Könyv beszerzés: ${title} (${bookQuantity} db)`,
+          amount: totalCost,
+          type: "expense",
+          timestamp: new Date().toISOString(),
+          recordedBy: user?.email || "ismeretlen",
+          sellerName:
+            user?.name || user?.displayName || user?.email || "ismeretlen",
+        });
+      }
 
       // Reset form and close
       resetForm();
@@ -561,6 +580,56 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                     step="1"
                     required
                   />
+                </div>
+                <div
+                  className="form-field"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px 14px",
+                    background: deductFromCashier ? "#ecfdf5" : "#f8fafc",
+                    borderRadius: "8px",
+                    border: `1px solid ${deductFromCashier ? "#86efac" : "#e9ecef"}`,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                  onClick={() => setDeductFromCashier(!deductFromCashier)}
+                >
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "22px",
+                      borderRadius: "11px",
+                      background: deductFromCashier ? "#059669" : "#d1d5db",
+                      position: "relative",
+                      transition: "background 0.2s ease",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        background: "#fff",
+                        position: "absolute",
+                        top: "2px",
+                        left: deductFromCashier ? "20px" : "2px",
+                        transition: "left 0.2s ease",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#374151",
+                    }}
+                  >
+                    Levonjuk a kasszából?
+                  </span>
                 </div>
               </>
             )}

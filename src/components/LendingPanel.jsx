@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { database, ref, onValue, off, update, push, set } from "../firebase.js";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { hu } from "date-fns/locale";
+import BarcodeScanner from "./BarcodeScanner.jsx";
+import "./BarcodeScanner.css";
 import "./LendingPanel.css";
 
 const LendingPanel = ({ books, users }) => {
@@ -22,6 +24,7 @@ const LendingPanel = ({ books, users }) => {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
   const [isToastExiting, setIsToastExiting] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     const filtered = books.filter((book) => book.category === "Könyvtár");
@@ -240,6 +243,39 @@ const LendingPanel = ({ books, users }) => {
         user.email.toLowerCase().includes(userSearchTerm.toLowerCase())),
   );
 
+  // Barcode scan handler — find library book by ISBN
+  const handleBarcodeScan = useCallback(
+    (scannedCode) => {
+      setShowScanner(false);
+
+      const matchedBook = libraryBooks.find(
+        (b) => b.isbn && b.isbn === scannedCode,
+      );
+
+      if (matchedBook) {
+        if (lentOutBookIds.has(matchedBook.id)) {
+          showToastNotification(
+            `"${matchedBook.title}" már ki van kölcsönözve!`,
+            "error",
+          );
+          return;
+        }
+        setSelectedBook(matchedBook);
+        setSearchTerm(matchedBook.title);
+        showToastNotification(
+          `Könyv megtalálva: ${matchedBook.title}`,
+          "success",
+        );
+      } else {
+        showToastNotification(
+          `Nem található könyvtári könyv ezzel a vonalkóddal: ${scannedCode}`,
+          "error",
+        );
+      }
+    },
+    [libraryBooks, lentOutBookIds],
+  );
+
   return (
     <div className="lending-panel">
       <div className="lending-header">
@@ -262,15 +298,56 @@ const LendingPanel = ({ books, users }) => {
 
       <div className="lending-content">
         <div className="books-section">
-          <h3>� Könyvkeresés</h3>
-          <div className="search-bar">
+          <h3>🔍 Könyvkeresés</h3>
+          <div
+            className="search-bar"
+            style={{ display: "flex", gap: "8px", alignItems: "center" }}
+          >
             <input
               type="text"
               placeholder="Keresés cím vagy szerző szerint..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
+              style={{ flex: 1 }}
             />
+            <button
+              className="kassza-scan-btn"
+              onClick={() => setShowScanner(true)}
+              style={{
+                padding: "10px 14px",
+                background: "#844a59",
+                color: "#fff",
+                border: "none",
+                borderRadius: "10px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "13px",
+                fontWeight: "600",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                <line x1="7" y1="12" x2="17" y2="12" />
+              </svg>
+              Szkennelés
+            </button>
           </div>
 
           {searchTerm && !selectedBook && (
@@ -791,6 +868,14 @@ const LendingPanel = ({ books, users }) => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Barcode Scanner */}
+      {showScanner && (
+        <BarcodeScanner
+          onScan={handleBarcodeScan}
+          onClose={() => setShowScanner(false)}
+        />
       )}
 
       {/* Toast Notification */}

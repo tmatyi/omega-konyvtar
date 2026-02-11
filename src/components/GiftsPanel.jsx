@@ -4,6 +4,7 @@ import {
   updateGiftInDb,
   deleteGiftFromDb,
 } from "../services/firebaseService.js";
+import { database, ref, push, set } from "../firebase.js";
 import "./BooksTable.css";
 
 function GiftsPanel({ user, gifts }) {
@@ -12,6 +13,7 @@ function GiftsPanel({ user, gifts }) {
   const [giftQuantity, setGiftQuantity] = useState("");
   const [giftPrice, setGiftPrice] = useState("");
   const [giftPurchasePrice, setGiftPurchasePrice] = useState("");
+  const [deductFromCashier, setDeductFromCashier] = useState(false);
   const [giftImage, setGiftImage] = useState("");
   const [giftBarcode, setGiftBarcode] = useState("");
   const [giftToDelete, setGiftToDelete] = useState(null);
@@ -663,6 +665,57 @@ function GiftsPanel({ user, gifts }) {
                   }}
                 />
               </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "12px 14px",
+                  background: deductFromCashier ? "#ecfdf5" : "#f8fafc",
+                  borderRadius: "8px",
+                  border: `1px solid ${deductFromCashier ? "#86efac" : "#e9ecef"}`,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  marginBottom: "15px",
+                }}
+                onClick={() => setDeductFromCashier(!deductFromCashier)}
+              >
+                <div
+                  style={{
+                    width: "40px",
+                    height: "22px",
+                    borderRadius: "11px",
+                    background: deductFromCashier ? "#059669" : "#d1d5db",
+                    position: "relative",
+                    transition: "background 0.2s ease",
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      background: "#fff",
+                      position: "absolute",
+                      top: "2px",
+                      left: deductFromCashier ? "20px" : "2px",
+                      transition: "left 0.2s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    }}
+                  />
+                </div>
+                <span
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    color: "#374151",
+                  }}
+                >
+                  Levonjuk a kasszából?
+                </span>
+              </div>
             </div>
 
             <div
@@ -691,7 +744,25 @@ function GiftsPanel({ user, gifts }) {
 
                     addGiftToDb(newGift);
 
-                    console.log("Gift added to Firebase:", newGift);
+                    // If deduct from cashier is enabled, create an expense record
+                    if (deductFromCashier && giftPurchasePrice) {
+                      const totalCost =
+                        parseFloat(giftPurchasePrice) * parseInt(giftQuantity);
+                      const extraRef = ref(database, "extraTransactions");
+                      const newRef = push(extraRef);
+                      set(newRef, {
+                        description: `Ajándéktárgy beszerzés: ${giftName} (${giftQuantity} db)`,
+                        amount: totalCost,
+                        type: "expense",
+                        timestamp: new Date().toISOString(),
+                        recordedBy: user?.email || "ismeretlen",
+                        sellerName:
+                          user?.name ||
+                          user?.displayName ||
+                          user?.email ||
+                          "ismeretlen",
+                      });
+                    }
 
                     // Reset form
                     setShowAddGiftForm(false);
@@ -701,6 +772,7 @@ function GiftsPanel({ user, gifts }) {
                     setGiftPurchasePrice("");
                     setGiftBarcode("");
                     setGiftImage("");
+                    setDeductFromCashier(false);
                   }
                 }}
                 disabled={!giftName || !giftQuantity || !giftPrice}

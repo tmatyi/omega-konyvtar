@@ -994,3 +994,209 @@
   justify-content: flex-end;
   border-radius: 0 0 12px 12px;
 }
+
+/* ===== Daily Balance Section ===== */
+.daily-balance-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.daily-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.balance-card {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.balance-card.positive {
+  background: #ecfdf5;
+}
+
+.balance-card.negative {
+  background: #fef2f2;
+}
+
+.balance-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.balance-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.balance-card.positive .balance-value {
+  color: #059669;
+}
+
+.balance-card.negative .balance-value {
+  color: #dc2626;
+}
+
+.balance-closing {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1f2937;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+
+.balance-closing-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d1d5db;
+}
+
+.balance-closing-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.balance-closing-value.positive {
+  color: #34d399;
+}
+
+.balance-closing-value.negative {
+  color: #f87171;
+}
+
+.daily-balance-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.daily-balance-actions .kassza-btn {
+  flex: 1;
+}
+
+.kassza-btn.daily-close {
+  background: linear-gradient(135deg, #1f2937, #374151);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.kassza-btn.daily-close:hover {
+  background: linear-gradient(135deg, #111827, #1f2937);
+}
+
+.kassza-btn.daily-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Today's extra transactions list */
+.today-extras-list {
+  margin-top: 8px;
+}
+
+.today-extras-list h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px 0;
+}
+
+.extra-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.extra-item.income {
+  background: #ecfdf5;
+}
+
+.extra-item.expense {
+  background: #fef2f2;
+}
+
+.extra-desc {
+  color: #374151;
+  font-weight: 500;
+}
+
+.extra-amount.income {
+  color: #059669;
+  font-weight: 600;
+}
+
+.extra-amount.expense {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Seller badge in sales list */
+.sale-seller {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .daily-balance-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .balance-card {
+    padding: 10px 12px;
+  }
+
+  .balance-value {
+    font-size: 14px;
+  }
+
+  .balance-closing {
+    padding: 12px 14px;
+  }
+
+  .balance-closing-value {
+    font-size: 18px;
+  }
+
+  .daily-balance-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .extra-item {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
