@@ -722,18 +722,19 @@
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   border: 1px solid #e9ecef;
-  transform: scale(0.9) translateY(20px);
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 100000;
   position: relative;
-  animation: modalAppear 0.3s forwards;
+  animation: modalAppear 0.3s ease-out forwards;
 }
 
 @keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
   to {
-    transform: scale(1) translateY(0);
     opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 

@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { database, ref, set, update, onValue, off } from "./firebase.js";
+import { database, ref, set, update, onValue, off, auth } from "./firebase.js";
+import {
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from "firebase/auth";
 import "./Profile.css";
 
 function Profile({ user, onUpdateUser }) {
@@ -18,6 +23,13 @@ function Profile({ user, onUpdateUser }) {
   const [toastType, setToastType] = useState("success");
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [userLoans, setUserLoans] = useState([]);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [loansLoading, setLoansLoading] = useState(true);
 
   // Load user's current loans
@@ -316,6 +328,48 @@ function Profile({ user, onUpdateUser }) {
     setMessage("");
   };
 
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      showToastNotification("Az új jelszavak nem egyeznek!", "error");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      showToastNotification(
+        "Az új jelszónak legalább 6 karakter hosszúnak kell lennie!",
+        "error",
+      );
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const credential = EmailAuthProvider.credential(
+        auth.currentUser.email,
+        passwordData.currentPassword,
+      );
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, passwordData.newPassword);
+      showToastNotification("Jelszó sikeresen megváltoztatva!", "success");
+      setShowPasswordForm(false);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      console.error("Password change error:", error);
+      if (error.code === "auth/wrong-password") {
+        showToastNotification("Hibás jelenlegi jelszó!", "error");
+      } else {
+        showToastNotification(
+          "Hiba történt a jelszó módosítása során!",
+          "error",
+        );
+      }
+    }
+    setPasswordLoading(false);
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "Nincs dátum";
     return new Date(dateString).toLocaleDateString("hu-HU");
@@ -442,6 +496,93 @@ function Profile({ user, onUpdateUser }) {
                 </button>
               </div>
             </div>
+          )}
+        </div>
+
+        <div className="profile-section">
+          <h3>Jelszó Változtatás</h3>
+          {!showPasswordForm ? (
+            <div className="section-actions" style={{ marginTop: 0 }}>
+              <button
+                className="profile-edit-btn"
+                onClick={() => setShowPasswordForm(true)}
+              >
+                🔒 Jelszó Változtatás
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handlePasswordChange} className="password-form">
+              <div className="form-group">
+                <label>Jelenlegi jelszó</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      currentPassword: e.target.value,
+                    })
+                  }
+                  placeholder="Add meg a jelenlegi jelszavad"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Új jelszó</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      newPassword: e.target.value,
+                    })
+                  }
+                  placeholder="Add meg az új jelszavad"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="form-group">
+                <label>Új jelszó megerősítése</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  placeholder="Írd be újra az új jelszavad"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="save-btn"
+                  disabled={passwordLoading}
+                >
+                  {passwordLoading ? "Mentés..." : "💾 Jelszó Mentése"}
+                </button>
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={() => {
+                    setShowPasswordForm(false);
+                    setPasswordData({
+                      currentPassword: "",
+                      newPassword: "",
+                      confirmPassword: "",
+                    });
+                  }}
+                >
+                  ❌ Mégse
+                </button>
+              </div>
+            </form>
           )}
         </div>
 

@@ -1,6 +1,6 @@
 {
   "name": "hello-world-app",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "description": "Omega Könyvtár - Digital Library with Profile System",
   "private": true,
   "type": "module",
@@ -22,7 +22,8 @@
     "libheif-js": "^1.19.8",
     "react": "^18.2.0",
     "react-datepicker": "^9.1.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

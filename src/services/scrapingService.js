@@ -1,28 +1,146 @@
-// Shared CORS proxy list used by multiple scrapers
-const CORS_PROXIES = [
-  "https://api.allorigins.win/raw?url=",
-  "https://corsproxy.io/?",
-  "https://cors-anywhere.herokuapp.com/",
-];
+// Create an AbortSignal with timeout (compatible with all browsers including older iOS Safari)
+const createTimeoutSignal = (ms) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, clear: () => clearTimeout(timeoutId) };
+};
 
-// Fetch HTML through CORS proxies with fallback chain
+// Fetch with timeout (iOS-compatible, no AbortSignal.timeout)
+const fetchWithTimeout = async (url, ms = 12000) => {
+  const { signal, clear } = createTimeoutSignal(ms);
+  try {
+    const response = await fetch(url, { signal });
+    clear();
+    return response;
+  } catch (error) {
+    clear();
+    throw error;
+  }
+};
+
+// Fetch HTML through multiple proxy strategies
+// Strategy: try direct fetch first (iOS sometimes allows this), then proxies
 const fetchViaProxy = async (url) => {
-  let html = "";
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const proxyUrl = proxy + encodeURIComponent(url);
-      const response = await fetch(proxyUrl);
-      if (response.ok) {
-        html = await response.text();
-        break;
+  let lastError = null;
+
+  // --- Strategy 0: Direct fetch (iOS PWA sometimes allows this for certain domains) ---
+  try {
+    const response = await fetchWithTimeout(url, 10000);
+    if (response.ok) {
+      const html = await response.text();
+      if (html && html.length > 100 && !html.includes("Access denied")) {
+        console.log("Direct fetch succeeded");
+        return html;
       }
-    } catch {
-      continue;
     }
+  } catch (error) {
+    console.warn("Direct fetch failed:", error.message);
+    lastError = error;
   }
 
-  if (!html) throw new Error("All proxies failed");
-  return html;
+  // --- Strategy 1: allorigins JSON API (returns JSON with "contents" field, no preflight) ---
+  try {
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const response = await fetchWithTimeout(proxyUrl, 12000);
+    if (response.ok) {
+      const json = await response.json();
+      if (json.contents && json.contents.length > 100) {
+        console.log("allorigins JSON API succeeded");
+        return json.contents;
+      }
+    }
+  } catch (error) {
+    console.warn("allorigins JSON failed:", error.message);
+    lastError = error;
+  }
+
+  // --- Strategy 2: cors.sh (simple GET, no custom headers) ---
+  try {
+    const proxyUrl = `https://cors.sh/${url}`;
+    const response = await fetchWithTimeout(proxyUrl, 12000);
+    if (response.ok) {
+      const html = await response.text();
+      if (html && html.length > 100 && !html.includes("Access denied")) {
+        console.log("cors.sh succeeded");
+        return html;
+      }
+    }
+  } catch (error) {
+    console.warn("cors.sh failed:", error.message);
+    lastError = error;
+  }
+
+  // --- Strategy 3: corslol ---
+  try {
+    const proxyUrl = `https://api.cors.lol/?url=${encodeURIComponent(url)}`;
+    const response = await fetchWithTimeout(proxyUrl, 12000);
+    if (response.ok) {
+      const html = await response.text();
+      if (html && html.length > 100 && !html.includes("Access denied")) {
+        console.log("cors.lol succeeded");
+        return html;
+      }
+    }
+  } catch (error) {
+    console.warn("cors.lol failed:", error.message);
+    lastError = error;
+  }
+
+  // --- Strategy 4: thebugging proxy ---
+  try {
+    const proxyUrl = `https://proxy.cors.sh/${url}`;
+    const response = await fetchWithTimeout(proxyUrl, 12000);
+    if (response.ok) {
+      const html = await response.text();
+      if (html && html.length > 100 && !html.includes("Access denied")) {
+        console.log("proxy.cors.sh succeeded");
+        return html;
+      }
+    }
+  } catch (error) {
+    console.warn("proxy.cors.sh failed:", error.message);
+    lastError = error;
+  }
+
+  // --- Strategy 5: corsproxy.io (simple GET, no custom headers) ---
+  try {
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const response = await fetchWithTimeout(proxyUrl, 12000);
+    if (response.ok) {
+      const html = await response.text();
+      if (
+        html &&
+        html.length > 100 &&
+        !html.includes("Access denied") &&
+        !html.includes("Service Unavailable")
+      ) {
+        console.log("corsproxy.io succeeded");
+        return html;
+      }
+    }
+  } catch (error) {
+    console.warn("corsproxy.io failed:", error.message);
+    lastError = error;
+  }
+
+  // Provide helpful error message
+  const errorMsg = lastError?.message || "Unknown error";
+  if (errorMsg.includes("timeout")) {
+    throw new Error(
+      "A weboldalak túl lassan válaszolnak. Kérjük, próbálja újra később.",
+    );
+  } else if (
+    errorMsg.includes("Failed to fetch") ||
+    errorMsg.includes("NetworkError")
+  ) {
+    throw new Error(
+      "Hálózati hiba történt. Ellenőrizze az internetkapcsolatot és próbálja újra.",
+    );
+  } else {
+    throw new Error(
+      `Nem lehet hozzáférni a weboldalhoz. Kérjük, próbálja később újra, vagy adja meg a könyv adatait manuálisan.`,
+    );
+  }
 };
 
 // Process CLC Hungary URLs
@@ -33,24 +151,22 @@ export const processClcHungaryUrl = async (url) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    // Extract title
-    const titleElement = doc.querySelector(".product_title.entry-title");
+    // Extract title - first H1 element
+    const titleElement = doc.querySelector("h1");
     const title = titleElement ? titleElement.textContent.trim() : "";
 
-    // Extract author from product meta or description
+    // Extract author - specific ID selector
     let author = "";
     const authorElement = doc.querySelector(
-      ".posted_in a, .tagged_as a, .product_meta .detail-value",
+      "#ctl00_pcontrib_rptContributors_ctl00_lnkC",
     );
     if (authorElement) {
       author = authorElement.textContent.trim();
     }
 
-    // Extract thumbnail
+    // Extract thumbnail - specific ID selector
     let thumbnail = "";
-    const thumbnailElement = doc.querySelector(
-      ".woocommerce-product-gallery__image img",
-    );
+    const thumbnailElement = doc.querySelector("#ctl00_ucImgs_imgProduct");
     if (thumbnailElement) {
       thumbnail =
         thumbnailElement.src ||
@@ -68,49 +184,109 @@ export const processClcHungaryUrl = async (url) => {
       description = descriptionElement.textContent.trim();
     }
 
-    // Extract metadata from product details table or meta
+    // Extract metadata from the specific div structure
     let isbn = "";
     let year = "";
     let publisher = "";
     let originalTitle = "";
     let pageCount = "";
 
-    // Try to find ISBN in SKU or product meta
-    const skuElement = doc.querySelector(".sku");
-    if (skuElement) {
-      const skuText = skuElement.textContent.trim();
-      if (/^[\d-]+$/.test(skuText)) {
-        isbn = skuText;
-      }
-    }
+    // Try to extract from the ctl00_pprops_fs div structure
+    const propsDiv = doc.querySelector("#ctl00_pprops_fs");
+    if (propsDiv) {
+      // Look for the pattern: <strong>Label</strong> : value
+      const strongElements = propsDiv.querySelectorAll("strong");
+      strongElements.forEach((strong) => {
+        const labelText = strong.textContent.trim().toLowerCase();
+        const nextSibling = strong.nextSibling;
 
-    // Try to extract from additional information table
-    const additionalInfoRows = doc.querySelectorAll(
-      ".woocommerce-product-attributes tr, .shop_attributes tr",
-    );
-    additionalInfoRows.forEach((row) => {
-      const label = row.querySelector("th, td:first-child");
-      const value = row.querySelector("td:last-child, td:nth-child(2)");
-      if (label && value) {
-        const labelText = label.textContent.trim().toLowerCase();
-        const valueText = value.textContent.trim();
+        // Find the text after the strong tag (could be text node or another element)
+        let valueText = "";
+        if (nextSibling) {
+          if (nextSibling.nodeType === Node.TEXT_NODE) {
+            // Direct text node like ": 9786156216038"
+            valueText = nextSibling.textContent || "";
+          } else if (nextSibling.nodeType === Node.ELEMENT_NODE) {
+            // Next element, look for text content
+            valueText = nextSibling.textContent || "";
+          }
 
-        if (labelText.includes("isbn")) isbn = valueText;
-        if (labelText.includes("kiadó") || labelText.includes("publisher"))
-          publisher = valueText;
-        if (labelText.includes("év") || labelText.includes("year"))
-          year = valueText;
+          // Clean up the value (remove ": " prefix)
+          valueText = valueText.replace(/^:\s*/, "").trim();
+        }
+
+        // Handle cases where the value is in a following element (like <a> for publisher)
         if (
+          !valueText &&
+          nextSibling &&
+          nextSibling.nodeType === Node.ELEMENT_NODE
+        ) {
+          valueText = nextSibling.textContent || "";
+        }
+
+        // Assign values based on label
+        if (labelText.includes("isbn")) {
+          isbn = valueText;
+        } else if (
+          labelText.includes("kiadó") ||
+          labelText.includes("publisher")
+        ) {
+          publisher = valueText;
+        } else if (
+          labelText.includes("oldalszám") ||
+          labelText.includes("oldal") ||
+          labelText.includes("page")
+        ) {
+          pageCount = valueText;
+        } else if (labelText.includes("év") || labelText.includes("year")) {
+          year = valueText;
+        } else if (
           labelText.includes("eredeti") ||
           labelText.includes("original title")
-        )
+        ) {
           originalTitle = valueText;
-        if (labelText.includes("oldal") || labelText.includes("page"))
-          pageCount = valueText;
-        if (labelText.includes("szerző") || labelText.includes("author"))
-          author = valueText;
-      }
-    });
+        }
+      });
+    }
+
+    // Fallback: try to extract from additional information table if propsDiv didn't work
+    if (!isbn || !publisher || !pageCount) {
+      const additionalInfoRows = doc.querySelectorAll(
+        ".woocommerce-product-attributes tr, .shop_attributes tr",
+      );
+      additionalInfoRows.forEach((row) => {
+        const label = row.querySelector("th, td:first-child");
+        const value = row.querySelector("td:last-child, td:nth-child(2)");
+        if (label && value) {
+          const labelText = label.textContent.trim().toLowerCase();
+          const valueText = value.textContent.trim();
+
+          if (labelText.includes("isbn") && !isbn) isbn = valueText;
+          if (
+            (labelText.includes("kiadó") || labelText.includes("publisher")) &&
+            !publisher
+          )
+            publisher = valueText;
+          if (
+            (labelText.includes("oldal") || labelText.includes("page")) &&
+            !pageCount
+          )
+            pageCount = valueText;
+          if (labelText.includes("év") || labelText.includes("year"))
+            year = valueText;
+          if (
+            labelText.includes("eredeti") ||
+            labelText.includes("original title")
+          )
+            originalTitle = valueText;
+          if (
+            (labelText.includes("szerző") || labelText.includes("author")) &&
+            !author
+          )
+            author = valueText;
+        }
+      });
+    }
 
     // Try to extract year from description or publisher text if not found
     if (!year && publisher) {

@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { database, ref, onValue, off, remove, update } from "../firebase.js";
+import {
+  database,
+  ref,
+  onValue,
+  off,
+  remove,
+  update,
+  push,
+  set,
+} from "../firebase.js";
 
 const UsersPanel = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -12,6 +21,10 @@ const UsersPanel = ({ user }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [editFormData, setEditFormData] = useState({});
+  const [pendingGuests, setPendingGuests] = useState([]);
+  const [approvePassword, setApprovePassword] = useState("");
+  const [approvingId, setApprovingId] = useState(null);
+  const [approveLoading, setApproveLoading] = useState(false);
 
   useEffect(() => {
     const usersRef = ref(database, "users");
@@ -32,8 +45,24 @@ const UsersPanel = ({ user }) => {
 
     onValue(usersRef, handleUsersData);
 
+    // Load pending guests
+    const guestsRef = ref(database, "pendingGuests");
+    const handleGuestsData = (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.keys(data)
+          .map((id) => ({ id, ...data[id] }))
+          .filter((g) => g.status === "pending");
+        setPendingGuests(list);
+      } else {
+        setPendingGuests([]);
+      }
+    };
+    onValue(guestsRef, handleGuestsData);
+
     return () => {
       off(usersRef, "value", handleUsersData);
+      off(guestsRef, "value", handleGuestsData);
     };
   }, []);
 
@@ -173,6 +202,59 @@ const UsersPanel = ({ user }) => {
     setEditFormData({});
   };
 
+  // Approve a pending guest: create Firebase Auth user, save to users, remove from pending
+  const handleApproveGuest = async (guest) => {
+    if (!approvePassword || approvePassword.length < 6) {
+      alert("A jelszónak legalább 6 karakter hosszúnak kell lennie!");
+      return;
+    }
+    setApproveLoading(true);
+    try {
+      // We can't create users from client without signing them in,
+      // so we save the approved user to a special node for manual setup
+      const approvedRef = ref(database, `pendingGuests/${guest.id}`);
+      await update(approvedRef, {
+        status: "approved",
+        approvedBy: user?.email || "admin",
+        approvedAt: new Date().toISOString(),
+        tempPassword: approvePassword,
+      });
+
+      // Also create a pre-registered user entry
+      const preRegRef = ref(database, "preRegisteredUsers");
+      const newRef = push(preRegRef);
+      await set(newRef, {
+        name: guest.name,
+        email: guest.email,
+        tempPassword: approvePassword,
+        role: "member",
+        approvedBy: user?.email || "admin",
+        approvedAt: new Date().toISOString(),
+        status: "ready",
+      });
+
+      setApprovingId(null);
+      setApprovePassword("");
+    } catch (error) {
+      console.error("Error approving guest:", error);
+      alert("Hiba történt a jóváhagyás során!");
+    }
+    setApproveLoading(false);
+  };
+
+  const handleRejectGuest = async (guest) => {
+    try {
+      const guestRef = ref(database, `pendingGuests/${guest.id}`);
+      await update(guestRef, {
+        status: "rejected",
+        rejectedBy: user?.email || "admin",
+        rejectedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error rejecting guest:", error);
+    }
+  };
+
   const formatDate = (timestamp) => {
     if (!timestamp) return "N/A";
     return new Date(timestamp).toLocaleDateString("hu-HU", {
@@ -227,6 +309,186 @@ const UsersPanel = ({ user }) => {
         <h2>Felhasználók Kezelése</h2>
         <div className="user-count">Összes felhasználó: {stats.totalUsers}</div>
       </div>
+
+      {/* Pending Guest Approvals */}
+      {pendingGuests.length > 0 && (
+        <div
+          style={{
+            background: "#fffbeb",
+            border: "1px solid #fbbf24",
+            borderRadius: "12px",
+            padding: "20px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3
+            style={{
+              margin: "0 0 14px",
+              color: "#92400e",
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            ⏳ Jóváhagyásra váró vendégek ({pendingGuests.length})
+          </h3>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+          >
+            {pendingGuests.map((guest) => (
+              <div
+                key={guest.id}
+                style={{
+                  background: "#fff",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  border: "1px solid #e5e7eb",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: "#1f2937",
+                        fontSize: "15px",
+                      }}
+                    >
+                      {guest.name}
+                    </div>
+                    <div style={{ color: "#6b7280", fontSize: "13px" }}>
+                      {guest.email}
+                    </div>
+                    <div
+                      style={{
+                        color: "#9ca3af",
+                        fontSize: "12px",
+                        marginTop: "2px",
+                      }}
+                    >
+                      Regisztrált: {formatDate(guest.registeredAt)}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    {approvingId !== guest.id ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            setApprovingId(guest.id);
+                            setApprovePassword("");
+                          }}
+                          style={{
+                            background: "#059669",
+                            color: "#fff",
+                            border: "none",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ✅ Jóváhagyás
+                        </button>
+                        <button
+                          onClick={() => handleRejectGuest(guest)}
+                          style={{
+                            background: "#dc2626",
+                            color: "#fff",
+                            border: "none",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ❌ Elutasítás
+                        </button>
+                      </>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "6px",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <input
+                          type="text"
+                          placeholder="Jelszó beállítása..."
+                          value={approvePassword}
+                          onChange={(e) => setApprovePassword(e.target.value)}
+                          style={{
+                            padding: "8px 12px",
+                            border: "2px solid #e9ecef",
+                            borderRadius: "8px",
+                            fontSize: "14px",
+                            minWidth: "160px",
+                          }}
+                        />
+                        <button
+                          onClick={() => handleApproveGuest(guest)}
+                          disabled={
+                            approveLoading || approvePassword.length < 6
+                          }
+                          style={{
+                            background:
+                              approvePassword.length >= 6
+                                ? "#059669"
+                                : "#94a3b8",
+                            color: "#fff",
+                            border: "none",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            cursor:
+                              approvePassword.length >= 6
+                                ? "pointer"
+                                : "not-allowed",
+                          }}
+                        >
+                          {approveLoading ? "..." : "Mentés"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setApprovingId(null);
+                            setApprovePassword("");
+                          }}
+                          style={{
+                            background: "#6b7280",
+                            color: "#fff",
+                            border: "none",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Mégse
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="users-controls">
         <div className="search-container">

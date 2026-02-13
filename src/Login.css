@@ -80,6 +80,35 @@
   text-align: center;
 }
 
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #c3e6cb;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.forgot-password-link {
+  text-align: right;
+  margin-top: -10px;
+}
+
+.forgot-btn {
+  background: none;
+  border: none;
+  color: #844a59;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.forgot-btn:hover {
+  color: #6b3c47;
+}
+
 .login-btn {
   background: linear-gradient(135deg, #844a59, #6b3c47);
   color: #fff;
@@ -248,7 +277,8 @@
     font-size: 14px;
   }
 
-  .error-message {
+  .error-message,
+  .success-message {
     padding: 12px 16px;
     font-size: 14px;
   }

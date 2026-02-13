@@ -25,6 +25,8 @@ const LendingPanel = ({ books, users }) => {
   const [toastType, setToastType] = useState("success");
   const [isToastExiting, setIsToastExiting] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [expandedLoanId, setExpandedLoanId] = useState(null);
+  const [loanSearchTerm, setLoanSearchTerm] = useState("");
 
   useEffect(() => {
     const filtered = books.filter((book) => book.category === "Könyvtár");
@@ -301,7 +303,7 @@ const LendingPanel = ({ books, users }) => {
           <h3>🔍 Könyvkeresés</h3>
           <div
             className="search-bar"
-            style={{ display: "flex", gap: "8px", alignItems: "center" }}
+            style={{ display: "flex", flexDirection: "column", gap: "8px" }}
           >
             <input
               type="text"
@@ -309,7 +311,7 @@ const LendingPanel = ({ books, users }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
-              style={{ flex: 1 }}
+              style={{ width: "100%" }}
             />
             <button
               className="kassza-scan-btn"
@@ -323,11 +325,11 @@ const LendingPanel = ({ books, users }) => {
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "6px",
                 fontSize: "13px",
                 fontWeight: "600",
                 whiteSpace: "nowrap",
-                flexShrink: 0,
               }}
             >
               <svg
@@ -538,71 +540,201 @@ const LendingPanel = ({ books, users }) => {
       {/* Active Loans Section - Always Visible */}
       <div className="loans-section">
         <h3>📋 Aktív kölcsönzések</h3>
+        <div className="loan-search-bar" style={{ marginBottom: "12px" }}>
+          <input
+            type="text"
+            placeholder="Keresés kölcsönzések között (könyv, kölcsönző)..."
+            value={loanSearchTerm}
+            onChange={(e) => setLoanSearchTerm(e.target.value)}
+            className="search-input"
+            style={{ width: "100%", boxSizing: "border-box" }}
+          />
+        </div>
         <div className="loans-list">
           {activeLoans.length === 0 ? (
             <p className="no-loans">Nincsenek aktív kölcsönzések</p>
           ) : (
-            activeLoans.map((loan) => {
-              const isOverdue = new Date(loan.dueDate) < new Date();
-              const daysLeft = Math.ceil(
-                (new Date(loan.dueDate) - new Date()) / (1000 * 60 * 60 * 24),
-              );
+            activeLoans
+              .filter((loan) => {
+                if (!loanSearchTerm) return true;
+                const term = loanSearchTerm.toLowerCase();
+                return (
+                  (loan.bookTitle || "").toLowerCase().includes(term) ||
+                  (loan.bookAuthor || "").toLowerCase().includes(term) ||
+                  (loan.userName || "").toLowerCase().includes(term) ||
+                  (loan.userEmail || "").toLowerCase().includes(term)
+                );
+              })
+              .map((loan) => {
+                const isOverdue = new Date(loan.dueDate) < new Date();
+                const daysLeft = Math.ceil(
+                  (new Date(loan.dueDate) - new Date()) / (1000 * 60 * 60 * 24),
+                );
+                const isExpanded = expandedLoanId === loan.id;
 
-              return (
-                <div
-                  key={loan.id}
-                  className={`loan-card ${isOverdue ? "overdue" : ""}`}
-                >
-                  <div className="loan-info">
-                    <h4>{loan.bookTitle}</h4>
-                    <p style={{ marginBottom: "12px" }}>{loan.bookAuthor}</p>
-                    <p>
-                      <strong>Kölcsönző:</strong>{" "}
-                      {loan.userName || "Ismeretlen felhasználó"}
-                    </p>
-                    {loan.userEmail && (
-                      <p>
-                        <strong>Email:</strong> {loan.userEmail}
-                      </p>
-                    )}
-                    <p>
-                      <strong>Kölcsönzés dátuma:</strong>{" "}
-                      {new Date(loan.loanDate).toLocaleDateString("hu-HU")}
-                    </p>
-                    <p>
-                      <strong>Lejárat:</strong>{" "}
-                      {new Date(loan.dueDate).toLocaleDateString("hu-HU")}
-                    </p>
-                    {isOverdue && (
-                      <p className="overdue-text">
-                        ⚠️ {Math.abs(daysLeft)} napja lejárt
-                      </p>
-                    )}
-                    {!isOverdue && daysLeft <= 7 && (
-                      <p className="warning-text">
-                        ⚠️ {daysLeft} nap van hátra
-                      </p>
-                    )}
-                  </div>
-                  <div className="loan-actions">
-                    <button
-                      className="return-btn"
-                      onClick={() => handleReturnBook(loan.id)}
+                return (
+                  <div
+                    key={loan.id}
+                    className={`loan-card ${isOverdue ? "overdue" : ""} ${isExpanded ? "expanded" : ""}`}
+                  >
+                    <div
+                      className="loan-card-header"
+                      onClick={() =>
+                        setExpandedLoanId(isExpanded ? null : loan.id)
+                      }
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        padding: "12px 16px",
+                      }}
                     >
-                      Visszahozás
-                    </button>
-                    {!isOverdue && (
-                      <button
-                        className="renew-btn"
-                        onClick={() => handleRenewLoan(loan.id)}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4
+                          style={{
+                            margin: 0,
+                            fontSize: "15px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          📖 {loan.bookTitle}
+                        </h4>
+                        <p
+                          style={{
+                            margin: "4px 0 0",
+                            fontSize: "13px",
+                            color: "#6b7280",
+                          }}
+                        >
+                          {loan.userName || "Ismeretlen felhasználó"}
+                        </p>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          flexShrink: 0,
+                        }}
                       >
-                        Meghosszabbítás
-                      </button>
+                        {isOverdue && (
+                          <span
+                            style={{
+                              background: "#fef2f2",
+                              color: "#dc2626",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Lejárt
+                          </span>
+                        )}
+                        {!isOverdue && daysLeft <= 7 && (
+                          <span
+                            style={{
+                              background: "#fffbeb",
+                              color: "#d97706",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {daysLeft} nap
+                          </span>
+                        )}
+                        <span
+                          style={{
+                            transition: "transform 0.2s ease",
+                            transform: isExpanded
+                              ? "rotate(180deg)"
+                              : "rotate(0deg)",
+                            fontSize: "14px",
+                            color: "#9ca3af",
+                          }}
+                        >
+                          ▼
+                        </span>
+                      </div>
+                    </div>
+                    {isExpanded && (
+                      <div
+                        className="loan-card-body"
+                        style={{
+                          padding: "0 16px 14px",
+                          borderTop: "1px solid #f3f4f6",
+                        }}
+                      >
+                        <div
+                          className="loan-info"
+                          style={{ paddingTop: "12px" }}
+                        >
+                          <p style={{ marginBottom: "4px" }}>
+                            <strong>Szerző:</strong> {loan.bookAuthor}
+                          </p>
+                          <p style={{ marginBottom: "4px" }}>
+                            <strong>Kölcsönző:</strong>{" "}
+                            {loan.userName || "Ismeretlen felhasználó"}
+                          </p>
+                          {loan.userEmail && (
+                            <p style={{ marginBottom: "4px" }}>
+                              <strong>Email:</strong> {loan.userEmail}
+                            </p>
+                          )}
+                          <p style={{ marginBottom: "4px" }}>
+                            <strong>Kölcsönzés dátuma:</strong>{" "}
+                            {new Date(loan.loanDate).toLocaleDateString(
+                              "hu-HU",
+                            )}
+                          </p>
+                          <p style={{ marginBottom: "4px" }}>
+                            <strong>Lejárat:</strong>{" "}
+                            {new Date(loan.dueDate).toLocaleDateString("hu-HU")}
+                          </p>
+                          {isOverdue && (
+                            <p className="overdue-text">
+                              ⚠️ {Math.abs(daysLeft)} napja lejárt
+                            </p>
+                          )}
+                          {!isOverdue && daysLeft <= 7 && (
+                            <p className="warning-text">
+                              ⚠️ {daysLeft} nap van hátra
+                            </p>
+                          )}
+                        </div>
+                        <div
+                          className="loan-actions"
+                          style={{ marginTop: "10px" }}
+                        >
+                          <button
+                            className="return-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReturnBook(loan.id);
+                            }}
+                          >
+                            Visszahozás
+                          </button>
+                          {!isOverdue && (
+                            <button
+                              className="renew-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRenewLoan(loan.id);
+                              }}
+                            >
+                              Meghosszabbítás
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-              );
-            })
+                );
+              })
           )}
         </div>
       </div>

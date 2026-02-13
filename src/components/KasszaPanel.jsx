@@ -13,7 +13,7 @@ import {
 import BarcodeScanner from "./BarcodeScanner.jsx";
 import "./BarcodeScanner.css";
 
-const KasszaPanel = ({ user }) => {
+const KasszaPanel = ({ user, users = [] }) => {
   const [sales, setSales] = useState([]);
   const [books, setBooks] = useState([]);
   const [gifts, setGifts] = useState([]);
@@ -45,8 +45,7 @@ const KasszaPanel = ({ user }) => {
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
 
-  // Daily Balance state
-  const [dailyCloses, setDailyCloses] = useState([]);
+  // Extra transactions state
   const [extraTransactions, setExtraTransactions] = useState([]);
   const [showExtraForm, setShowExtraForm] = useState(false);
   const [extraData, setExtraData] = useState({
@@ -54,7 +53,23 @@ const KasszaPanel = ({ user }) => {
     amount: "",
     type: "income", // "income" or "expense"
   });
-  const [showDailyCloseConfirm, setShowDailyCloseConfirm] = useState(false);
+
+  // Shift Management state
+  const [shifts, setShifts] = useState([]);
+  const [activeShift, setActiveShift] = useState(null);
+  const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [showShiftHistory, setShowShiftHistory] = useState(false);
+  const [openShiftData, setOpenShiftData] = useState({
+    openingBalance: "",
+    staffOnDuty: [],
+  });
+  const [closeShiftData, setCloseShiftData] = useState({
+    actualBalance: "",
+  });
+  const [closingSummary, setClosingSummary] = useState(null);
+  const [summaryText, setSummaryText] = useState("");
+  const [copiedSummary, setCopiedSummary] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -92,7 +107,7 @@ const KasszaPanel = ({ user }) => {
     const salesRef = ref(database, "sales");
     const booksRef = ref(database, "books");
     const giftsRef = ref(database, "gifts");
-    const dailyClosesRef = ref(database, "dailyCloses");
+    const shiftsRef = ref(database, "shifts");
     const extraTransRef = ref(database, "extraTransactions");
 
     const handleSalesData = (snapshot) => {
@@ -135,12 +150,17 @@ const KasszaPanel = ({ user }) => {
       }
     };
 
-    const handleDailyCloses = (snapshot) => {
+    const handleShiftsData = (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setDailyCloses(Object.keys(data).map((id) => ({ id, ...data[id] })));
+        const shiftsList = Object.keys(data).map((id) => ({ id, ...data[id] }));
+        setShifts(shiftsList);
+        // Find the currently open shift (status === "open")
+        const openShift = shiftsList.find((s) => s.status === "open");
+        setActiveShift(openShift || null);
       } else {
-        setDailyCloses([]);
+        setShifts([]);
+        setActiveShift(null);
       }
     };
 
@@ -158,7 +178,7 @@ const KasszaPanel = ({ user }) => {
     onValue(salesRef, handleSalesData);
     onValue(booksRef, handleBooksData);
     onValue(giftsRef, handleGiftsData);
-    onValue(dailyClosesRef, handleDailyCloses);
+    onValue(shiftsRef, handleShiftsData);
     onValue(extraTransRef, handleExtraTransactions);
   }, []);
 
@@ -407,6 +427,10 @@ const KasszaPanel = ({ user }) => {
       alert("Kérjük, töltse ki az összes mezőt!");
       return;
     }
+    if (!activeShift) {
+      showToastNotification("Először nyissa ki a kasszát!", "error");
+      return;
+    }
     const extraRef = ref(database, "extraTransactions");
     const newRef = push(extraRef);
     set(newRef, {
@@ -414,6 +438,7 @@ const KasszaPanel = ({ user }) => {
       amount: parseFloat(extraData.amount),
       type: extraData.type,
       timestamp: new Date().toISOString(),
+      shiftId: activeShift.id,
       recordedBy: user?.email || "ismeretlen",
       sellerName:
         user?.name || user?.displayName || user?.email || "ismeretlen",
@@ -426,81 +451,171 @@ const KasszaPanel = ({ user }) => {
     );
   };
 
-  // Daily Close handler
-  const handleDailyClose = () => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+  // --- Shift Management Handlers ---
 
-    // Check if already closed today
-    const alreadyClosed = dailyCloses.some((dc) => dc.date === todayStr);
-    if (alreadyClosed) {
-      showToastNotification("A mai nap már le van zárva!", "error");
-      setShowDailyCloseConfirm(false);
+  const handleOpenShift = () => {
+    if (
+      !openShiftData.openingBalance ||
+      openShiftData.staffOnDuty.length === 0
+    ) {
+      alert(
+        "Kérjük, adja meg a nyitó egyenleget és válassza ki a személyzetet!",
+      );
       return;
     }
 
-    const closingBalance =
-      todayOpeningBalance +
-      todaySalesTotal +
-      todayExtraIncome -
-      todayExtraExpense;
-
-    const closeRef = ref(database, "dailyCloses");
-    const newRef = push(closeRef);
-    set(newRef, {
-      date: todayStr,
-      openingBalance: todayOpeningBalance,
-      salesTotal: todaySalesTotal,
-      extraIncome: todayExtraIncome,
-      extraExpense: todayExtraExpense,
-      closingBalance,
-      closedBy: user?.email || "ismeretlen",
-      closedAt: new Date().toISOString(),
+    const shiftsRef = ref(database, "shifts");
+    const newShiftRef = push(shiftsRef);
+    set(newShiftRef, {
+      status: "open",
+      date: new Date().toISOString().slice(0, 10),
+      openedAt: new Date().toISOString(),
+      openingBalance: parseFloat(openShiftData.openingBalance),
+      staffOnDuty: openShiftData.staffOnDuty,
+      openedBy: user?.email || "ismeretlen",
+      openedByName:
+        user?.name || user?.displayName || user?.email || "ismeretlen",
     });
 
-    setShowDailyCloseConfirm(false);
+    setOpenShiftData({ openingBalance: "", staffOnDuty: [] });
+    setShowOpenShiftModal(false);
+    showToastNotification("Kassza sikeresen megnyitva!", "success");
+  };
+
+  const handleCloseShift = () => {
+    if (!closeShiftData.actualBalance) {
+      alert("Kérjük, adja meg a fizikai záró egyenleget!");
+      return;
+    }
+    if (!activeShift) return;
+
+    const actualBalance = parseFloat(closeShiftData.actualBalance);
+    const expectedBalance = shiftExpectedBalance;
+    const discrepancy = actualBalance - expectedBalance;
+
+    const shiftRef = ref(database, `shifts/${activeShift.id}`);
+    update(shiftRef, {
+      status: "closed",
+      closedAt: new Date().toISOString(),
+      closedBy: user?.email || "ismeretlen",
+      closedByName:
+        user?.name || user?.displayName || user?.email || "ismeretlen",
+      salesTotal: shiftSalesTotal,
+      extraIncome: shiftExtraIncome,
+      extraExpense: shiftExtraExpense,
+      expectedBalance,
+      actualBalance,
+      discrepancy,
+    });
+
+    // Generate summary text
+    const staffNames = activeShift.staffOnDuty?.join(", ") || "N/A";
+    const dateStr = new Date().toLocaleDateString("hu-HU", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const extraNetText =
+      shiftExtraIncome - shiftExtraExpense >= 0
+        ? `+${(shiftExtraIncome - shiftExtraExpense).toLocaleString("hu-HU")} Ft`
+        : `${(shiftExtraIncome - shiftExtraExpense).toLocaleString("hu-HU")} Ft`;
+
+    // Build extra details
+    const shiftExtrasForSummary = extraTransactions.filter(
+      (t) => t.shiftId === activeShift.id,
+    );
+    let extraLines = "";
+    shiftExtrasForSummary.forEach((t) => {
+      extraLines += `  ${t.type === "income" ? "+" : "-"}${t.amount.toLocaleString("hu-HU")} Ft (${t.description})\n`;
+    });
+
+    const summary = `--- OMEGA KÖNYVTÁR NAPI ZÁRÁS ---
+Dátum: ${dateStr}
+Személyzet: ${staffNames}
+---------------------------------
+Nyitó egyenleg: ${activeShift.openingBalance.toLocaleString("hu-HU")} Ft
+Összes eladás: ${shiftSalesTotal.toLocaleString("hu-HU")} Ft
+Egyéb mozgás: ${extraNetText}${extraLines ? "\n" + extraLines : ""}
+Várt egyenleg: ${expectedBalance.toLocaleString("hu-HU")} Ft
+Fizikai záró: ${actualBalance.toLocaleString("hu-HU")} Ft
+ELTÉRÉS: ${discrepancy >= 0 ? "+" : ""}${discrepancy.toLocaleString("hu-HU")} Ft
+---------------------------------
+Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
+
+    setSummaryText(summary);
+    setClosingSummary({
+      expectedBalance,
+      actualBalance,
+      discrepancy,
+      staffNames,
+      dateStr,
+    });
+    setCloseShiftData({ actualBalance: "" });
+    setShowCloseShiftModal(false);
+    setCopiedSummary(false);
     showToastNotification(
-      `Napi zárás sikeres! Záró egyenleg: ${closingBalance.toLocaleString("hu-HU")} Ft`,
-      "success",
+      `Kassza sikeresen lezárva! Eltérés: ${discrepancy >= 0 ? "+" : ""}${discrepancy.toLocaleString("hu-HU")} Ft`,
+      discrepancy === 0 ? "success" : "error",
     );
   };
 
-  // --- Daily Balance calculations ---
+  const handleCopySummary = () => {
+    navigator.clipboard.writeText(summaryText).then(() => {
+      setCopiedSummary(true);
+      showToastNotification("Összegzés vágólapra másolva!", "success");
+      setTimeout(() => setCopiedSummary(false), 3000);
+    });
+  };
+
+  const toggleStaffMember = (name) => {
+    setOpenShiftData((prev) => {
+      const current = prev.staffOnDuty;
+      if (current.includes(name)) {
+        return { ...prev, staffOnDuty: current.filter((n) => n !== name) };
+      } else {
+        return { ...prev, staffOnDuty: [...current, name] };
+      }
+    });
+  };
+
+  // --- Shift Balance Calculations ---
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // Last daily close = opening balance for today
-  const sortedCloses = [...dailyCloses].sort(
-    (a, b) => new Date(b.date) - new Date(a.date),
-  );
-  const lastClose = sortedCloses[0];
-  const todayOpeningBalance = lastClose ? lastClose.closingBalance : 0;
-
-  // Today's sales (cash only for balance)
-  const todaySales = sales.filter(
-    (s) => s.timestamp && s.timestamp.startsWith(todayStr),
-  );
-  const todaySalesTotal = todaySales.reduce(
+  // Sales during active shift
+  const shiftSales = activeShift
+    ? sales.filter(
+        (s) =>
+          s.timestamp &&
+          new Date(s.timestamp) >= new Date(activeShift.openedAt),
+      )
+    : [];
+  const shiftSalesTotal = shiftSales.reduce(
     (sum, s) => sum + (s.totalAmount || 0),
     0,
   );
 
-  // Today's extra transactions
-  const todayExtras = extraTransactions.filter(
-    (t) => t.timestamp && t.timestamp.startsWith(todayStr),
-  );
-  const todayExtraIncome = todayExtras
+  // Extra transactions during active shift
+  const shiftExtras = activeShift
+    ? extraTransactions.filter((t) => t.shiftId === activeShift.id)
+    : [];
+  const shiftExtraIncome = shiftExtras
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + (t.amount || 0), 0);
-  const todayExtraExpense = todayExtras
+  const shiftExtraExpense = shiftExtras
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-  const todayClosingBalance =
-    todayOpeningBalance +
-    todaySalesTotal +
-    todayExtraIncome -
-    todayExtraExpense;
+  const shiftExpectedBalance = activeShift
+    ? activeShift.openingBalance +
+      shiftSalesTotal +
+      shiftExtraIncome -
+      shiftExtraExpense
+    : 0;
 
-  const isTodayClosed = dailyCloses.some((dc) => dc.date === todayStr);
+  // Shift history (sorted newest first)
+  const closedShifts = [...shifts]
+    .filter((s) => s.status === "closed")
+    .sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
 
   // --- Filtered sales calculations ---
   const dailySales = sales.filter(
@@ -551,76 +666,391 @@ const KasszaPanel = ({ user }) => {
         </div>
       </header>
 
-      <div className="kassza-content">
-        {/* Daily Balance Section */}
-        <div className="kassza-section daily-balance-section">
-          <h3>Napi Egyenleg</h3>
-          <div className="daily-balance-grid">
-            <div className="balance-card">
-              <span className="balance-label">Nyitó</span>
-              <span className="balance-value">
-                {todayOpeningBalance.toLocaleString("hu-HU")} Ft
-              </span>
-            </div>
-            <div className="balance-card positive">
-              <span className="balance-label">Eladások</span>
-              <span className="balance-value">
-                +{todaySalesTotal.toLocaleString("hu-HU")} Ft
-              </span>
-            </div>
-            <div className="balance-card positive">
-              <span className="balance-label">Egyéb bevétel</span>
-              <span className="balance-value">
-                +{todayExtraIncome.toLocaleString("hu-HU")} Ft
-              </span>
-            </div>
-            <div className="balance-card negative">
-              <span className="balance-label">Egyéb kiadás</span>
-              <span className="balance-value">
-                -{todayExtraExpense.toLocaleString("hu-HU")} Ft
-              </span>
-            </div>
-          </div>
-          <div className="balance-closing">
-            <span className="balance-closing-label">Záró egyenleg</span>
-            <span
-              className={`balance-closing-value ${todayClosingBalance >= 0 ? "positive" : "negative"}`}
-            >
-              {todayClosingBalance.toLocaleString("hu-HU")} Ft
-            </span>
-          </div>
-          <div className="daily-balance-actions">
-            <button
-              className="kassza-btn primary"
-              onClick={() => setShowExtraForm(true)}
-            >
-              + Egyéb Tétel
-            </button>
-            {user?.role === "admin" && (
+      {/* Status Badge */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "12px",
+          padding: "12px 20px",
+          margin: "0 16px 16px",
+          borderRadius: "12px",
+          background: activeShift
+            ? "linear-gradient(135deg, #059669, #10b981)"
+            : "linear-gradient(135deg, #dc2626, #ef4444)",
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: "16px",
+          letterSpacing: "0.5px",
+          boxShadow: activeShift
+            ? "0 4px 12px rgba(5, 150, 105, 0.3)"
+            : "0 4px 12px rgba(220, 38, 38, 0.3)",
+        }}
+      >
+        <span style={{ fontSize: "20px" }}>{activeShift ? "🟢" : "🔴"}</span>
+        {activeShift ? "KASSZA NYITVA" : "KASSZA ZÁRVA"}
+        {activeShift && activeShift.staffOnDuty && (
+          <span style={{ fontWeight: 400, fontSize: "13px", opacity: 0.9 }}>
+            — {activeShift.staffOnDuty.join(", ")}
+          </span>
+        )}
+      </div>
+
+      {/* Closing Summary (shown after closing) */}
+      {closingSummary && summaryText && (
+        <div
+          style={{
+            margin: "0 16px 16px",
+            padding: "20px",
+            background: "#fffbeb",
+            border: "1px solid #fbbf24",
+            borderRadius: "12px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+            }}
+          >
+            <h3 style={{ margin: 0, color: "#92400e", fontSize: "16px" }}>
+              📋 Zárási Összegzés
+            </h3>
+            <div style={{ display: "flex", gap: "8px" }}>
               <button
-                className={`kassza-btn ${isTodayClosed ? "secondary" : "daily-close"}`}
-                onClick={() => setShowDailyCloseConfirm(true)}
-                disabled={isTodayClosed}
+                onClick={handleCopySummary}
+                style={{
+                  padding: "8px 16px",
+                  background: copiedSummary ? "#059669" : "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
               >
-                {isTodayClosed ? "Mai nap lezárva" : "Napi Zárás"}
+                {copiedSummary ? "✅ Másolva!" : "📋 Másolás"}
               </button>
-            )}
+              <button
+                onClick={() => {
+                  setClosingSummary(null);
+                  setSummaryText("");
+                }}
+                style={{
+                  padding: "8px 12px",
+                  background: "#6b7280",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
-          {todayExtras.length > 0 && (
-            <div className="today-extras-list">
-              <h4>Mai egyéb tételek</h4>
-              {todayExtras.map((t) => (
-                <div key={t.id} className={`extra-item ${t.type}`}>
-                  <span className="extra-desc">{t.description}</span>
-                  <span className={`extra-amount ${t.type}`}>
-                    {t.type === "income" ? "+" : "-"}
-                    {t.amount.toLocaleString("hu-HU")} Ft
-                  </span>
-                </div>
-              ))}
+          <textarea
+            readOnly
+            value={summaryText}
+            style={{
+              width: "100%",
+              minHeight: "220px",
+              padding: "14px",
+              background: "#1f2937",
+              color: "#e5e7eb",
+              border: "none",
+              borderRadius: "8px",
+              fontFamily: "monospace",
+              fontSize: "13px",
+              lineHeight: "1.6",
+              resize: "vertical",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+      )}
+
+      {/* Open/Close Shift Buttons */}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          margin: "0 16px 16px",
+          flexWrap: "wrap",
+        }}
+      >
+        {!activeShift ? (
+          <button
+            onClick={() => setShowOpenShiftModal(true)}
+            style={{
+              flex: 1,
+              padding: "14px 20px",
+              background: "linear-gradient(135deg, #059669, #10b981)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "15px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            🔓 Kassza Nyitás
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowCloseShiftModal(true)}
+            style={{
+              flex: 1,
+              padding: "14px 20px",
+              background: "linear-gradient(135deg, #dc2626, #ef4444)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "15px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            🔒 Kassza Zárás
+          </button>
+        )}
+        <button
+          onClick={() => setShowShiftHistory(!showShiftHistory)}
+          style={{
+            padding: "14px 20px",
+            background: showShiftHistory ? "#4f46e5" : "#6366f1",
+            color: "#fff",
+            border: "none",
+            borderRadius: "12px",
+            fontSize: "15px",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          📖 Műszak Napló
+        </button>
+      </div>
+
+      {/* Shift History Table */}
+      {showShiftHistory && (
+        <div
+          style={{
+            margin: "0 16px 16px",
+            padding: "20px",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: "12px",
+          }}
+        >
+          <h3
+            style={{ margin: "0 0 16px", fontSize: "16px", color: "#1e293b" }}
+          >
+            📖 Műszak Napló
+          </h3>
+          {closedShifts.length === 0 ? (
+            <p
+              style={{ color: "#94a3b8", textAlign: "center", padding: "20px" }}
+            >
+              Még nincsenek lezárt műszakok.
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "13px",
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#e2e8f0" }}>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "left",
+                        borderRadius: "8px 0 0 0",
+                      }}
+                    >
+                      Dátum
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left" }}>
+                      Személyzet
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
+                      Nyitó
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
+                      Eladások
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
+                      Várt
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
+                      Fizikai
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "right",
+                        borderRadius: "0 8px 0 0",
+                      }}
+                    >
+                      Eltérés
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {closedShifts.map((shift) => (
+                    <tr
+                      key={shift.id}
+                      style={{ borderBottom: "1px solid #e2e8f0" }}
+                    >
+                      <td style={{ padding: "10px 12px" }}>
+                        {new Date(shift.closedAt).toLocaleDateString("hu-HU")}
+                      </td>
+                      <td style={{ padding: "10px 12px" }}>
+                        {shift.staffOnDuty?.join(", ") || "N/A"}
+                      </td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                        {(shift.openingBalance || 0).toLocaleString("hu-HU")} Ft
+                      </td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                        {(shift.salesTotal || 0).toLocaleString("hu-HU")} Ft
+                      </td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                        {(shift.expectedBalance || 0).toLocaleString("hu-HU")}{" "}
+                        Ft
+                      </td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                        {(shift.actualBalance || 0).toLocaleString("hu-HU")} Ft
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "right",
+                          fontWeight: 700,
+                          color:
+                            (shift.discrepancy || 0) === 0
+                              ? "#059669"
+                              : (shift.discrepancy || 0) > 0
+                                ? "#2563eb"
+                                : "#dc2626",
+                        }}
+                      >
+                        {(shift.discrepancy || 0) >= 0 ? "+" : ""}
+                        {(shift.discrepancy || 0).toLocaleString("hu-HU")} Ft
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
+      )}
+
+      <div className="kassza-content">
+        {/* Shift Balance Section */}
+        {activeShift && (
+          <div className="kassza-section daily-balance-section">
+            <h3>Műszak Egyenleg</h3>
+            <div className="daily-balance-grid">
+              <div className="balance-card">
+                <span className="balance-label">Nyitó</span>
+                <span className="balance-value">
+                  {activeShift.openingBalance.toLocaleString("hu-HU")} Ft
+                </span>
+              </div>
+              <div className="balance-card positive">
+                <span className="balance-label">Eladások</span>
+                <span className="balance-value">
+                  +{shiftSalesTotal.toLocaleString("hu-HU")} Ft
+                </span>
+              </div>
+              <div className="balance-card positive">
+                <span className="balance-label">Egyéb bevétel</span>
+                <span className="balance-value">
+                  +{shiftExtraIncome.toLocaleString("hu-HU")} Ft
+                </span>
+              </div>
+              <div className="balance-card negative">
+                <span className="balance-label">Egyéb kiadás</span>
+                <span className="balance-value">
+                  -{shiftExtraExpense.toLocaleString("hu-HU")} Ft
+                </span>
+              </div>
+            </div>
+            <div className="balance-closing">
+              <span className="balance-closing-label">Várt egyenleg</span>
+              <span
+                className={`balance-closing-value ${shiftExpectedBalance >= 0 ? "positive" : "negative"}`}
+              >
+                {shiftExpectedBalance.toLocaleString("hu-HU")} Ft
+              </span>
+            </div>
+            <div className="daily-balance-actions">
+              <button
+                className="kassza-btn primary"
+                onClick={() => setShowExtraForm(true)}
+              >
+                + Egyéb Tétel
+              </button>
+            </div>
+            {shiftExtras.length > 0 && (
+              <div className="today-extras-list">
+                <h4>Műszak egyéb tételek</h4>
+                {shiftExtras.map((t) => (
+                  <div key={t.id} className={`extra-item ${t.type}`}>
+                    <span className="extra-desc">{t.description}</span>
+                    <span className={`extra-amount ${t.type}`}>
+                      {t.type === "income" ? "+" : "-"}
+                      {t.amount.toLocaleString("hu-HU")} Ft
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Disabled overlay when shift is closed */}
+        {!activeShift && (
+          <div
+            style={{
+              padding: "40px 20px",
+              textAlign: "center",
+              background: "#f1f5f9",
+              borderRadius: "12px",
+              margin: "0 0 16px",
+              border: "2px dashed #cbd5e1",
+            }}
+          >
+            <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔒</div>
+            <h3 style={{ color: "#475569", margin: "0 0 8px" }}>
+              A kassza jelenleg zárva van
+            </h3>
+            <p style={{ color: "#94a3b8", margin: 0 }}>
+              Nyissa meg a kasszát az eladások és tranzakciók rögzítéséhez.
+            </p>
+          </div>
+        )}
 
         <div className="kassza-section">
           <h3>Eladási Történet</h3>
@@ -670,11 +1100,18 @@ const KasszaPanel = ({ user }) => {
             </div>
           </div>
 
-          <div className="kassza-section">
+          <div
+            className="kassza-section"
+            style={{
+              opacity: activeShift ? 1 : 0.5,
+              pointerEvents: activeShift ? "auto" : "none",
+            }}
+          >
             <h3>Új Eladás</h3>
             <button
               className="kassza-scan-btn"
               onClick={() => setShowScanner(true)}
+              disabled={!activeShift}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -715,6 +1152,7 @@ const KasszaPanel = ({ user }) => {
             <button
               onClick={() => setShowSaleForm(true)}
               className="kassza-btn primary"
+              disabled={!activeShift}
             >
               + Új Eladás Rögzítése
             </button>
@@ -1154,54 +1592,257 @@ const KasszaPanel = ({ user }) => {
         </div>
       )}
 
-      {/* Daily Close Confirmation Modal */}
-      {showDailyCloseConfirm && (
+      {/* Open Shift Modal */}
+      {showOpenShiftModal && (
         <div className="kassza-modal">
-          <div className="kassza-modal-content delete-modal">
-            <div className="delete-modal-header">
-              <h3>Napi Zárás</h3>
-            </div>
-            <div className="delete-modal-body">
-              <div className="delete-warning-icon">📋</div>
-              <p>Biztosan le szeretnéd zárni a mai napot?</p>
-              <div className="sale-preview">
-                <div className="sale-details-preview">
-                  <span>
-                    Nyitó egyenleg:{" "}
-                    {todayOpeningBalance.toLocaleString("hu-HU")} Ft
-                  </span>
-                  <span>
-                    Eladások: +{todaySalesTotal.toLocaleString("hu-HU")} Ft
-                  </span>
-                  <span>
-                    Egyéb bevétel: +{todayExtraIncome.toLocaleString("hu-HU")}{" "}
-                    Ft
-                  </span>
-                  <span>
-                    Egyéb kiadás: -{todayExtraExpense.toLocaleString("hu-HU")}{" "}
-                    Ft
-                  </span>
-                  <span>
-                    <strong>
-                      Záró egyenleg:{" "}
-                      {todayClosingBalance.toLocaleString("hu-HU")} Ft
-                    </strong>
-                  </span>
+          <div className="kassza-modal-content">
+            <h3>🔓 Kassza Nyitás</h3>
+            <div className="kassza-modal-body">
+              <div className="form-group">
+                <label>Fizikai nyitó egyenleg (Ft):</label>
+                <input
+                  type="number"
+                  value={openShiftData.openingBalance}
+                  onChange={(e) =>
+                    setOpenShiftData({
+                      ...openShiftData,
+                      openingBalance: e.target.value,
+                    })
+                  }
+                  placeholder="Számolja meg a kasszában lévő összeget"
+                  min="0"
+                  step="1"
+                  style={{ fontSize: "18px", padding: "14px", fontWeight: 600 }}
+                />
+              </div>
+              <div className="form-group">
+                <label>Személyzet (ki van szolgálatban):</label>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    marginTop: "8px",
+                  }}
+                >
+                  {users.map((u) => {
+                    const name = u.name || u.displayName || u.email || "N/A";
+                    const isSelected = openShiftData.staffOnDuty.includes(name);
+                    return (
+                      <button
+                        key={u.id || u.email}
+                        type="button"
+                        onClick={() => toggleStaffMember(name)}
+                        style={{
+                          padding: "8px 16px",
+                          borderRadius: "20px",
+                          border: isSelected
+                            ? "2px solid #059669"
+                            : "2px solid #e2e8f0",
+                          background: isSelected ? "#ecfdf5" : "#fff",
+                          color: isSelected ? "#059669" : "#64748b",
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {isSelected ? "✓ " : ""}
+                        {name}
+                      </button>
+                    );
+                  })}
                 </div>
+                {openShiftData.staffOnDuty.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      fontSize: "13px",
+                      color: "#059669",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Kiválasztva: {openShiftData.staffOnDuty.join(", ")}
+                  </div>
+                )}
               </div>
             </div>
-            <div className="delete-modal-footer">
+            <div className="kassza-modal-footer">
               <button
-                onClick={() => setShowDailyCloseConfirm(false)}
+                onClick={handleOpenShift}
+                className="kassza-btn primary"
+                disabled={
+                  !openShiftData.openingBalance ||
+                  openShiftData.staffOnDuty.length === 0
+                }
+                style={{
+                  opacity:
+                    !openShiftData.openingBalance ||
+                    openShiftData.staffOnDuty.length === 0
+                      ? 0.5
+                      : 1,
+                }}
+              >
+                Kassza Megnyitása
+              </button>
+              <button
+                onClick={() => {
+                  setShowOpenShiftModal(false);
+                  setOpenShiftData({ openingBalance: "", staffOnDuty: [] });
+                }}
                 className="kassza-btn secondary"
               >
                 Mégse
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close Shift Modal */}
+      {showCloseShiftModal && activeShift && (
+        <div className="kassza-modal">
+          <div className="kassza-modal-content">
+            <h3>🔒 Kassza Zárás</h3>
+            <div className="kassza-modal-body">
+              <div className="sale-preview" style={{ marginBottom: "16px" }}>
+                <div className="sale-details-preview">
+                  <span>
+                    Nyitó egyenleg:{" "}
+                    {activeShift.openingBalance.toLocaleString("hu-HU")} Ft
+                  </span>
+                  <span>
+                    Eladások: +{shiftSalesTotal.toLocaleString("hu-HU")} Ft
+                  </span>
+                  <span>
+                    Egyéb bevétel: +{shiftExtraIncome.toLocaleString("hu-HU")}{" "}
+                    Ft
+                  </span>
+                  <span>
+                    Egyéb kiadás: -{shiftExtraExpense.toLocaleString("hu-HU")}{" "}
+                    Ft
+                  </span>
+                  <span>
+                    <strong>
+                      Várt egyenleg:{" "}
+                      {shiftExpectedBalance.toLocaleString("hu-HU")} Ft
+                    </strong>
+                  </span>
+                </div>
+              </div>
+              <div className="form-group">
+                <label style={{ fontSize: "15px", fontWeight: 700 }}>
+                  Fizikai záró egyenleg (Ft):
+                </label>
+                <input
+                  type="number"
+                  value={closeShiftData.actualBalance}
+                  onChange={(e) =>
+                    setCloseShiftData({ actualBalance: e.target.value })
+                  }
+                  placeholder="Számolja meg a kasszában lévő összeget"
+                  min="0"
+                  step="1"
+                  style={{ fontSize: "18px", padding: "14px", fontWeight: 600 }}
+                />
+              </div>
+              {closeShiftData.actualBalance && (
+                <div
+                  style={{
+                    padding: "14px",
+                    borderRadius: "10px",
+                    marginTop: "8px",
+                    background:
+                      parseFloat(closeShiftData.actualBalance) ===
+                      shiftExpectedBalance
+                        ? "#ecfdf5"
+                        : parseFloat(closeShiftData.actualBalance) >
+                            shiftExpectedBalance
+                          ? "#eff6ff"
+                          : "#fef2f2",
+                    border: `1px solid ${
+                      parseFloat(closeShiftData.actualBalance) ===
+                      shiftExpectedBalance
+                        ? "#a7f3d0"
+                        : parseFloat(closeShiftData.actualBalance) >
+                            shiftExpectedBalance
+                          ? "#bfdbfe"
+                          : "#fecaca"
+                    }`,
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      color: "#6b7280",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Eltérés
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 800,
+                      color:
+                        parseFloat(closeShiftData.actualBalance) ===
+                        shiftExpectedBalance
+                          ? "#059669"
+                          : parseFloat(closeShiftData.actualBalance) >
+                              shiftExpectedBalance
+                            ? "#2563eb"
+                            : "#dc2626",
+                    }}
+                  >
+                    {parseFloat(closeShiftData.actualBalance) -
+                      shiftExpectedBalance >=
+                    0
+                      ? "+"
+                      : ""}
+                    {(
+                      parseFloat(closeShiftData.actualBalance) -
+                      shiftExpectedBalance
+                    ).toLocaleString("hu-HU")}{" "}
+                    Ft
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#9ca3af",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {parseFloat(closeShiftData.actualBalance) ===
+                    shiftExpectedBalance
+                      ? "Tökéletes egyezés! ✅"
+                      : parseFloat(closeShiftData.actualBalance) >
+                          shiftExpectedBalance
+                        ? "Többlet a kasszában"
+                        : "Hiány a kasszában ⚠️"}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="kassza-modal-footer">
               <button
-                onClick={handleDailyClose}
+                onClick={handleCloseShift}
                 className="kassza-btn daily-close"
+                disabled={!closeShiftData.actualBalance}
+                style={{
+                  opacity: !closeShiftData.actualBalance ? 0.5 : 1,
+                }}
               >
-                Napi Zárás Megerősítése
+                Kassza Lezárása
+              </button>
+              <button
+                onClick={() => {
+                  setShowCloseShiftModal(false);
+                  setCloseShiftData({ actualBalance: "" });
+                }}
+                className="kassza-btn secondary"
+              >
+                Mégse
               </button>
             </div>
           </div>

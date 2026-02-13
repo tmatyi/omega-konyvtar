@@ -130,15 +130,21 @@
 }
 
 .mode-buttons {
+  display: -webkit-flex;
   display: flex;
   gap: 8px;
 }
 
 .mode-btn {
+  -webkit-flex: 1;
   flex: 1;
+  display: -webkit-flex;
   display: flex;
+  -webkit-flex-direction: column;
   flex-direction: column;
+  -webkit-align-items: center;
   align-items: center;
+  -webkit-justify-content: center;
   justify-content: center;
   padding: 12px 8px;
   background: rgba(255, 255, 255, 0.1);
@@ -148,6 +154,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   min-height: 60px;
+  box-sizing: border-box;
 }
 
 .mode-btn:hover {
@@ -435,6 +442,7 @@
 }
 
 .mobile-menu-mode-switcher {
+  display: -webkit-flex;
   display: flex;
   gap: 0;
   margin: 0 10px 4px;
@@ -444,9 +452,13 @@
 }
 
 .mobile-menu-mode-btn {
+  -webkit-flex: 1;
   flex: 1;
+  display: -webkit-flex;
   display: flex;
+  -webkit-align-items: center;
   align-items: center;
+  -webkit-justify-content: center;
   justify-content: center;
   gap: 8px;
   padding: 13px 16px;
@@ -458,6 +470,9 @@
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 48px;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .mobile-menu-mode-btn:first-child {

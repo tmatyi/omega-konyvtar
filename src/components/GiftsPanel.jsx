@@ -23,6 +23,30 @@ function GiftsPanel({ user, gifts }) {
   const [showImagePopup, setShowImagePopup] = useState(false);
   const [popupImage, setPopupImage] = useState(null);
   const [expandedGiftId, setExpandedGiftId] = useState(null);
+  const [giftSortBy, setGiftSortBy] = useState("name");
+
+  // Sort gifts
+  const sortedGifts = [...gifts].sort((a, b) => {
+    const field = giftSortBy.replace("-desc", "");
+    const desc = giftSortBy.endsWith("-desc");
+    let valA, valB;
+    if (field === "name") {
+      valA = (a.name || "").toLowerCase();
+      valB = (b.name || "").toLowerCase();
+    } else if (field === "price") {
+      valA = a.price || 0;
+      valB = b.price || 0;
+    } else if (field === "createdAt") {
+      valA = a.createdAt || "";
+      valB = b.createdAt || "";
+    } else {
+      valA = (a.name || "").toLowerCase();
+      valB = (b.name || "").toLowerCase();
+    }
+    if (valA < valB) return desc ? 1 : -1;
+    if (valA > valB) return desc ? -1 : 1;
+    return 0;
+  });
 
   // Delete gift function
   const deleteGift = (giftId) => {
@@ -73,6 +97,19 @@ function GiftsPanel({ user, gifts }) {
               </div>
             </div>
             <div className="controls-right">
+              <select
+                value={giftSortBy}
+                onChange={(e) => setGiftSortBy(e.target.value)}
+                className="filter-select"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="name">Név (A-Z)</option>
+                <option value="name-desc">Név (Z-A)</option>
+                <option value="price">Ár (növekvő)</option>
+                <option value="price-desc">Ár (csökkenő)</option>
+                <option value="createdAt-desc">Legújabb</option>
+                <option value="createdAt">Legrégebbi</option>
+              </select>
               <button
                 className="filter-toggle-btn"
                 onClick={() => setShowAddGiftForm(true)}
@@ -103,7 +140,7 @@ function GiftsPanel({ user, gifts }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {gifts.map((gift) => {
+                    {sortedGifts.map((gift) => {
                       const isAtRecommendedStock =
                         gift.recommendedStock &&
                         gift.quantity === gift.recommendedStock;
@@ -232,7 +269,7 @@ function GiftsPanel({ user, gifts }) {
 
               {/* Mobile: expandable compact rows */}
               <div className="compact-rows-container gifts-rows-mobile">
-                {gifts.map((gift) => {
+                {sortedGifts.map((gift) => {
                   const isExpanded = expandedGiftId === gift.id;
                   const isAtRecommendedStock =
                     gift.recommendedStock &&

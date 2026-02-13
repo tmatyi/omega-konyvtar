@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   database,
   ref,
   set,
@@ -70,6 +71,15 @@ export function useAuth() {
       return userCredential.user;
     } catch (error) {
       console.error("Registration error:", error);
+      throw error;
+    }
+  };
+
+  const handleForgotPassword = async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error("Password reset error:", error);
       throw error;
     }
   };
@@ -142,6 +152,7 @@ export function useAuth() {
     loading,
     handleLogin,
     handleRegister,
+    handleForgotPassword,
     handleLogout,
     handleProfileUpdate,
   };

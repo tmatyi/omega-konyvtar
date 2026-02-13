@@ -20,6 +20,7 @@ function App() {
     loading,
     handleLogin,
     handleRegister,
+    handleForgotPassword,
     handleLogout,
     handleProfileUpdate,
   } = useAuth();
@@ -44,6 +45,7 @@ function App() {
   // Sorting for table
   const [sortField, setSortField] = useState("title");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [sortBy, setSortBy] = useState("title");
 
   const handleDensityChange = (newDensity) => {
     if (newDensity === cardDensity) return;
@@ -131,6 +133,38 @@ function App() {
     }
   };
 
+  // Handle sort dropdown change
+  const handleSortByChange = (value) => {
+    setSortBy(value);
+    setSortField(value.replace("-desc", "").replace("-asc", ""));
+    setSortOrder(value.endsWith("-desc") ? "desc" : "asc");
+  };
+
+  // Sort filtered books
+  const sortedFilteredBooks = [...filteredBooks].sort((a, b) => {
+    let fieldName = sortBy.replace("-desc", "").replace("-asc", "");
+    let order = sortBy.endsWith("-desc") ? "desc" : "asc";
+    let valA, valB;
+
+    if (fieldName === "title") {
+      valA = (a.title || "").toLowerCase();
+      valB = (b.title || "").toLowerCase();
+    } else if (fieldName === "price") {
+      valA = a.price || 0;
+      valB = b.price || 0;
+    } else if (fieldName === "createdAt") {
+      valA = a.createdAt || "";
+      valB = b.createdAt || "";
+    } else {
+      valA = (a.title || "").toLowerCase();
+      valB = (b.title || "").toLowerCase();
+    }
+
+    if (valA < valB) return order === "asc" ? -1 : 1;
+    if (valA > valB) return order === "asc" ? 1 : -1;
+    return 0;
+  });
+
   // Handle book click for details
   const handleBookClick = (book) => {
     setSelectedBook(book);
@@ -153,7 +187,13 @@ function App() {
   }
 
   if (!user) {
-    return <Login onLogin={handleLogin} onRegister={handleRegister} />;
+    return (
+      <Login
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        onForgotPassword={handleForgotPassword}
+      />
+    );
   }
 
   return (
@@ -172,8 +212,8 @@ function App() {
             <header className="App-header">
               <div className="header-section header-title">
                 <div className="title-container">
-                  <h1>Omega Könyvtár</h1>
-                  <p>Digitális Könyvtárad</p>
+                  <h1>Könyvesbolt</h1>
+                  <p>Raktárkezelés</p>
                 </div>
               </div>
               <div className="header-section header-controls">
@@ -246,6 +286,18 @@ function App() {
                       </option>
                     ))}
                   </select>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => handleSortByChange(e.target.value)}
+                    className="filter-select"
+                  >
+                    <option value="title">Rendezés: Cím (A-Z)</option>
+                    <option value="title-desc">Rendezés: Cím (Z-A)</option>
+                    <option value="price">Rendezés: Ár (növekvő)</option>
+                    <option value="price-desc">Rendezés: Ár (csökkenő)</option>
+                    <option value="createdAt-desc">Rendezés: Legújabb</option>
+                    <option value="createdAt">Rendezés: Legrégebbi</option>
+                  </select>
                   {(filterText || filterGenre || filterAuthor) && (
                     <button
                       className="clear-filters-btn"
@@ -283,7 +335,7 @@ function App() {
                 style={{ "--card-density": cardDensity }}
                 data-density-value={cardDensity}
               >
-                {filteredBooks.length === 0 ? (
+                {sortedFilteredBooks.length === 0 ? (
                   <div className="no-books">
                     {books.filter(
                       (book) =>
@@ -303,7 +355,7 @@ function App() {
                   </div>
                 ) : (
                   <BooksTable
-                    books={filteredBooks}
+                    books={sortedFilteredBooks}
                     user={user}
                     sortField={sortField}
                     sortOrder={sortOrder}
@@ -409,6 +461,16 @@ function App() {
                       </option>
                     ))}
                   </select>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => handleSortByChange(e.target.value)}
+                    className="filter-select"
+                  >
+                    <option value="title">Rendezés: Cím (A-Z)</option>
+                    <option value="title-desc">Rendezés: Cím (Z-A)</option>
+                    <option value="createdAt-desc">Rendezés: Legújabb</option>
+                    <option value="createdAt">Rendezés: Legrégebbi</option>
+                  </select>
                   {(filterText || filterGenre || filterAuthor) && (
                     <button
                       className="clear-filters-btn"
@@ -471,7 +533,7 @@ function App() {
                 style={{ "--card-density": cardDensity }}
                 data-density-value={cardDensity}
               >
-                {filteredBooks.length === 0 ? (
+                {sortedFilteredBooks.length === 0 ? (
                   <div className="no-books">
                     {books.filter(
                       (book) =>
@@ -490,7 +552,7 @@ function App() {
                     )}
                   </div>
                 ) : (
-                  filteredBooks.map((book) => {
+                  sortedFilteredBooks.map((book) => {
                     const isLentOut = lentOutBookIds.has(book.id);
                     return (
                       <div
@@ -548,7 +610,7 @@ function App() {
         )}
         {activeTab === "kassza" && (
           <div className="tab-content custom-scrollbar">
-            <KasszaPanel user={user} />
+            <KasszaPanel user={user} users={users} />
           </div>
         )}
       </div>
