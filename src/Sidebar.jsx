@@ -1,6 +1,26 @@
 import React, { useState, useEffect } from "react";
 import "./Sidebar.css";
 
+// Build timestamp injected at build time by Vite
+const BUILD_TIMESTAMP =
+  typeof __BUILD_TIMESTAMP__ !== "undefined" ? __BUILD_TIMESTAMP__ : null;
+
+const formatBuildDate = (isoString) => {
+  if (!isoString) return "";
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString("hu-HU", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
+
 function Sidebar({
   user,
   onLogout,
@@ -246,6 +266,19 @@ function Sidebar({
             </button>
           ))}
         </nav>
+        {!isCollapsed && BUILD_TIMESTAMP && (
+          <div
+            style={{
+              padding: "8px 20px 12px",
+              fontSize: "11px",
+              color: "#8899a6",
+              textAlign: "center",
+              opacity: 0.7,
+            }}
+          >
+            Frissítve: {formatBuildDate(BUILD_TIMESTAMP)}
+          </div>
+        )}
       </div>
 
       {/* ===== MOBILE BOTTOM BAR ===== */}
@@ -468,6 +501,19 @@ function Sidebar({
               </svg>
               <span className="mobile-menu-item-label">Kijelentkezés</span>
             </button>
+
+            {BUILD_TIMESTAMP && (
+              <div
+                style={{
+                  padding: "12px 16px 8px",
+                  fontSize: "11px",
+                  color: "#9ca3af",
+                  textAlign: "center",
+                }}
+              >
+                Frissítve: {formatBuildDate(BUILD_TIMESTAMP)}
+              </div>
+            )}
           </div>
         </div>
       )}

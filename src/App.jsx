@@ -372,13 +372,17 @@ function App() {
         {activeTab === "gifts" && <GiftsPanel user={user} gifts={gifts} />}
         {activeTab === "profile" && (
           <div className="tab-content custom-scrollbar">
-            <Profile user={user} onUpdateUser={handleProfileUpdate} />
+            <Profile
+              user={user}
+              onUpdateUser={handleProfileUpdate}
+              loans={loans}
+            />
           </div>
         )}
 
         {activeTab === "lending" && (
           <div className="tab-content custom-scrollbar">
-            <LendingPanel books={books} users={users} />
+            <LendingPanel books={books} users={users} loans={loans} />
           </div>
         )}
 
@@ -605,12 +609,17 @@ function App() {
 
         {activeTab === "users" && (
           <div className="tab-content custom-scrollbar">
-            <UsersPanel user={user} />
+            <UsersPanel user={user} users={users} />
           </div>
         )}
         {activeTab === "kassza" && (
           <div className="tab-content custom-scrollbar">
-            <KasszaPanel user={user} users={users} />
+            <KasszaPanel
+              user={user}
+              users={users}
+              books={books}
+              gifts={gifts}
+            />
           </div>
         )}
       </div>

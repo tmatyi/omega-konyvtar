@@ -7,12 +7,11 @@ import BarcodeScanner from "./BarcodeScanner.jsx";
 import "./BarcodeScanner.css";
 import "./LendingPanel.css";
 
-const LendingPanel = ({ books, users }) => {
+const LendingPanel = ({ books, users, loans = [] }) => {
   const [libraryBooks, setLibraryBooks] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userSearchTerm, setUserSearchTerm] = useState("");
-  const [loans, setLoans] = useState([]);
   const [showLoanModal, setShowLoanModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [memberCode, setMemberCode] = useState("");
@@ -31,30 +30,6 @@ const LendingPanel = ({ books, users }) => {
   useEffect(() => {
     const filtered = books.filter((book) => book.category === "Könyvtár");
     setLibraryBooks(filtered);
-
-    // Load loans from Firebase instead of localStorage
-    const loansRef = ref(database, "loans");
-    const handleLoansData = (snapshot) => {
-      const loansData = snapshot.val();
-      const loansList = [];
-
-      if (loansData) {
-        Object.keys(loansData).forEach((loanId) => {
-          loansList.push({
-            id: loanId,
-            ...loansData[loanId],
-          });
-        });
-      }
-
-      setLoans(loansList);
-    };
-
-    onValue(loansRef, handleLoansData);
-
-    return () => {
-      off(loansRef, "value", handleLoansData);
-    };
   }, [books]);
 
   const showToastNotification = (message, type = "success") => {

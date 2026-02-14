@@ -10,9 +10,8 @@ import {
   set,
 } from "../firebase.js";
 
-const UsersPanel = ({ user }) => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+const UsersPanel = ({ user, users = [] }) => {
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -27,24 +26,6 @@ const UsersPanel = ({ user }) => {
   const [approveLoading, setApproveLoading] = useState(false);
 
   useEffect(() => {
-    const usersRef = ref(database, "users");
-
-    const handleUsersData = (snapshot) => {
-      const usersData = snapshot.val();
-      if (usersData) {
-        const usersList = Object.keys(usersData).map((userId) => ({
-          id: userId,
-          ...usersData[userId],
-        }));
-        setUsers(usersList);
-      } else {
-        setUsers([]);
-      }
-      setLoading(false);
-    };
-
-    onValue(usersRef, handleUsersData);
-
     // Load pending guests
     const guestsRef = ref(database, "pendingGuests");
     const handleGuestsData = (snapshot) => {
@@ -61,7 +42,6 @@ const UsersPanel = ({ user }) => {
     onValue(guestsRef, handleGuestsData);
 
     return () => {
-      off(usersRef, "value", handleUsersData);
       off(guestsRef, "value", handleGuestsData);
     };
   }, []);

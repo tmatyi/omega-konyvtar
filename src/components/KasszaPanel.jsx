@@ -13,10 +13,8 @@ import {
 import BarcodeScanner from "./BarcodeScanner.jsx";
 import "./BarcodeScanner.css";
 
-const KasszaPanel = ({ user, users = [] }) => {
+const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   const [sales, setSales] = useState([]);
-  const [books, setBooks] = useState([]);
-  const [gifts, setGifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSaleForm, setShowSaleForm] = useState(false);
@@ -105,8 +103,6 @@ const KasszaPanel = ({ user, users = [] }) => {
 
   useEffect(() => {
     const salesRef = ref(database, "sales");
-    const booksRef = ref(database, "books");
-    const giftsRef = ref(database, "gifts");
     const shiftsRef = ref(database, "shifts");
     const extraTransRef = ref(database, "extraTransactions");
 
@@ -122,32 +118,6 @@ const KasszaPanel = ({ user, users = [] }) => {
         setSales([]);
       }
       setLoading(false);
-    };
-
-    const handleBooksData = (snapshot) => {
-      const booksData = snapshot.val();
-      if (booksData) {
-        const booksList = Object.keys(booksData).map((bookId) => ({
-          id: bookId,
-          ...booksData[bookId],
-        }));
-        setBooks(booksList);
-      } else {
-        setBooks([]);
-      }
-    };
-
-    const handleGiftsData = (snapshot) => {
-      const giftsData = snapshot.val();
-      if (giftsData) {
-        const giftsList = Object.keys(giftsData).map((giftId) => ({
-          id: giftId,
-          ...giftsData[giftId],
-        }));
-        setGifts(giftsList);
-      } else {
-        setGifts([]);
-      }
     };
 
     const handleShiftsData = (snapshot) => {
@@ -176,8 +146,6 @@ const KasszaPanel = ({ user, users = [] }) => {
     };
 
     onValue(salesRef, handleSalesData);
-    onValue(booksRef, handleBooksData);
-    onValue(giftsRef, handleGiftsData);
     onValue(shiftsRef, handleShiftsData);
     onValue(extraTransRef, handleExtraTransactions);
   }, []);

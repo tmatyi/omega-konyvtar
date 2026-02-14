@@ -18,23 +18,28 @@ const fetchWithTimeout = async (url, ms = 12000) => {
   }
 };
 
+// Firebase Cloud Function proxy URL
+const CLOUD_FUNCTION_URL =
+  "https://us-central1-kpregisztracio-6fb9d.cloudfunctions.net/corsProxy";
+
 // Fetch HTML through multiple proxy strategies
-// Strategy: try direct fetch first (iOS sometimes allows this), then proxies
+// Strategy: Cloud Function first (most reliable), then third-party proxies as fallback
 const fetchViaProxy = async (url) => {
   let lastError = null;
 
-  // --- Strategy 0: Direct fetch (iOS PWA sometimes allows this for certain domains) ---
+  // --- Strategy 0: Firebase Cloud Function (own server-side proxy, no CORS issues) ---
   try {
-    const response = await fetchWithTimeout(url, 10000);
+    const proxyUrl = `${CLOUD_FUNCTION_URL}?url=${encodeURIComponent(url)}`;
+    const response = await fetchWithTimeout(proxyUrl, 15000);
     if (response.ok) {
       const html = await response.text();
       if (html && html.length > 100 && !html.includes("Access denied")) {
-        console.log("Direct fetch succeeded");
+        console.log("Cloud Function proxy succeeded");
         return html;
       }
     }
   } catch (error) {
-    console.warn("Direct fetch failed:", error.message);
+    console.warn("Cloud Function proxy failed:", error.message);
     lastError = error;
   }
 
@@ -54,55 +59,7 @@ const fetchViaProxy = async (url) => {
     lastError = error;
   }
 
-  // --- Strategy 2: cors.sh (simple GET, no custom headers) ---
-  try {
-    const proxyUrl = `https://cors.sh/${url}`;
-    const response = await fetchWithTimeout(proxyUrl, 12000);
-    if (response.ok) {
-      const html = await response.text();
-      if (html && html.length > 100 && !html.includes("Access denied")) {
-        console.log("cors.sh succeeded");
-        return html;
-      }
-    }
-  } catch (error) {
-    console.warn("cors.sh failed:", error.message);
-    lastError = error;
-  }
-
-  // --- Strategy 3: corslol ---
-  try {
-    const proxyUrl = `https://api.cors.lol/?url=${encodeURIComponent(url)}`;
-    const response = await fetchWithTimeout(proxyUrl, 12000);
-    if (response.ok) {
-      const html = await response.text();
-      if (html && html.length > 100 && !html.includes("Access denied")) {
-        console.log("cors.lol succeeded");
-        return html;
-      }
-    }
-  } catch (error) {
-    console.warn("cors.lol failed:", error.message);
-    lastError = error;
-  }
-
-  // --- Strategy 4: thebugging proxy ---
-  try {
-    const proxyUrl = `https://proxy.cors.sh/${url}`;
-    const response = await fetchWithTimeout(proxyUrl, 12000);
-    if (response.ok) {
-      const html = await response.text();
-      if (html && html.length > 100 && !html.includes("Access denied")) {
-        console.log("proxy.cors.sh succeeded");
-        return html;
-      }
-    }
-  } catch (error) {
-    console.warn("proxy.cors.sh failed:", error.message);
-    lastError = error;
-  }
-
-  // --- Strategy 5: corsproxy.io (simple GET, no custom headers) ---
+  // --- Strategy 2: corsproxy.io (simple GET, no custom headers) ---
   try {
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
     const response = await fetchWithTimeout(proxyUrl, 12000);

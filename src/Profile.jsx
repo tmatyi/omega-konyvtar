@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import "./Profile.css";
 
-function Profile({ user, onUpdateUser }) {
+function Profile({ user, onUpdateUser, loans = [] }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     email: user?.email || "",
@@ -22,7 +22,6 @@ function Profile({ user, onUpdateUser }) {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [userLoans, setUserLoans] = useState([]);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -30,39 +29,11 @@ function Profile({ user, onUpdateUser }) {
     confirmPassword: "",
   });
   const [passwordLoading, setPasswordLoading] = useState(false);
-  const [loansLoading, setLoansLoading] = useState(true);
-
-  // Load user's current loans
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const loansRef = ref(database, "loans");
-    const handleLoansData = (snapshot) => {
-      const loansData = snapshot.val();
-      const userCurrentLoans = [];
-
-      if (loansData) {
-        Object.keys(loansData).forEach((loanId) => {
-          const loan = loansData[loanId];
-          if (loan.userId === user.uid && loan.status === "active") {
-            userCurrentLoans.push({
-              id: loanId,
-              ...loan,
-            });
-          }
-        });
-      }
-
-      setUserLoans(userCurrentLoans);
-      setLoansLoading(false);
-    };
-
-    onValue(loansRef, handleLoansData);
-
-    return () => {
-      off(loansRef, "value", handleLoansData);
-    };
-  }, [user?.uid]);
+  // Filter loans for current user
+  const userLoans = loans.filter(
+    (loan) => loan.userId === user?.uid && loan.status === "active",
+  );
+  const loansLoading = false;
 
   // Load profile data from Firebase on mount
   useEffect(() => {

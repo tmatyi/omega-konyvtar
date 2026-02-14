@@ -31,21 +31,31 @@ function GiftsPanel({ user, gifts }) {
     const desc = giftSortBy.endsWith("-desc");
     let valA, valB;
     if (field === "name") {
-      valA = (a.name || "").toLowerCase();
-      valB = (b.name || "").toLowerCase();
+      valA = a.name || "";
+      valB = b.name || "";
+      // Use Hungarian locale-aware sorting for proper ABC order
+      const comparison = valA.localeCompare(valB, "hu", {
+        sensitivity: "base",
+      });
+      return desc ? -comparison : comparison;
     } else if (field === "price") {
       valA = a.price || 0;
       valB = b.price || 0;
+      const comparison = valA - valB;
+      return desc ? -comparison : comparison;
     } else if (field === "createdAt") {
       valA = a.createdAt || "";
       valB = b.createdAt || "";
+      const comparison = new Date(valA) - new Date(valB);
+      return desc ? -comparison : comparison;
     } else {
-      valA = (a.name || "").toLowerCase();
-      valB = (b.name || "").toLowerCase();
+      valA = a.name || "";
+      valB = b.name || "";
+      const comparison = valA.localeCompare(valB, "hu", {
+        sensitivity: "base",
+      });
+      return desc ? -comparison : comparison;
     }
-    if (valA < valB) return desc ? 1 : -1;
-    if (valA > valB) return desc ? -1 : 1;
-    return 0;
   });
 
   // Delete gift function
