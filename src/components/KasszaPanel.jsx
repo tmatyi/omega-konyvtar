@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   database,
   ref,
@@ -58,6 +58,9 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [showShiftHistory, setShowShiftHistory] = useState(false);
+  const [expandedShiftId, setExpandedShiftId] = useState(null);
+  const [shiftToDelete, setShiftToDelete] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [openShiftData, setOpenShiftData] = useState({
     openingBalance: "",
     staffOnDuty: [],
@@ -546,6 +549,234 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
     });
   };
 
+  // Delete shift with all associated sales
+  const handleDeleteShift = async () => {
+    if (deleteConfirmText !== "JÓVÁHAGY") {
+      alert("Kérjük, írja be pontosan: JÓVÁHAGY");
+      return;
+    }
+
+    if (!shiftToDelete) return;
+
+    try {
+      // Find all sales in this shift
+      const shiftSalesData = sales.filter(
+        (s) =>
+          s.timestamp &&
+          new Date(s.timestamp) >= new Date(shiftToDelete.openedAt) &&
+          new Date(s.timestamp) <= new Date(shiftToDelete.closedAt),
+      );
+
+      // Delete all sales in this shift
+      for (const sale of shiftSalesData) {
+        const saleRef = ref(database, `sales/${sale.id}`);
+        await remove(saleRef);
+      }
+
+      // Delete all extra transactions in this shift
+      const shiftExtrasData = extraTransactions.filter(
+        (t) => t.shiftId === shiftToDelete.id,
+      );
+      for (const extra of shiftExtrasData) {
+        const extraRef = ref(database, `extraTransactions/${extra.id}`);
+        await remove(extraRef);
+      }
+
+      // Delete the shift itself
+      const shiftRef = ref(database, `shifts/${shiftToDelete.id}`);
+      await remove(shiftRef);
+
+      showToastNotification(
+        `Műszak és ${shiftSalesData.length} eladás sikeresen törölve!`,
+        "success",
+      );
+      setShiftToDelete(null);
+      setDeleteConfirmText("");
+    } catch (error) {
+      console.error("Error deleting shift:", error);
+      alert("Hiba történt a műszak törlése közben!");
+    }
+  };
+
+  // Print individual shift
+  const handlePrintShift = (shift, shiftSalesData, shiftExtrasData) => {
+    const printWindow = window.open("", "_blank");
+    const dateStr = new Date(shift.closedAt).toLocaleDateString("hu-HU", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const timeStr = new Date(shift.closedAt).toLocaleTimeString("hu-HU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    let salesHTML = "";
+    if (shiftSalesData.length > 0) {
+      salesHTML = `
+        <h3>Eladások (${shiftSalesData.length} db)</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <thead>
+            <tr style="background: #f1f5f9;">
+              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Időpont</th>
+              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Termék</th>
+              <th style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">Mennyiség</th>
+              <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">Egységár</th>
+              <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">Összeg</th>
+              <th style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">Fizetés</th>
+              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Eladó</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${shiftSalesData
+              .map(
+                (sale) => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">${new Date(sale.timestamp).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">${sale.itemType === "book" ? "📚" : "🎁"} ${sale.itemName}</td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">${sale.quantity}</td>
+                <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">${parseInt(sale.price).toLocaleString("hu-HU")} Ft</td>
+                <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0; font-weight: 600;">${sale.totalAmount.toLocaleString("hu-HU")} Ft</td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">${sale.paymentMethod === "cash" ? "Készpénz" : sale.paymentMethod === "card" ? "Kártya" : "Átutalás"}</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">${sale.sellerName || "N/A"}</td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    let extrasHTML = "";
+    if (shiftExtrasData.length > 0) {
+      extrasHTML = `
+        <h3>Egyéb Mozgások (${shiftExtrasData.length} db)</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <thead>
+            <tr style="background: #f1f5f9;">
+              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Leírás</th>
+              <th style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">Típus</th>
+              <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">Összeg</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${shiftExtrasData
+              .map(
+                (extra) => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">${extra.description}</td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">${extra.type === "income" ? "Bevétel" : "Kiadás"}</td>
+                <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0; font-weight: 600; color: ${extra.type === "income" ? "#059669" : "#dc2626"};">${extra.type === "income" ? "+" : "-"}${extra.amount.toLocaleString("hu-HU")} Ft</td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Műszak Jelentés - ${dateStr}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 20px;
+              max-width: 900px;
+              margin: 0 auto;
+            }
+            h1 { color: #1e293b; margin-bottom: 10px; }
+            h2 { color: #475569; margin-top: 20px; margin-bottom: 10px; }
+            h3 { color: #64748b; margin-top: 15px; margin-bottom: 10px; }
+            .summary {
+              background: #f8fafc;
+              padding: 15px;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            .summary-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 0;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            .summary-row:last-child {
+              border-bottom: none;
+              font-weight: 700;
+              font-size: 16px;
+              margin-top: 8px;
+              padding-top: 12px;
+              border-top: 2px solid #cbd5e1;
+            }
+            .label { color: #64748b; }
+            .value { font-weight: 600; }
+            @media print {
+              body { padding: 10px; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Műszak Jelentés</h1>
+          <p><strong>Dátum:</strong> ${dateStr} ${timeStr}</p>
+          <p><strong>Személyzet:</strong> ${shift.staffOnDuty?.join(", ") || "N/A"}</p>
+          
+          <div class="summary">
+            <h2>Összegzés</h2>
+            <div class="summary-row">
+              <span class="label">Nyitó egyenleg:</span>
+              <span class="value">${(shift.openingBalance || 0).toLocaleString("hu-HU")} Ft</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Eladások összesen:</span>
+              <span class="value">${(shift.salesTotal || 0).toLocaleString("hu-HU")} Ft</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Egyéb bevétel:</span>
+              <span class="value" style="color: #059669;">+${(shift.extraIncome || 0).toLocaleString("hu-HU")} Ft</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Egyéb kiadás:</span>
+              <span class="value" style="color: #dc2626;">-${(shift.extraExpense || 0).toLocaleString("hu-HU")} Ft</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Várt egyenleg:</span>
+              <span class="value">${(shift.expectedBalance || 0).toLocaleString("hu-HU")} Ft</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Fizikai záró egyenleg:</span>
+              <span class="value">${(shift.actualBalance || 0).toLocaleString("hu-HU")} Ft</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Eltérés:</span>
+              <span class="value" style="color: ${(shift.discrepancy || 0) === 0 ? "#059669" : (shift.discrepancy || 0) > 0 ? "#2563eb" : "#dc2626"};">
+                ${(shift.discrepancy || 0) >= 0 ? "+" : ""}${(shift.discrepancy || 0).toLocaleString("hu-HU")} Ft
+              </span>
+            </div>
+          </div>
+
+          ${salesHTML}
+          ${extrasHTML}
+
+          <p style="margin-top: 30px; color: #94a3b8; font-size: 12px;">
+            Nyomtatva: ${new Date().toLocaleString("hu-HU")}
+          </p>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   // --- Shift Balance Calculations ---
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -885,48 +1116,426 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                   </tr>
                 </thead>
                 <tbody>
-                  {closedShifts.map((shift) => (
-                    <tr
-                      key={shift.id}
-                      style={{ borderBottom: "1px solid #e2e8f0" }}
-                    >
-                      <td style={{ padding: "10px 12px" }}>
-                        {new Date(shift.closedAt).toLocaleDateString("hu-HU")}
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        {shift.staffOnDuty?.join(", ") || "N/A"}
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                        {(shift.openingBalance || 0).toLocaleString("hu-HU")} Ft
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                        {(shift.salesTotal || 0).toLocaleString("hu-HU")} Ft
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                        {(shift.expectedBalance || 0).toLocaleString("hu-HU")}{" "}
-                        Ft
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                        {(shift.actualBalance || 0).toLocaleString("hu-HU")} Ft
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px 12px",
-                          textAlign: "right",
-                          fontWeight: 700,
-                          color:
-                            (shift.discrepancy || 0) === 0
-                              ? "#059669"
-                              : (shift.discrepancy || 0) > 0
-                                ? "#2563eb"
-                                : "#dc2626",
-                        }}
-                      >
-                        {(shift.discrepancy || 0) >= 0 ? "+" : ""}
-                        {(shift.discrepancy || 0).toLocaleString("hu-HU")} Ft
-                      </td>
-                    </tr>
-                  ))}
+                  {closedShifts.map((shift) => {
+                    const isExpanded = expandedShiftId === shift.id;
+                    const shiftSalesData = sales.filter(
+                      (s) =>
+                        s.timestamp &&
+                        new Date(s.timestamp) >= new Date(shift.openedAt) &&
+                        new Date(s.timestamp) <= new Date(shift.closedAt),
+                    );
+                    const shiftExtrasData = extraTransactions.filter(
+                      (t) => t.shiftId === shift.id,
+                    );
+
+                    return (
+                      <React.Fragment key={shift.id}>
+                        <tr
+                          onClick={() =>
+                            setExpandedShiftId(isExpanded ? null : shift.id)
+                          }
+                          style={{
+                            borderBottom: "1px solid #e2e8f0",
+                            cursor: "pointer",
+                            background: isExpanded ? "#f1f5f9" : "transparent",
+                            transition: "background 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isExpanded)
+                              e.currentTarget.style.background = "#f8fafc";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isExpanded)
+                              e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "10px 12px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                transition: "transform 0.2s ease",
+                                transform: isExpanded
+                                  ? "rotate(90deg)"
+                                  : "rotate(0deg)",
+                              }}
+                            >
+                              ▶
+                            </span>
+                            {new Date(shift.closedAt).toLocaleDateString(
+                              "hu-HU",
+                            )}
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            {shift.staffOnDuty?.join(", ") || "N/A"}
+                          </td>
+                          <td
+                            style={{ padding: "10px 12px", textAlign: "right" }}
+                          >
+                            {(shift.openingBalance || 0).toLocaleString(
+                              "hu-HU",
+                            )}{" "}
+                            Ft
+                          </td>
+                          <td
+                            style={{ padding: "10px 12px", textAlign: "right" }}
+                          >
+                            {(shift.salesTotal || 0).toLocaleString("hu-HU")} Ft
+                          </td>
+                          <td
+                            style={{ padding: "10px 12px", textAlign: "right" }}
+                          >
+                            {(shift.expectedBalance || 0).toLocaleString(
+                              "hu-HU",
+                            )}{" "}
+                            Ft
+                          </td>
+                          <td
+                            style={{ padding: "10px 12px", textAlign: "right" }}
+                          >
+                            {(shift.actualBalance || 0).toLocaleString("hu-HU")}{" "}
+                            Ft
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 12px",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              color:
+                                (shift.discrepancy || 0) === 0
+                                  ? "#059669"
+                                  : (shift.discrepancy || 0) > 0
+                                    ? "#2563eb"
+                                    : "#dc2626",
+                            }}
+                          >
+                            {(shift.discrepancy || 0) >= 0 ? "+" : ""}
+                            {(shift.discrepancy || 0).toLocaleString(
+                              "hu-HU",
+                            )}{" "}
+                            Ft
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td
+                              colSpan="7"
+                              style={{
+                                padding: "16px",
+                                background: "#ffffff",
+                                borderBottom: "2px solid #e2e8f0",
+                              }}
+                            >
+                              <div style={{ marginBottom: "16px" }}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    marginBottom: "12px",
+                                  }}
+                                >
+                                  <h4
+                                    style={{
+                                      margin: 0,
+                                      fontSize: "14px",
+                                      color: "#1e293b",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    📊 Eladások ({shiftSalesData.length} db)
+                                  </h4>
+                                  <div style={{ display: "flex", gap: "8px" }}>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handlePrintShift(
+                                          shift,
+                                          shiftSalesData,
+                                          shiftExtrasData,
+                                        );
+                                      }}
+                                      style={{
+                                        padding: "6px 12px",
+                                        background: "#844a59",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                        cursor: "pointer",
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      🖨️ Nyomtatás
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShiftToDelete(shift);
+                                      }}
+                                      style={{
+                                        padding: "6px 12px",
+                                        background: "#dc2626",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                        cursor: "pointer",
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      🗑️ Törlés
+                                    </button>
+                                  </div>
+                                </div>
+                                {shiftSalesData.length === 0 ? (
+                                  <p
+                                    style={{
+                                      color: "#94a3b8",
+                                      fontSize: "13px",
+                                      margin: "8px 0",
+                                    }}
+                                  >
+                                    Nincsenek eladások ebben a műszakban.
+                                  </p>
+                                ) : (
+                                  <div
+                                    style={{
+                                      maxHeight: "300px",
+                                      overflowY: "auto",
+                                      border: "1px solid #e2e8f0",
+                                      borderRadius: "8px",
+                                    }}
+                                  >
+                                    <table
+                                      style={{
+                                        width: "100%",
+                                        fontSize: "12px",
+                                        borderCollapse: "collapse",
+                                      }}
+                                    >
+                                      <thead
+                                        style={{
+                                          position: "sticky",
+                                          top: 0,
+                                          background: "#f8fafc",
+                                        }}
+                                      >
+                                        <tr>
+                                          <th
+                                            style={{
+                                              padding: "8px",
+                                              textAlign: "left",
+                                              borderBottom: "1px solid #e2e8f0",
+                                            }}
+                                          >
+                                            Időpont
+                                          </th>
+                                          <th
+                                            style={{
+                                              padding: "8px",
+                                              textAlign: "left",
+                                              borderBottom: "1px solid #e2e8f0",
+                                            }}
+                                          >
+                                            Termék
+                                          </th>
+                                          <th
+                                            style={{
+                                              padding: "8px",
+                                              textAlign: "center",
+                                              borderBottom: "1px solid #e2e8f0",
+                                            }}
+                                          >
+                                            Mennyiség
+                                          </th>
+                                          <th
+                                            style={{
+                                              padding: "8px",
+                                              textAlign: "right",
+                                              borderBottom: "1px solid #e2e8f0",
+                                            }}
+                                          >
+                                            Egységár
+                                          </th>
+                                          <th
+                                            style={{
+                                              padding: "8px",
+                                              textAlign: "right",
+                                              borderBottom: "1px solid #e2e8f0",
+                                            }}
+                                          >
+                                            Összeg
+                                          </th>
+                                          <th
+                                            style={{
+                                              padding: "8px",
+                                              textAlign: "center",
+                                              borderBottom: "1px solid #e2e8f0",
+                                            }}
+                                          >
+                                            Fizetés
+                                          </th>
+                                          <th
+                                            style={{
+                                              padding: "8px",
+                                              textAlign: "left",
+                                              borderBottom: "1px solid #e2e8f0",
+                                            }}
+                                          >
+                                            Eladó
+                                          </th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {shiftSalesData.map((sale) => (
+                                          <tr
+                                            key={sale.id}
+                                            style={{
+                                              borderBottom: "1px solid #f1f5f9",
+                                            }}
+                                          >
+                                            <td style={{ padding: "8px" }}>
+                                              {new Date(
+                                                sale.timestamp,
+                                              ).toLocaleTimeString("hu-HU", {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                              })}
+                                            </td>
+                                            <td style={{ padding: "8px" }}>
+                                              {sale.itemType === "book"
+                                                ? "📚"
+                                                : "🎁"}{" "}
+                                              {sale.itemName}
+                                            </td>
+                                            <td
+                                              style={{
+                                                padding: "8px",
+                                                textAlign: "center",
+                                              }}
+                                            >
+                                              {sale.quantity}
+                                            </td>
+                                            <td
+                                              style={{
+                                                padding: "8px",
+                                                textAlign: "right",
+                                              }}
+                                            >
+                                              {parseInt(
+                                                sale.price,
+                                              ).toLocaleString("hu-HU")}{" "}
+                                              Ft
+                                            </td>
+                                            <td
+                                              style={{
+                                                padding: "8px",
+                                                textAlign: "right",
+                                                fontWeight: 600,
+                                              }}
+                                            >
+                                              {sale.totalAmount.toLocaleString(
+                                                "hu-HU",
+                                              )}{" "}
+                                              Ft
+                                            </td>
+                                            <td
+                                              style={{
+                                                padding: "8px",
+                                                textAlign: "center",
+                                              }}
+                                            >
+                                              {sale.paymentMethod === "cash"
+                                                ? "💵"
+                                                : sale.paymentMethod === "card"
+                                                  ? "💳"
+                                                  : "🏦"}
+                                            </td>
+                                            <td style={{ padding: "8px" }}>
+                                              {sale.sellerName || "N/A"}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
+                              {shiftExtrasData.length > 0 && (
+                                <div>
+                                  <h4
+                                    style={{
+                                      margin: "0 0 8px",
+                                      fontSize: "14px",
+                                      color: "#1e293b",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    💰 Egyéb Mozgások ({shiftExtrasData.length}{" "}
+                                    db)
+                                  </h4>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: "6px",
+                                    }}
+                                  >
+                                    {shiftExtrasData.map((extra) => (
+                                      <div
+                                        key={extra.id}
+                                        style={{
+                                          padding: "8px 12px",
+                                          background:
+                                            extra.type === "income"
+                                              ? "#f0fdf4"
+                                              : "#fef2f2",
+                                          border: `1px solid ${
+                                            extra.type === "income"
+                                              ? "#bbf7d0"
+                                              : "#fecaca"
+                                          }`,
+                                          borderRadius: "6px",
+                                          fontSize: "12px",
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          alignItems: "center",
+                                        }}
+                                      >
+                                        <span>{extra.description}</span>
+                                        <span
+                                          style={{
+                                            fontWeight: 600,
+                                            color:
+                                              extra.type === "income"
+                                                ? "#059669"
+                                                : "#dc2626",
+                                          }}
+                                        >
+                                          {extra.type === "income" ? "+" : "-"}
+                                          {extra.amount.toLocaleString(
+                                            "hu-HU",
+                                          )}{" "}
+                                          Ft
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1191,18 +1800,35 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                         </div>
                       </div>
                       <div className="sale-actions">
-                        <button
-                          onClick={() => handleSaleEdit(sale)}
-                          className="kassza-btn edit"
-                        >
-                          ✏️ Szerkesztés
-                        </button>
-                        <button
-                          onClick={() => handleSaleDelete(sale)}
-                          className="kassza-btn delete"
-                        >
-                          🗑️ Törlés
-                        </button>
+                        {activeShift &&
+                        sale.timestamp &&
+                        new Date(sale.timestamp) >=
+                          new Date(activeShift.openedAt) ? (
+                          <>
+                            <button
+                              onClick={() => handleSaleEdit(sale)}
+                              className="kassza-btn edit"
+                            >
+                              ✏️ Szerkesztés
+                            </button>
+                            <button
+                              onClick={() => handleSaleDelete(sale)}
+                              className="kassza-btn delete"
+                            >
+                              🗑️ Törlés
+                            </button>
+                          </>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: "12px",
+                              color: "#94a3b8",
+                              fontStyle: "italic",
+                            }}
+                          >
+                            Lezárt műszak
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1823,6 +2449,132 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
           onScan={handleBarcodeScan}
           onClose={() => setShowScanner(false)}
         />
+      )}
+
+      {/* Shift Delete Confirmation Modal */}
+      {shiftToDelete && (
+        <div className="kassza-modal">
+          <div className="kassza-modal-content" style={{ maxWidth: "500px" }}>
+            <h3 style={{ color: "#dc2626", marginBottom: "16px" }}>
+              ⚠️ Műszak Törlése
+            </h3>
+            <div className="kassza-modal-body">
+              <p style={{ marginBottom: "16px", lineHeight: "1.6" }}>
+                <strong>FIGYELEM!</strong> Ez a művelet véglegesen törli a
+                műszakot és az összes hozzá tartozó eladást és tranzakciót.
+              </p>
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  marginBottom: "16px",
+                }}
+              >
+                <p style={{ margin: "0 0 8px", fontWeight: "600" }}>
+                  Törlésre kerül:
+                </p>
+                <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                  <li>
+                    Műszak:{" "}
+                    {new Date(shiftToDelete.closedAt).toLocaleDateString(
+                      "hu-HU",
+                    )}
+                  </li>
+                  <li>
+                    Személyzet: {shiftToDelete.staffOnDuty?.join(", ") || "N/A"}
+                  </li>
+                  <li>
+                    Eladások száma:{" "}
+                    {
+                      sales.filter(
+                        (s) =>
+                          s.timestamp &&
+                          new Date(s.timestamp) >=
+                            new Date(shiftToDelete.openedAt) &&
+                          new Date(s.timestamp) <=
+                            new Date(shiftToDelete.closedAt),
+                      ).length
+                    }{" "}
+                    db
+                  </li>
+                </ul>
+              </div>
+              <p style={{ marginBottom: "12px", fontWeight: "600" }}>
+                A törlés megerősítéséhez írja be:{" "}
+                <code
+                  style={{
+                    background: "#f1f5f9",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  JÓVÁHAGY
+                </code>
+              </p>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Írja be: JÓVÁHAGY"
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "2px solid #e2e8f0",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  marginBottom: "16px",
+                  fontFamily: "monospace",
+                  textTransform: "uppercase",
+                }}
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => {
+                    setShiftToDelete(null);
+                    setDeleteConfirmText("");
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "#f1f5f9",
+                    color: "#475569",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Mégse
+                </button>
+                <button
+                  onClick={handleDeleteShift}
+                  disabled={deleteConfirmText !== "JÓVÁHAGY"}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background:
+                      deleteConfirmText === "JÓVÁHAGY" ? "#dc2626" : "#cbd5e1",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor:
+                      deleteConfirmText === "JÓVÁHAGY"
+                        ? "pointer"
+                        : "not-allowed",
+                  }}
+                >
+                  Törlés
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast Notification */}

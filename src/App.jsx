@@ -514,21 +514,33 @@ function App() {
                     onClick={() => handleDensityChange(4)}
                     title="Compact - 4 cards per row"
                   >
-                    <span className="density-icon">📚</span>
+                    <img
+                      src="/grid-small.png"
+                      alt="Compact"
+                      className="density-icon-img"
+                    />
                   </button>
                   <button
                     className={`density-btn ${cardDensity === 7 ? "active" : ""}`}
                     onClick={() => handleDensityChange(7)}
                     title="Balanced - 7 cards per row"
                   >
-                    <span className="density-icon">📖</span>
+                    <img
+                      src="/grid-medium.png"
+                      alt="Balanced"
+                      className="density-icon-img"
+                    />
                   </button>
                   <button
                     className={`density-btn ${cardDensity === 10 ? "active" : ""}`}
                     onClick={() => handleDensityChange(10)}
                     title="Spacious - 10 cards per row"
                   >
-                    <span className="density-icon">📄</span>
+                    <img
+                      src="/grid.png"
+                      alt="Spacious"
+                      className="density-icon-img"
+                    />
                   </button>
                 </div>
               </div>

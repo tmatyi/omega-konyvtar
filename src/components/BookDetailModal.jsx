@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import { updateBookInDb, deleteBookFromDb } from "../services/firebaseService.js";
+import {
+  updateBookInDb,
+  deleteBookFromDb,
+} from "../services/firebaseService.js";
 
 function BookDetailModal({ show, book, onClose, user }) {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -10,6 +13,8 @@ function BookDetailModal({ show, book, onClose, user }) {
   const [year, setYear] = useState("");
   const [genre, setGenre] = useState("");
   const [description, setDescription] = useState("");
+  const [kategoria, setKategoria] = useState("");
+  const [sorszam, setSorszam] = useState("");
   const [isbn, setIsbn] = useState("");
   const [thumbnail, setThumbnail] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
@@ -37,6 +42,8 @@ function BookDetailModal({ show, book, onClose, user }) {
     setYear(bookItem.year || "");
     setGenre(bookItem.genre || "");
     setDescription(bookItem.description || "");
+    setKategoria(bookItem.kategoria || "");
+    setSorszam(bookItem.sorszam || "");
     setIsbn(bookItem.isbn || "");
     setThumbnail(bookItem.thumbnail || "");
     setThumbnailPreview(bookItem.thumbnail || null);
@@ -64,6 +71,8 @@ function BookDetailModal({ show, book, onClose, user }) {
     setYear("");
     setGenre("");
     setDescription("");
+    setKategoria("");
+    setSorszam("");
     setIsbn("");
     setThumbnail("");
     setThumbnailPreview(null);
@@ -84,7 +93,6 @@ function BookDetailModal({ show, book, onClose, user }) {
       title,
       author,
       year,
-      genre,
       description,
       isbn,
       thumbnail,
@@ -93,6 +101,17 @@ function BookDetailModal({ show, book, onClose, user }) {
       publisher,
       updatedAt: new Date().toISOString(),
     };
+
+    // Add genre for non-library books
+    if (editingBook.category !== "Könyvtár") {
+      updateData.genre = genre;
+    }
+
+    // Add Kategória and Sorszám for library books
+    if (editingBook.category === "Könyvtár") {
+      updateData.kategoria = kategoria;
+      updateData.sorszam = sorszam;
+    }
 
     // Add quantity and price for bookstore books
     if (editingBook.category === "Bolt") {
@@ -359,15 +378,47 @@ function BookDetailModal({ show, book, onClose, user }) {
                         className="edit-input"
                       />
                     </div>
-                    <div className="book-detail-field">
-                      <strong>Műfaj:</strong>
-                      <input
-                        type="text"
-                        value={genre}
-                        onChange={(e) => setGenre(e.target.value)}
-                        className="edit-input"
-                      />
-                    </div>
+                    {editingBook.category === "Könyvtár" ? (
+                      <div className="book-detail-field">
+                        <strong>Sorszám:</strong>
+                        <input
+                          type="text"
+                          value={sorszam}
+                          onChange={(e) => setSorszam(e.target.value)}
+                          className="edit-input"
+                          placeholder="Pl: BIB-001"
+                        />
+                      </div>
+                    ) : (
+                      <div className="book-detail-field">
+                        <strong>Műfaj:</strong>
+                        <input
+                          type="text"
+                          value={genre}
+                          onChange={(e) => setGenre(e.target.value)}
+                          className="edit-input"
+                        />
+                      </div>
+                    )}
+                    {editingBook.category === "Könyvtár" && (
+                      <div className="book-detail-field">
+                        <strong>Kategória:</strong>
+                        <input
+                          type="text"
+                          value={kategoria}
+                          onChange={(e) => setKategoria(e.target.value)}
+                          className="edit-input"
+                          placeholder="Pl: BIB"
+                          disabled
+                          style={{
+                            backgroundColor: "#f0f9ff",
+                            color: "#0369a1",
+                            fontWeight: "600",
+                            cursor: "not-allowed",
+                          }}
+                        />
+                      </div>
+                    )}
                     <div className="book-detail-field">
                       <strong>Eredeti cím:</strong>
                       <input
@@ -511,9 +562,22 @@ function BookDetailModal({ show, book, onClose, user }) {
                     <div className="book-detail-field">
                       <strong>Év:</strong> {selectedBook.year || "N/A"}
                     </div>
-                    <div className="book-detail-field">
-                      <strong>Műfaj:</strong> {selectedBook.genre || "N/A"}
-                    </div>
+                    {selectedBook.category === "Könyvtár" ? (
+                      <div className="book-detail-field">
+                        <strong>Sorszám:</strong>{" "}
+                        {selectedBook.sorszam || "N/A"}
+                      </div>
+                    ) : (
+                      <div className="book-detail-field">
+                        <strong>Műfaj:</strong> {selectedBook.genre || "N/A"}
+                      </div>
+                    )}
+                    {selectedBook.category === "Könyvtár" && (
+                      <div className="book-detail-field">
+                        <strong>Kategória:</strong>{" "}
+                        {selectedBook.kategoria || "N/A"}
+                      </div>
+                    )}
                     <div className="book-detail-field">
                       <strong>Eredeti cím:</strong>{" "}
                       {selectedBook.originalTitle || "N/A"}
@@ -523,8 +587,7 @@ function BookDetailModal({ show, book, onClose, user }) {
                       {selectedBook.pageCount || "N/A"}
                     </div>
                     <div className="book-detail-field">
-                      <strong>Kiadó:</strong>{" "}
-                      {selectedBook.publisher || "N/A"}
+                      <strong>Kiadó:</strong> {selectedBook.publisher || "N/A"}
                     </div>
                     <div className="book-detail-field">
                       <strong>ISBN:</strong> {selectedBook.isbn || "N/A"}

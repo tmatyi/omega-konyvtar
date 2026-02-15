@@ -5,7 +5,7 @@ import {
   processMolyHuUrl,
 } from "../services/scrapingService.js";
 import { addBookToDb } from "../services/firebaseService.js";
-import { database, ref, push, set } from "../firebase.js";
+import { database, ref, push, set, onValue } from "../firebase.js";
 
 function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
   const [title, setTitle] = useState("");
@@ -24,6 +24,8 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
   const [bookPurchasePrice, setBookPurchasePrice] = useState("");
   const [deductFromCashier, setDeductFromCashier] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [kategoria, setKategoria] = useState("");
+  const [sorszam, setSorszam] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -170,6 +172,94 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
     }
   };
 
+  // Category definitions for library books
+  const LIBRARY_CATEGORIES = [
+    {
+      section: "1. Biblia és teológia",
+      categories: [
+        { code: "BIB", name: "Biblia, kommentárok, tanulmányozás" },
+        { code: "TEO", name: "Isten, Jézus, Szent Szellem, alapvető teológia" },
+        { code: "TAN", name: "Hit, kegyelem, gyógyulás, végidők, tanítások" },
+      ],
+    },
+    {
+      section: "2. Keresztyén élet",
+      categories: [
+        { code: "KER", name: "Keresztény élet, növekedés" },
+        { code: "IMA", name: "Ima, böjt, dicsőítés" },
+        { code: "LEL", name: "Lelkigondozás, belső gyógyulás" },
+      ],
+    },
+    {
+      section: "3. Kapcsolatok",
+      categories: [
+        { code: "CSG", name: "Család, gyermeknevelés" },
+        { code: "HAP", name: "Házasság, párkapcsolat" },
+      ],
+    },
+    {
+      section: "4. Szolgálat",
+      categories: [
+        { code: "SZV", name: "Szolgálat, gyülekezet, vezetés" },
+        { code: "MIS", name: "Misszió, evangelizáció" },
+      ],
+    },
+    {
+      section: "5. Életrajz és irodalom",
+      categories: [
+        { code: "ELB", name: "Életrajzok, bizonyságok" },
+        { code: "REG", name: "Regények" },
+        { code: "GYK", name: "Gyermekkönyvek" },
+      ],
+    },
+  ];
+
+  // Generate next available Sorszám for selected Kategória
+  const generateSorszam = async (categoryCode) => {
+    if (!categoryCode) return "";
+
+    try {
+      const booksRef = ref(database, "books");
+      const snapshot = await new Promise((resolve) => {
+        onValue(booksRef, resolve, { onlyOnce: true });
+      });
+
+      const books = snapshot.val();
+      if (!books) return `${categoryCode}-001`;
+
+      // Find all books with this category code
+      const existingNumbers = Object.values(books)
+        .filter((book) => book.sorszam && book.sorszam.startsWith(categoryCode))
+        .map((book) => {
+          const match = book.sorszam.match(/-(\d+)$/);
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter((num) => !isNaN(num));
+
+      // Find next available number
+      const maxNumber =
+        existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      const nextNumber = maxNumber + 1;
+      return `${categoryCode}-${String(nextNumber).padStart(3, "0")}`;
+    } catch (error) {
+      console.error("Error generating Sorszám:", error);
+      return `${categoryCode}-001`;
+    }
+  };
+
+  // Handle category change
+  const handleKategoriaChange = async (e) => {
+    const selectedCode = e.target.value;
+    setKategoria(selectedCode);
+
+    if (selectedCode && getCategoryFilter(activeTab) === "Könyvtár") {
+      const newSorszam = await generateSorszam(selectedCode);
+      setSorszam(newSorszam);
+    } else {
+      setSorszam("");
+    }
+  };
+
   // Reset form
   const resetForm = () => {
     setTitle("");
@@ -187,6 +277,8 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
     setBookQuantity("");
     setBookPrice("");
     setBookPurchasePrice("");
+    setKategoria("");
+    setSorszam("");
     setSuccessMessage("");
   };
 
@@ -200,7 +292,6 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
         title,
         author,
         year,
-        genre,
         description,
         isbn,
         thumbnail,
@@ -211,6 +302,21 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
         createdAt: new Date().toISOString(),
         addedBy: user?.email || "unknown",
       };
+
+      // Add genre for non-library books
+      if (bookCategory !== "Könyvtár") {
+        bookData.genre = genre;
+      }
+
+      // Add Kategória and Sorszám for library books
+      if (bookCategory === "Könyvtár") {
+        if (!kategoria || !sorszam) {
+          alert("Könyvtár könyvek esetében meg kell adni a Kategóriát!");
+          return;
+        }
+        bookData.kategoria = kategoria;
+        bookData.sorszam = sorszam;
+      }
 
       // Add quantity and price for bookstore books
       if (bookCategory === "Bolt") {
@@ -475,16 +581,19 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 className="form-input"
               />
             </div>
-            <div className="form-field">
-              <label className="field-label">Műfaj</label>
-              <input
-                type="text"
-                placeholder="Add meg a műfajat"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                className="form-input"
-              />
-            </div>
+            {/* Only show Műfaj for non-library books */}
+            {getCategoryFilter(activeTab) !== "Könyvtár" && (
+              <div className="form-field">
+                <label className="field-label">Műfaj</label>
+                <input
+                  type="text"
+                  placeholder="Add meg a műfajat"
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+            )}
             <div className="form-field">
               <label className="field-label">Leírás</label>
               <textarea
@@ -540,6 +649,52 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 className="form-input"
               />
             </div>
+
+            {/* Library specific fields - only show for Könyvtár category */}
+            {getCategoryFilter(activeTab) === "Könyvtár" && (
+              <>
+                {sorszam && (
+                  <div className="form-field">
+                    <label className="field-label">Sorszám</label>
+                    <input
+                      type="text"
+                      value={sorszam}
+                      className="form-input"
+                      disabled
+                      style={{
+                        backgroundColor: "#f0f9ff",
+                        color: "#0369a1",
+                        fontWeight: "600",
+                        cursor: "not-allowed",
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="form-field">
+                  <label className="field-label">Kategória *</label>
+                  <select
+                    value={kategoria}
+                    onChange={handleKategoriaChange}
+                    className="form-input"
+                    required
+                    style={{
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="">Válasszon kategóriát...</option>
+                    {LIBRARY_CATEGORIES.map((section) => (
+                      <optgroup key={section.section} label={section.section}>
+                        {section.categories.map((cat) => (
+                          <option key={cat.code} value={cat.code}>
+                            {cat.code} - {cat.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
 
             {/* Bookstore specific fields - only show for Bolt category */}
             {getCategoryFilter(activeTab) === "Bolt" && (
