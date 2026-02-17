@@ -3,6 +3,7 @@ import {
   updateBookInDb,
   deleteBookFromDb,
 } from "../services/firebaseService.js";
+import { database, ref, onValue } from "../firebase.js";
 
 function BookDetailModal({ show, book, onClose, user }) {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -26,6 +27,99 @@ function BookDetailModal({ show, book, onClose, user }) {
   const [bookPurchasePrice, setBookPurchasePrice] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
+
+  // Category definitions for library books
+  const LIBRARY_CATEGORIES = [
+    {
+      section: "1. Biblia és teológia",
+      categories: [
+        { code: "BIB", name: "Biblia, kommentárok, tanulmányozás" },
+        { code: "TEO", name: "Isten, Jézus, Szent Szellem, alapvető teológia" },
+        { code: "TAN", name: "Hit, kegyelem, gyógyulás, végidők, tanítások" },
+      ],
+    },
+    {
+      section: "2. Keresztyén élet",
+      categories: [
+        { code: "KER", name: "Keresztény élet, növekedés" },
+        { code: "IMA", name: "Ima, böjt, dicsőítés" },
+        { code: "LEL", name: "Lelkigondozás, belső gyógyulás" },
+      ],
+    },
+    {
+      section: "3. Kapcsolatok",
+      categories: [
+        { code: "CSG", name: "Család, gyermeknevelés" },
+        { code: "HAP", name: "Házasság, párkapcsolat" },
+      ],
+    },
+    {
+      section: "4. Szolgálat",
+      categories: [
+        { code: "SZV", name: "Szolgálat, gyülekezet, vezetés" },
+        { code: "MIS", name: "Misszió, evangelizáció" },
+      ],
+    },
+    {
+      section: "5. Életrajz és irodalom",
+      categories: [
+        { code: "ELB", name: "Életrajzok, bizonyságok" },
+        { code: "REG", name: "Regények" },
+        { code: "GYK", name: "Gyermekkönyvek" },
+      ],
+    },
+  ];
+
+  // Generate next available Sorszám for selected Kategória
+  const generateSorszam = async (categoryCode, excludeBookId = null) => {
+    if (!categoryCode) return "";
+
+    try {
+      const booksRef = ref(database, "books");
+      const snapshot = await new Promise((resolve) => {
+        onValue(booksRef, resolve, { onlyOnce: true });
+      });
+
+      const books = snapshot.val();
+      if (!books) return `${categoryCode}-001`;
+
+      // Find all books with this category code (excluding current book if editing)
+      const existingNumbers = Object.values(books)
+        .filter(
+          (book) =>
+            book.sorszam &&
+            book.sorszam.startsWith(categoryCode) &&
+            book.id !== excludeBookId,
+        )
+        .map((book) => {
+          const match = book.sorszam.match(/-(\d+)$/);
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter((num) => !isNaN(num));
+
+      // Find next available number
+      const maxNumber =
+        existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      const nextNumber = maxNumber + 1;
+      return `${categoryCode}-${String(nextNumber).padStart(3, "0")}`;
+    } catch (error) {
+      console.error("Error generating Sorszám:", error);
+      return `${categoryCode}-001`;
+    }
+  };
+
+  // Handle category change in edit mode
+  const handleKategoriaChange = async (e) => {
+    const selectedCode = e.target.value;
+    setKategoria(selectedCode);
+
+    if (selectedCode && editingBook?.category === "Könyvtár") {
+      const newSorszam = await generateSorszam(selectedCode, editingBook.id);
+      setSorszam(newSorszam);
+    } else {
+      setSorszam("");
+    }
+  };
 
   // Sync selectedBook with prop when it changes
   React.useEffect(() => {
@@ -387,7 +481,25 @@ function BookDetailModal({ show, book, onClose, user }) {
                           onChange={(e) => setSorszam(e.target.value)}
                           className="edit-input"
                           placeholder="Pl: BIB-001"
+                          disabled
+                          style={{
+                            backgroundColor: "#f0f9ff",
+                            color: "#0369a1",
+                            fontWeight: "600",
+                            cursor: "not-allowed",
+                          }}
                         />
+                        <small
+                          style={{
+                            color: "#64748b",
+                            fontSize: "12px",
+                            marginTop: "4px",
+                            display: "block",
+                          }}
+                        >
+                          A sorszám automatikusan frissül a kategória
+                          választásakor
+                        </small>
                       </div>
                     ) : (
                       <div className="book-detail-field">
@@ -403,20 +515,28 @@ function BookDetailModal({ show, book, onClose, user }) {
                     {editingBook.category === "Könyvtár" && (
                       <div className="book-detail-field">
                         <strong>Kategória:</strong>
-                        <input
-                          type="text"
+                        <select
                           value={kategoria}
-                          onChange={(e) => setKategoria(e.target.value)}
+                          onChange={handleKategoriaChange}
                           className="edit-input"
-                          placeholder="Pl: BIB"
-                          disabled
                           style={{
-                            backgroundColor: "#f0f9ff",
-                            color: "#0369a1",
-                            fontWeight: "600",
-                            cursor: "not-allowed",
+                            cursor: "pointer",
                           }}
-                        />
+                        >
+                          <option value="">Válasszon kategóriát...</option>
+                          {LIBRARY_CATEGORIES.map((section) => (
+                            <optgroup
+                              key={section.section}
+                              label={section.section}
+                            >
+                              {section.categories.map((cat) => (
+                                <option key={cat.code} value={cat.code}>
+                                  {cat.code} - {cat.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
                       </div>
                     )}
                     <div className="book-detail-field">
