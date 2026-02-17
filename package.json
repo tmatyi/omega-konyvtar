@@ -1,6 +1,6 @@
 {
   "name": "hello-world-app",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Omega Könyvtár - Digital Library with Profile System",
   "private": true,
   "type": "module",
