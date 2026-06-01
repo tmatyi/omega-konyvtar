@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   database,
+  dbRef,
   ref,
   set,
   update,
@@ -28,7 +29,7 @@ export function useAuth() {
 
       // Update lastLogin timestamp in database
       try {
-        const userRef = ref(database, `users/${userCredential.user.uid}`);
+        const userRef = dbRef(database, `users/${userCredential.user.uid}`);
         await update(userRef, {
           lastLogin: new Date().toISOString(),
         });
@@ -52,7 +53,7 @@ export function useAuth() {
       );
 
       // Create user record in Realtime Database
-      const userRef = ref(database, `users/${userCredential.user.uid}`);
+      const userRef = dbRef(database, `users/${userCredential.user.uid}`);
       const userData = {
         uid: userCredential.user.uid,
         email: userCredential.user.email,
@@ -108,7 +109,7 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         // Load profile data from Firebase database
-        const userRef = ref(database, `users/${user.uid}`);
+        const userRef = dbRef(database, `users/${user.uid}`);
         onValue(userRef, (snapshot) => {
           const dbProfileData = snapshot.val();
 

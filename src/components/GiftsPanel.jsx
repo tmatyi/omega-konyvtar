@@ -4,7 +4,7 @@ import {
   updateGiftInDb,
   deleteGiftFromDb,
 } from "../services/firebaseService.js";
-import { database, ref, push, set } from "../firebase.js";
+import { database, dbRef, ref, push, set } from "../firebase.js";
 import "./BooksTable.css";
 
 function GiftsPanel({ user, gifts }) {
@@ -795,7 +795,7 @@ function GiftsPanel({ user, gifts }) {
                     if (deductFromCashier && giftPurchasePrice) {
                       const totalCost =
                         parseFloat(giftPurchasePrice) * parseInt(giftQuantity);
-                      const extraRef = ref(database, "extraTransactions");
+                      const extraRef = dbRef(database, "extraTransactions");
                       const newRef = push(extraRef);
                       set(newRef, {
                         description: `Ajándéktárgy beszerzés: ${giftName} (${giftQuantity} db)`,

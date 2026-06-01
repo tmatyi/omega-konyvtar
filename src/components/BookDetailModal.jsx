@@ -3,7 +3,7 @@ import {
   updateBookInDb,
   deleteBookFromDb,
 } from "../services/firebaseService.js";
-import { database, ref, onValue } from "../firebase.js";
+import { database, dbRef, ref, onValue } from "../firebase.js";
 
 function BookDetailModal({ show, book, onClose, user }) {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -75,7 +75,7 @@ function BookDetailModal({ show, book, onClose, user }) {
     if (!categoryCode) return "";
 
     try {
-      const booksRef = ref(database, "books");
+      const booksRef = dbRef(database, "books");
       const snapshot = await new Promise((resolve) => {
         onValue(booksRef, resolve, { onlyOnce: true });
       });
@@ -381,7 +381,26 @@ function BookDetailModal({ show, book, onClose, user }) {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="book-detail-header">
-            <h2>{selectedBook.title}</h2>
+            {isEditMode ? (
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="edit-input"
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  padding: "8px 12px",
+                  border: "2px solid #dee2e6",
+                  borderRadius: "8px",
+                  flex: 1,
+                  marginRight: "12px",
+                }}
+                placeholder="Könyv címe"
+              />
+            ) : (
+              <h2>{selectedBook.title}</h2>
+            )}
             <button className="close-btn" onClick={closeBookDetail}>
               ×
             </button>

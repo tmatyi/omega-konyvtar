@@ -5,7 +5,7 @@ import {
   processMolyHuUrl,
 } from "../services/scrapingService.js";
 import { addBookToDb } from "../services/firebaseService.js";
-import { database, ref, push, set, onValue } from "../firebase.js";
+import { database, dbRef, ref, push, set, onValue } from "../firebase.js";
 
 function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
   const [title, setTitle] = useState("");
@@ -218,7 +218,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
     if (!categoryCode) return "";
 
     try {
-      const booksRef = ref(database, "books");
+      const booksRef = dbRef(database, "books");
       const snapshot = await new Promise((resolve) => {
         onValue(booksRef, resolve, { onlyOnce: true });
       });

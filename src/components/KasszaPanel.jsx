@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   database,
+  dbRef,
   ref,
   onValue,
   off,
@@ -11,6 +12,7 @@ import {
 } from "../firebase.js";
 
 import BarcodeScanner from "./BarcodeScanner.jsx";
+import POSOverlay from "./POSOverlay.jsx";
 import "./BarcodeScanner.css";
 
 const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
@@ -42,6 +44,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   const [saleToDelete, setSaleToDelete] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const [showPOSOverlay, setShowPOSOverlay] = useState(false);
 
   // Extra transactions state
   const [extraTransactions, setExtraTransactions] = useState([]);
@@ -105,9 +108,9 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   };
 
   useEffect(() => {
-    const salesRef = ref(database, "sales");
-    const shiftsRef = ref(database, "shifts");
-    const extraTransRef = ref(database, "extraTransactions");
+    const salesRef = dbRef(database, "sales");
+    const shiftsRef = dbRef(database, "shifts");
+    const extraTransRef = dbRef(database, "extraTransactions");
 
     const handleSalesData = (snapshot) => {
       const salesData = snapshot.val();
@@ -264,7 +267,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       });
 
       // Update the sale record
-      const saleRef = ref(database, `sales/${editingSale.id}`);
+      const saleRef = dbRef(database, `sales/${editingSale.id}`);
       update(saleRef, {
         itemType: saleData.itemType,
         itemId: saleData.itemId,
@@ -286,7 +289,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       }
 
       // Create new sale record
-      const salesRef = ref(database, "sales");
+      const salesRef = dbRef(database, "sales");
       const newSaleRef = push(salesRef);
 
       const saleDataToSave = {
@@ -374,7 +377,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       }
 
       // Then delete the sale
-      const saleRef = ref(database, `sales/${saleToDelete.id}`);
+      const saleRef = dbRef(database, `sales/${saleToDelete.id}`);
       remove(saleRef);
 
       // Show success toast
@@ -402,7 +405,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       showToastNotification("Először nyissa ki a kasszát!", "error");
       return;
     }
-    const extraRef = ref(database, "extraTransactions");
+    const extraRef = dbRef(database, "extraTransactions");
     const newRef = push(extraRef);
     set(newRef, {
       description: extraData.description,
@@ -435,7 +438,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       return;
     }
 
-    const shiftsRef = ref(database, "shifts");
+    const shiftsRef = dbRef(database, "shifts");
     const newShiftRef = push(shiftsRef);
     set(newShiftRef, {
       status: "open",
@@ -464,7 +467,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
     const expectedBalance = shiftExpectedBalance;
     const discrepancy = actualBalance - expectedBalance;
 
-    const shiftRef = ref(database, `shifts/${activeShift.id}`);
+    const shiftRef = dbRef(database, `shifts/${activeShift.id}`);
     update(shiftRef, {
       status: "closed",
       closedAt: new Date().toISOString(),
@@ -569,7 +572,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
 
       // Delete all sales in this shift
       for (const sale of shiftSalesData) {
-        const saleRef = ref(database, `sales/${sale.id}`);
+        const saleRef = dbRef(database, `sales/${sale.id}`);
         await remove(saleRef);
       }
 
@@ -578,12 +581,12 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
         (t) => t.shiftId === shiftToDelete.id,
       );
       for (const extra of shiftExtrasData) {
-        const extraRef = ref(database, `extraTransactions/${extra.id}`);
+        const extraRef = dbRef(database, `extraTransactions/${extra.id}`);
         await remove(extraRef);
       }
 
       // Delete the shift itself
-      const shiftRef = ref(database, `shifts/${shiftToDelete.id}`);
+      const shiftRef = dbRef(database, `shifts/${shiftToDelete.id}`);
       await remove(shiftRef);
 
       showToastNotification(
@@ -1684,28 +1687,92 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
               pointerEvents: activeShift ? "auto" : "none",
             }}
           >
-            <h3>Új Eladás</h3>
-            <button
-              className="kassza-scan-btn"
-              onClick={() => setShowScanner(true)}
-              disabled={!activeShift}
+            <h3>Eladás Rögzítése</h3>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                marginBottom: "12px",
+              }}
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <button
+                onClick={() => setShowScanner(true)}
+                disabled={!activeShift}
+                style={{
+                  flex: 1,
+                  padding: "14px",
+                  minHeight: "48px",
+                  background: activeShift ? "#844a59" : "#e9ecef",
+                  border: "none",
+                  borderRadius: "12px",
+                  color: "white",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: activeShift ? "pointer" : "not-allowed",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  transition: "all 0.2s ease",
+                  WebkitTapHighlightColor: "transparent",
+                  touchAction: "manipulation",
+                }}
               >
-                <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                <line x1="7" y1="12" x2="17" y2="12" />
-              </svg>
-              Vonalkód Szkennelés
-            </button>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                  <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                  <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                  <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                  <line x1="7" y1="12" x2="17" y2="12" />
+                </svg>
+                Szkennelés
+              </button>
+
+              <button
+                onClick={() => setShowSaleForm(true)}
+                disabled={!activeShift}
+                style={{
+                  flex: 1,
+                  padding: "14px",
+                  minHeight: "48px",
+                  background: activeShift ? "#495057" : "#e9ecef",
+                  border: "none",
+                  borderRadius: "12px",
+                  color: "white",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: activeShift ? "pointer" : "not-allowed",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  transition: "all 0.2s ease",
+                  WebkitTapHighlightColor: "transparent",
+                  touchAction: "manipulation",
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="currentColor"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" fill="white" />
+                </svg>
+                Manuális
+              </button>
+            </div>
+
             {scanResult && (
               <div
                 className={`scan-result-banner ${scanResult.type}`}
@@ -1726,13 +1793,6 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                 {scanResult.message}
               </div>
             )}
-            <button
-              onClick={() => setShowSaleForm(true)}
-              className="kassza-btn primary"
-              disabled={!activeShift}
-            >
-              + Új Eladás Rögzítése
-            </button>
           </div>
 
           <div className="kassza-section">
@@ -2615,6 +2675,62 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
           </div>
         </div>
       )}
+
+      {/* Floating Action Button (FAB) for POS */}
+      {activeShift && (
+        <button
+          onClick={() => setShowPOSOverlay(true)}
+          className="pos-fab"
+          style={{
+            position: "fixed",
+            top: "80px",
+            right: "20px",
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #059669, #10b981)",
+            border: "none",
+            color: "white",
+            fontSize: "28px",
+            fontWeight: "700",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(5, 150, 105, 0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "scale(1.1) rotate(90deg)";
+            e.currentTarget.style.boxShadow =
+              "0 6px 24px rgba(5, 150, 105, 0.5)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "scale(1) rotate(0deg)";
+            e.currentTarget.style.boxShadow =
+              "0 4px 20px rgba(5, 150, 105, 0.4)";
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+          </svg>
+        </button>
+      )}
+
+      {/* POS Overlay */}
+      <POSOverlay
+        isOpen={showPOSOverlay}
+        onClose={() => setShowPOSOverlay(false)}
+        books={books}
+        gifts={gifts}
+        sales={sales}
+        activeShift={activeShift}
+        user={user}
+        onSaleComplete={() => {
+          showToastNotification("Eladás sikeresen rögzítve!", "success");
+        }}
+      />
     </div>
   );
 };

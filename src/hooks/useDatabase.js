@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   database,
+  dbRef,
   ref,
   onValue,
   off,
@@ -14,7 +15,7 @@ export function useDatabase() {
 
   // Load books from Firebase
   useEffect(() => {
-    const booksRef = ref(database, "books");
+    const booksRef = dbRef(database, "books");
     const unsubscribe = onValue(booksRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -33,7 +34,7 @@ export function useDatabase() {
 
   // Load gifts from Firebase
   useEffect(() => {
-    const giftsRef = ref(database, "gifts");
+    const giftsRef = dbRef(database, "gifts");
     const unsubscribe = onValue(giftsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -52,7 +53,7 @@ export function useDatabase() {
 
   // Load users from Firebase
   useEffect(() => {
-    const usersRef = ref(database, "users");
+    const usersRef = dbRef(database, "users");
     const unsubscribe = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -71,7 +72,7 @@ export function useDatabase() {
 
   // Load loans from Firebase
   useEffect(() => {
-    const loansRef = ref(database, "loans");
+    const loansRef = dbRef(database, "loans");
     const unsubscribe = onValue(loansRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {

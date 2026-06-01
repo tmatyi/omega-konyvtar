@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { database, ref, set, update, onValue, off, auth } from "./firebase.js";
+import { database, dbRef, ref, set, update, onValue, off, auth } from "./firebase.js";
 import {
   updatePassword,
   EmailAuthProvider,
@@ -39,7 +39,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const userRef = ref(database, `users/${user.uid}`);
+    const userRef = dbRef(database, `users/${user.uid}`);
     const handleProfileData = (snapshot) => {
       const profileData = snapshot.val();
 
@@ -98,7 +98,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
     console.log("Saving profile to Firebase:", profileData);
 
     try {
-      const userRef = ref(database, `users/${user.uid}`);
+      const userRef = dbRef(database, `users/${user.uid}`);
       const userData = {
         displayName: user?.displayName || user?.name,
         email: profileData.email,

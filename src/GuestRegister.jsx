@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { database, ref, push, set } from "./firebase.js";
+import { database, dbRef, ref, push, set } from "./firebase.js";
 import "./GuestRegister.css";
 
 function GuestRegister() {
@@ -27,7 +27,7 @@ function GuestRegister() {
 
     setLoading(true);
     try {
-      const guestRef = ref(database, "pendingGuests");
+      const guestRef = dbRef(database, "pendingGuests");
       const newRef = push(guestRef);
       await set(newRef, {
         name: name.trim(),

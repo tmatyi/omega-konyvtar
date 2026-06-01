@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { database, ref, onValue, off, update, push, set } from "../firebase.js";
+import { database, dbRef, ref, onValue, off, update, push, set } from "../firebase.js";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { hu } from "date-fns/locale";
@@ -91,7 +91,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
     };
 
     // Save to Firebase instead of localStorage
-    const loansRef = ref(database, "loans");
+    const loansRef = dbRef(database, "loans");
     const newLoanRef = push(loansRef);
     set(newLoanRef, newLoan)
       .then(() => {
@@ -120,7 +120,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
 
   const handleReturnBook = (loanId) => {
     // Update loan in Firebase
-    const loanRef = ref(database, `loans/${loanId}`);
+    const loanRef = dbRef(database, `loans/${loanId}`);
     const updatedLoan = {
       status: "returned",
       returnDate: new Date().toISOString(),
@@ -152,7 +152,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
     if (!selectedLoan || !renewalDate) return;
 
     // Update loan in Firebase
-    const loanRef = ref(database, `loans/${selectedLoan.id}`);
+    const loanRef = dbRef(database, `loans/${selectedLoan.id}`);
     const updatedLoan = {
       dueDate: renewalDate.toISOString(),
     };

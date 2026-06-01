@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   database,
+  dbRef,
   ref,
   onValue,
   off,
@@ -27,7 +28,7 @@ const UsersPanel = ({ user, users = [] }) => {
 
   useEffect(() => {
     // Load pending guests
-    const guestsRef = ref(database, "pendingGuests");
+    const guestsRef = dbRef(database, "pendingGuests");
     const handleGuestsData = (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -84,7 +85,7 @@ const UsersPanel = ({ user, users = [] }) => {
 
     setDeleteLoading(true);
     try {
-      const userRef = ref(database, `users/${selectedUser.id}`);
+      const userRef = dbRef(database, `users/${selectedUser.id}`);
       await remove(userRef);
 
       // Close modals and reset state
@@ -157,7 +158,7 @@ const UsersPanel = ({ user, users = [] }) => {
     if (!selectedUser?.id) return;
 
     try {
-      const userRef = ref(database, `users/${selectedUser.id}`);
+      const userRef = dbRef(database, `users/${selectedUser.id}`);
       await update(userRef, {
         ...editFormData,
         updatedAt: new Date().toISOString(),
@@ -192,7 +193,7 @@ const UsersPanel = ({ user, users = [] }) => {
     try {
       // We can't create users from client without signing them in,
       // so we save the approved user to a special node for manual setup
-      const approvedRef = ref(database, `pendingGuests/${guest.id}`);
+      const approvedRef = dbRef(database, `pendingGuests/${guest.id}`);
       await update(approvedRef, {
         status: "approved",
         approvedBy: user?.email || "admin",
@@ -201,7 +202,7 @@ const UsersPanel = ({ user, users = [] }) => {
       });
 
       // Also create a pre-registered user entry
-      const preRegRef = ref(database, "preRegisteredUsers");
+      const preRegRef = dbRef(database, "preRegisteredUsers");
       const newRef = push(preRegRef);
       await set(newRef, {
         name: guest.name,
@@ -224,7 +225,7 @@ const UsersPanel = ({ user, users = [] }) => {
 
   const handleRejectGuest = async (guest) => {
     try {
-      const guestRef = ref(database, `pendingGuests/${guest.id}`);
+      const guestRef = dbRef(database, `pendingGuests/${guest.id}`);
       await update(guestRef, {
         status: "rejected",
         rejectedBy: user?.email || "admin",

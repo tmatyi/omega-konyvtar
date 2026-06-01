@@ -42,6 +42,27 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.error("Error setting auth persistence:", error);
 });
 
+// Environment-aware database prefix helper
+// In staging mode, all paths are prefixed with "staging/"
+// to keep staging data separate from production data in the same RTDB.
+const appEnv = typeof import.meta !== "undefined" ? import.meta.env.VITE_APP_ENV : "production";
+const isStaging = appEnv === "staging";
+
+/**
+ * Returns the database prefix: "staging/" for staging builds, "" for production.
+ */
+export function dbPrefix() {
+  return isStaging ? "staging/" : "";
+}
+
+/**
+ * Wraps the firebase ref() function to automatically prepend the environment prefix.
+ * Use this instead of raw ref() for all database paths.
+ */
+export function dbRef(db, path) {
+  return ref(db, dbPrefix() + path);
+}
+
 export {
   database,
   ref,
