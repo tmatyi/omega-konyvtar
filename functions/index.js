@@ -1,8 +1,11 @@
 const functions = require("firebase-functions");
 const fetch = require("node-fetch");
 
+// Node.js 18+ — built-in AbortSignal.timeout (replaces node-fetch@2's internal timeout which is unreliable)
+const FETCH_TIMEOUT_MS = 20_000;
+
 exports.corsProxy = functions.https.onRequest(async (req, res) => {
-  // Set CORS headers
+  // Set CORS headers on EVERY response path so the browser gets a valid CORS response even on errors
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type");
@@ -44,6 +47,7 @@ exports.corsProxy = functions.https.onRequest(async (req, res) => {
 
   try {
     const response = await fetch(targetUrl, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -51,12 +55,11 @@ exports.corsProxy = functions.https.onRequest(async (req, res) => {
           "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "hu-HU,hu;q=0.9,en-US;q=0.8,en;q=0.7",
       },
-      timeout: 15000,
     });
 
     if (!response.ok) {
       res
-        .status(response.status)
+        .status(502)
         .json({ error: `Upstream returned ${response.status}` });
       return;
     }
@@ -66,6 +69,12 @@ exports.corsProxy = functions.https.onRequest(async (req, res) => {
     res.status(200).send(html);
   } catch (error) {
     console.error("Proxy fetch error:", error.message);
-    res.status(502).json({ error: "Failed to fetch target URL" });
+
+    // Distinguish timeout from other errors
+    if (error.name === "AbortError" || error.name === "TimeoutError") {
+      res.status(504).json({ error: "Upstream request timed out" });
+    } else {
+      res.status(502).json({ error: "Failed to fetch target URL" });
+    }
   }
 });
