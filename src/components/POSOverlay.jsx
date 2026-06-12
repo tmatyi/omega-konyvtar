@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { database, dbRef, ref, update, push, set } from "../firebase.js";
+import { BookOpen, Gift, ShoppingCart, Trash2, Check, Banknote, CreditCard } from "lucide-react";
 import BarcodeScanner from "./BarcodeScanner.jsx";
 import "./POSOverlay.css";
 
@@ -12,6 +13,7 @@ const POSOverlay = ({
   activeShift,
   user,
   onSaleComplete,
+  onToast,
 }) => {
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -20,6 +22,7 @@ const POSOverlay = ({
   const [amountReceived, setAmountReceived] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const overlayRef = useRef(null);
 
   // Calculate top 12 most sold items
@@ -169,6 +172,7 @@ const POSOverlay = ({
     setShowCart(false);
     setShowPayment(false);
     setAmountReceived("");
+    setPaymentMethod("cash");
   };
 
   // Calculate totals
@@ -193,19 +197,19 @@ const POSOverlay = ({
       });
       setShowScanner(false);
     } else {
-      alert("Könyv nem található vagy nincs raktáron!");
+      onToast?.("Könyv nem található vagy nincs raktáron!", "error");
     }
   };
 
   // Finalize sale
   const finalizeSale = async () => {
     if (!activeShift) {
-      alert("Nincs nyitott műszak!");
+      onToast?.("Nincs nyitott műszak!", "error");
       return;
     }
 
     if (cart.length === 0) {
-      alert("A kosár üres!");
+      onToast?.("A kosár üres!", "error");
       return;
     }
 
@@ -217,7 +221,7 @@ const POSOverlay = ({
           : gifts.find((g) => g.id === cartItem.itemId);
 
       if (!item || item.quantity < cartItem.quantity) {
-        alert(`Nincs elég raktárkészlet: ${cartItem.itemName}`);
+        onToast?.(`Nincs elég raktárkészlet: ${cartItem.itemName}`, "error");
         return;
       }
     }
@@ -237,7 +241,7 @@ const POSOverlay = ({
           itemName: cartItem.itemName,
           quantity: cartItem.quantity,
           price: cartItem.price,
-          paymentMethod: "cash",
+          paymentMethod: paymentMethod,
           timestamp: new Date().toISOString(),
           shiftId: activeShift.id,
           seller: user?.email || "ismeretlen",
@@ -254,7 +258,7 @@ const POSOverlay = ({
             ? books.find((b) => b.id === cartItem.itemId)
             : gifts.find((g) => g.id === cartItem.itemId);
 
-        const itemRef = ref(
+        const itemRef = dbRef(
           database,
           `${cartItem.itemType === "book" ? "books" : "gifts"}/${cartItem.itemId}`,
         );
@@ -274,13 +278,14 @@ const POSOverlay = ({
 
       // Show success message
       setTimeout(() => {
-        alert(
-          `✅ Eladás sikeresen rögzítve!\nÖsszeg: ${cartTotal.toLocaleString("hu-HU")} Ft\nVisszajáró: ${changeDue.toLocaleString("hu-HU")} Ft`,
+        onToast?.(
+          `Eladás sikeresen rögzítve! Összeg: ${cartTotal.toLocaleString("hu-HU")} Ft${paymentMethod === "cash" ? `, Visszajáró: ${changeDue.toLocaleString("hu-HU")} Ft` : ` (Bankkártya)`}`,
+          "success",
         );
       }, 300);
     } catch (error) {
       console.error("Error finalizing sale:", error);
-      alert("Hiba történt az eladás rögzítése során!");
+      onToast?.("Hiba történt az eladás rögzítése során!", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -331,7 +336,7 @@ const POSOverlay = ({
             </button>
             <h2>Gyors Eladás</h2>
             <div className="pos-shift-indicator">
-              {activeShift ? "🟢 Nyitva" : "🔴 Zárva"}
+              {activeShift ? <><span style={{display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: "#22c55e", marginRight: 6, flexShrink: 0}} /> Nyitva</> : <><span style={{display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: "#ef4444", marginRight: 6, flexShrink: 0}} /> Zárva</>}
             </div>
           </div>
 
@@ -392,8 +397,8 @@ const POSOverlay = ({
                     <div className="pos-result-name">{item.itemName}</div>
                     <div className="pos-result-meta">
                       {item.itemType === "book"
-                        ? `📚 ${item.author || ""}`
-                        : "🎁 Ajándék"}
+                        ? <><BookOpen size={14} style={{verticalAlign: "middle", marginRight: 3}} /> {item.author || ""}</>
+                        : <><Gift size={14} style={{verticalAlign: "middle", marginRight: 3}} /> Ajándék</>}
                       {" • "}
                       Raktár: {item.quantity} db
                     </div>
@@ -425,9 +430,11 @@ const POSOverlay = ({
                       : fullItem.image;
 
                   return (
-                    <button
+                    <div
                       key={`${item.itemType}-${item.itemId}`}
                       className="pos-quick-btn"
+                      role="button"
+                      tabIndex={-1}
                       onClick={() =>
                         addToCart({ ...item, price: fullItem.price })
                       }
@@ -447,14 +454,14 @@ const POSOverlay = ({
                           className="pos-quick-icon-fallback"
                           style={{ display: imageUrl ? "none" : "flex" }}
                         >
-                          {item.itemType === "book" ? "📚" : "🎁"}
+                          {item.itemType === "book" ? <BookOpen size={24} /> : <Gift size={24} />}
                         </div>
                       </div>
                       <div className="pos-quick-name">{item.itemName}</div>
                       <div className="pos-quick-price">
                         {fullItem.price?.toLocaleString("hu-HU")} Ft
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -468,9 +475,9 @@ const POSOverlay = ({
               onClick={() => setShowCart(true)}
             >
               <div className="pos-cart-icon">
-                🛒
+                <ShoppingCart size={24} />
                 {cartItemCount > 0 && (
-                  <span className="pos-cart-badge">{cartItemCount}</span>
+                  <span className="pos-cart-badge" key={cartItemCount}>{cartItemCount}</span>
                 )}
               </div>
               <div className="pos-cart-total">
@@ -550,7 +557,7 @@ const POSOverlay = ({
                       className="pos-remove-btn"
                       onClick={() => removeFromCart(item.itemId, item.itemType)}
                     >
-                      🗑️
+                      <Trash2 size={14} />
                     </button>
                   </div>
                   <div className="pos-cart-item-total">
@@ -578,37 +585,58 @@ const POSOverlay = ({
                 </button>
               ) : (
                 <div className="pos-payment-form">
-                  <div className="pos-payment-input-group">
-                    <label>Kapott összeg (Ft):</label>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      value={amountReceived}
-                      onChange={(e) => setAmountReceived(e.target.value)}
-                    />
+                  <div className="pos-payment-method-toggle">
+                    <button
+                      className={`pos-method-btn ${paymentMethod === "cash" ? "active" : ""}`}
+                      onClick={() => setPaymentMethod("cash")}
+                      type="button"
+                    >
+                      <Banknote size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Készpénz
+                    </button>
+                    <button
+                      className={`pos-method-btn ${paymentMethod === "card" ? "active" : ""}`}
+                      onClick={() => setPaymentMethod("card")}
+                      type="button"
+                    >
+                      <CreditCard size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Bankkártya
+                    </button>
                   </div>
 
-                  {amountReceived && (
-                    <div className="pos-change-display">
-                      <span>Visszajáró:</span>
-                      <span
-                        className={
-                          changeDue >= 0
-                            ? "pos-change-positive"
-                            : "pos-change-negative"
-                        }
-                      >
-                        {changeDue.toLocaleString("hu-HU")} Ft
-                      </span>
-                    </div>
+                  {paymentMethod === "cash" && (
+                    <>
+                      <div className="pos-payment-input-group">
+                        <label>Kapott összeg (Ft):</label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={amountReceived}
+                          onChange={(e) => setAmountReceived(e.target.value)}
+                        />
+                      </div>
+
+                      {amountReceived && (
+                        <div className="pos-change-display">
+                          <span>Visszajáró:</span>
+                          <span
+                            className={
+                              changeDue >= 0
+                                ? "pos-change-positive"
+                                : "pos-change-negative"
+                            }
+                          >
+                            {changeDue.toLocaleString("hu-HU")} Ft
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <button
                     className="pos-finalize-btn"
                     onClick={finalizeSale}
-                    disabled={isProcessing || !amountReceived || changeDue < 0}
+                    disabled={isProcessing || (paymentMethod === "cash" && (!amountReceived || changeDue < 0))}
                   >
-                    {isProcessing ? "Feldolgozás..." : "✓ ELADÁS RÖGZÍTÉSE"}
+                    {isProcessing ? "Feldolgozás..." : <><Check size={16} style={{verticalAlign: "middle", marginRight: 4}} /> ELADÁS RÖGZÍTÉSE</>}
                   </button>
                 </div>
               )}

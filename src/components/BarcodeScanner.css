@@ -129,7 +129,7 @@
   transform: translate(-50%, -50%);
   width: 65%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #844a59, transparent);
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
   z-index: 1;
   animation: scanLine 2s ease-in-out infinite;
   opacity: 0.8;
@@ -209,10 +209,10 @@
   gap: 8px;
   width: 100%;
   padding: 14px 20px;
-  border: 2px dashed #844a59;
+  border: 2px dashed var(--color-primary);
   border-radius: 12px;
-  background: rgba(132, 74, 89, 0.05);
-  color: #844a59;
+  background: rgba(var(--color-primary-rgb), 0.05);
+  color: var(--color-primary);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -224,7 +224,7 @@
 
 .kassza-scan-btn:hover,
 .kassza-scan-btn:active {
-  background: rgba(132, 74, 89, 0.12);
+  background: rgba(var(--color-primary-rgb), 0.12);
   border-style: solid;
 }
 
@@ -244,7 +244,7 @@
   border: 2px solid #e9ecef;
   border-radius: 8px;
   background: #f8fafc;
-  color: #844a59;
+  color: var(--color-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
@@ -254,9 +254,9 @@
 
 .isbn-scan-btn:hover,
 .isbn-scan-btn:active {
-  background: #844a59;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #844a59;
+  border-color: var(--color-primary);
 }
 
 .isbn-scan-btn svg {

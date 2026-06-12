@@ -248,7 +248,6 @@ function BookDetailModal({ show, book, onClose, user }) {
     if (bookToDelete) {
       deleteBookFromDb(bookToDelete.id)
         .then(() => {
-          console.log("Book deleted successfully");
           closeBookDetail();
           setShowDeleteConfirm(false);
           setBookToDelete(null);
@@ -768,7 +767,7 @@ function BookDetailModal({ show, book, onClose, user }) {
                             <strong>Eladási ár:</strong>{" "}
                             <span
                               style={{
-                                color: "#844a59",
+                                color: "#3741A8",
                                 fontWeight: "600",
                               }}
                             >

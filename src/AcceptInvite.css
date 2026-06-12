@@ -1,0 +1,201 @@
+/* AcceptInvite page — styled to match Login.css conventions */
+.invite-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  padding: 20px;
+}
+
+.invite-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.invite-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.invite-header h1 {
+  color: var(--color-primary);
+  font-size: 1.8rem;
+  margin: 0 0 10px 0;
+}
+
+.invite-header p {
+  color: #666;
+  margin: 5px 0;
+  font-size: 0.95rem;
+}
+
+/* Form styles */
+.accept-invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.accept-invite-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.accept-invite-form label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.accept-invite-form input {
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.accept-invite-form input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
+}
+
+.accept-invite-form-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.invite-submit-btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 8px;
+}
+
+.invite-submit-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.invite-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Loading */
+.invite-loading {
+  text-align: center;
+  padding: 40px 0;
+  color: #666;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Success */
+.invite-success {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.invite-success .success-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.invite-success h2 {
+  color: #28a745;
+  margin: 0 0 12px 0;
+}
+
+.invite-success p {
+  color: #555;
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+/* Error */
+.invite-error {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.invite-error .error-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.invite-error h2 {
+  color: #dc2626;
+  margin: 0 0 12px 0;
+}
+
+.invite-error p {
+  color: #666;
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.invite-note {
+  font-size: 0.85rem;
+  color: #999 !important;
+  margin-top: 16px !important;
+}
+
+.invite-login-btn {
+  display: inline-block;
+  margin-top: 20px;
+  background: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.invite-login-btn:hover {
+  background: var(--color-primary-hover);
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .invite-card {
+    padding: 24px;
+  }
+
+  .invite-header h1 {
+    font-size: 1.5rem;
+  }
+}

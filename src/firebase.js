@@ -20,6 +20,7 @@ import {
   browserSessionPersistence,
   sendPasswordResetEmail,
 } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDsGop0bF9OvJalbi56-jSr4n4wiq7686w",
@@ -63,6 +64,33 @@ export function dbRef(db, path) {
   return ref(db, dbPrefix() + path);
 }
 
+// Firebase Callable Functions — wrappers for Cloud Functions
+const functions = getFunctions(app);
+
+/**
+ * Validates an invite token. Unauthenticated — callable from AcceptInvite page.
+ */
+export function validateInvite(token, email) {
+  const fn = httpsCallable(functions, "validateInvite");
+  return fn({ token, email });
+}
+
+/**
+ * Marks an invite as accepted. Requires the user to be authenticated.
+ */
+export function acceptInviteCallable(token, email) {
+  const fn = httpsCallable(functions, "acceptInvite");
+  return fn({ token, email });
+}
+
+/**
+ * Deletes a user's Auth account and RTDB record. Requires admin authentication.
+ */
+export function deleteUserCallable(uid) {
+  const fn = httpsCallable(functions, "deleteUserAccount");
+  return fn({ uid });
+}
+
 export {
   database,
   ref,
@@ -81,4 +109,7 @@ export {
   browserLocalPersistence,
   browserSessionPersistence,
   sendPasswordResetEmail,
+  functions,
+  getFunctions,
+  httpsCallable,
 };

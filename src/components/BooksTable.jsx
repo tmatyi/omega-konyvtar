@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { BookOpen } from "lucide-react";
 import "./BooksTable.css";
 
 function BooksTable({
@@ -73,7 +74,7 @@ function BooksTable({
                         className="table-thumbnail-img"
                       />
                     ) : (
-                      <div className="table-thumbnail-placeholder">📚</div>
+                      <div className="table-thumbnail-placeholder"><BookOpen size={24} /></div>
                     )}
                   </div>
                 </td>
@@ -154,7 +155,7 @@ function BooksTable({
                   {book.thumbnail ? (
                     <img src={book.thumbnail} alt={book.title} />
                   ) : (
-                    <span className="compact-row__thumb-placeholder">📚</span>
+                    <span className="compact-row__thumb-placeholder"><BookOpen size={20} /></span>
                   )}
                 </div>
                 <div className="compact-row__info">

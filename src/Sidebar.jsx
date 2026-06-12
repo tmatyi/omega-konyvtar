@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from "react";
 import "./Sidebar.css";
+import {
+  BookOpen,
+  Gift,
+  CircleDollarSign,
+  ClipboardList,
+  Building2,
+  BookMarked,
+  Users,
+  LogOut,
+  ShoppingCart,
+  Pin,
+  PinOff,
+} from "lucide-react";
 
 // Build timestamp injected at build time by Vite
 const BUILD_TIMESTAMP =
@@ -64,49 +77,56 @@ function Sidebar({
     {
       id: "books",
       label: "Könyvesbolt",
-      icon: "📚",
+      icon: BookOpen,
       mode: "bolt",
       requiresRole: null,
     },
     {
       id: "gifts",
       label: "Ajándékok",
-      icon: "🎁",
+      icon: Gift,
       mode: "bolt",
       requiresRole: null,
     },
     {
       id: "kassza",
       label: "Kassza",
-      icon: "💰",
+      icon: CircleDollarSign,
+      mode: "bolt",
+      requiresRole: null,
+    },
+    {
+      id: "naplo",
+      label: "Napló",
+      icon: ClipboardList,
       mode: "bolt",
       requiresRole: null,
     },
     {
       id: "library",
       label: "Könyvtár",
-      icon: "🏛️",
+      icon: Building2,
       mode: "könyvtár",
       requiresRole: null,
     },
     {
       id: "lending",
       label: "Kölcsönzés",
-      icon: "📖",
+      icon: BookMarked,
       mode: "könyvtár",
       requiresRole: "admin",
     },
     {
       id: "users",
       label: "Felhasználók",
-      icon: "👥",
+      icon: Users,
       mode: null,
       requiresRole: "admin",
     },
     {
       id: "logout",
       label: "Kilépés",
-      icon: "🚪",
+      icon: LogOut,
       mode: null,
       requiresRole: null,
     },
@@ -224,7 +244,7 @@ function Sidebar({
                   : "Pin sidebar (stay open)"
               }
             >
-              {isSticky ? "📌" : "📍"}
+              {isSticky ? <Pin size={14} /> : <PinOff size={14} />}
             </button>
           )}
         </div>
@@ -237,7 +257,7 @@ function Sidebar({
               onClick={() => onModeChange("könyvtár")}
               title={isCollapsed ? "Könyvtár mód" : ""}
             >
-              <span className="mode-icon">🏛️</span>
+              <span className="mode-icon"><Building2 size={22} /></span>
               {!isCollapsed && <span className="mode-name">Könyvtár</span>}
             </button>
             <button
@@ -245,7 +265,7 @@ function Sidebar({
               onClick={() => onModeChange("bolt")}
               title={isCollapsed ? "Bolt mód" : ""}
             >
-              <span className="mode-icon">🛒</span>
+              <span className="mode-icon"><ShoppingCart size={22} /></span>
               {!isCollapsed && <span className="mode-name">Bolt</span>}
             </button>
           </div>
@@ -261,7 +281,7 @@ function Sidebar({
               onClick={() => handleTabClick(tab.id)}
               title={isCollapsed ? tab.label : ""}
             >
-              <span className="tab-icon">{tab.icon}</span>
+              <span className="tab-icon"><tab.icon size={20} /></span>
               {!isCollapsed && <span className="tab-label">{tab.label}</span>}
             </button>
           ))}
@@ -318,6 +338,14 @@ function Sidebar({
                   <>
                     <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
                     <line x1="1" y1="10" x2="23" y2="10" />
+                  </>
+                )}
+                {tab.id === "naplo" && (
+                  <>
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
                   </>
                 )}
                 {tab.id === "library" && (

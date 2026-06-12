@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Search, CircleCheck } from "lucide-react";
 import {
   processClcHungaryUrl,
   processBooklineUrl,
@@ -415,9 +416,9 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 boxSizing: "border-box",
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = "#844a59";
+                e.target.style.borderColor = "#3741A8";
                 e.target.style.backgroundColor = "#fff";
-                e.target.style.boxShadow = "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                e.target.style.boxShadow = "0 0 0 3px rgba(55, 65, 168, 0.1)";
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = "#e9ecef";
@@ -435,7 +436,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 borderRadius: "8px",
                 fontSize: "16px",
                 fontWeight: "600",
-                backgroundColor: searchLoading ? "#94a3b8" : "#844a59",
+                backgroundColor: searchLoading ? "#94a3b8" : "#3741A8",
                 color: "white",
                 cursor: searchLoading ? "not-allowed" : "pointer",
                 transition: "all 0.3s ease",
@@ -443,14 +444,14 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
               }}
               onMouseEnter={(e) => {
                 if (!searchLoading) {
-                  e.target.style.backgroundColor = "#6b3a48";
+                  e.target.style.backgroundColor = "#424EB5";
                   e.target.style.transform = "translateY(-1px)";
                   e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!searchLoading) {
-                  e.target.style.backgroundColor = "#844a59";
+                  e.target.style.backgroundColor = "#3741A8";
                   e.target.style.transform = "translateY(0)";
                   e.target.style.boxShadow = "none";
                 }
@@ -467,13 +468,13 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                   </div>
                 </div>
               ) : (
-                "🔍 Keresés"
+                <><Search size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Keresés</>
               )}
             </button>
           </div>
           {successMessage && (
             <div className="success-message">
-              <div className="success-icon">✓</div>
+              <div className="success-icon"><CircleCheck size={48} /></div>
               <span>{successMessage}</span>
             </div>
           )}
@@ -750,7 +751,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 borderRadius: "8px",
                 fontSize: "16px",
                 fontWeight: "600",
-                backgroundColor: "#844a59",
+                backgroundColor: "#3741A8",
                 color: "white",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
@@ -759,12 +760,12 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
                 minWidth: "140px",
               }}
               onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "#6b3a48";
+                e.target.style.backgroundColor = "#424EB5";
                 e.target.style.transform = "translateY(-1px)";
                 e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
               }}
               onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "#844a59";
+                e.target.style.backgroundColor = "#3741A8";
                 e.target.style.transform = "translateY(0)";
                 e.target.style.boxShadow = "none";
               }}

@@ -202,7 +202,7 @@
 }
 
 .compact-row__action-btn--primary {
-  background: #844a59;
+  background: var(--color-primary);
   color: #fff;
 }
 

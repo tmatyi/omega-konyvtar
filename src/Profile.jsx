@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Camera, Pencil, Save, X, Lock, CircleCheck, CircleX } from "lucide-react";
 import { database, dbRef, ref, set, update, onValue, off, auth } from "./firebase.js";
 import {
   updatePassword,
@@ -11,8 +12,6 @@ function Profile({ user, onUpdateUser, loans = [] }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     email: user?.email || "",
-    phone: "",
-    address: "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -44,8 +43,6 @@ function Profile({ user, onUpdateUser, loans = [] }) {
       const profileData = snapshot.val();
 
       if (profileData) {
-        console.log("Profile data loaded from Firebase:", profileData);
-
         // Set avatar preview from Firebase data
         if (profileData.photoURL) {
           setAvatarPreview(profileData.photoURL);
@@ -63,7 +60,6 @@ function Profile({ user, onUpdateUser, loans = [] }) {
   // Fallback: Check if user has photoURL but avatarPreview is null
   useEffect(() => {
     if (user?.photoURL && !avatarPreview) {
-      console.log("Fallback: Setting avatar from user.photoURL");
       setAvatarPreview(user.photoURL);
     }
   }, [user, avatarPreview]);
@@ -95,25 +91,20 @@ function Profile({ user, onUpdateUser, loans = [] }) {
       return;
     }
 
-    console.log("Saving profile to Firebase:", profileData);
-
     try {
       const userRef = dbRef(database, `users/${user.uid}`);
       const userData = {
-        displayName: user?.displayName || user?.name,
+        displayName: profileData.displayName || user?.displayName || user?.name,
         email: profileData.email,
         photoURL: profileData.photoURL,
-        phone: profileData.phone,
-        address: profileData.address,
         updatedAt: profileData.updatedAt,
         // Keep existing fields if they exist
-        role: profileData.role || "member",
+        role: profileData.role || "owner",
         createdAt: profileData.createdAt || new Date().toISOString(),
         lastLogin: profileData.lastLogin || null,
       };
 
       await update(userRef, userData);
-      console.log("Profile saved to Firebase Realtime Database");
     } catch (error) {
       console.error("Error saving profile to Firebase:", error);
       throw error;
@@ -158,8 +149,6 @@ function Profile({ user, onUpdateUser, loans = [] }) {
           photoURL: processedImage,
           updatedAt: new Date().toISOString(),
         };
-
-        console.log("Auto-saving avatar after upload");
 
         // Save to Firebase
         try {
@@ -248,8 +237,8 @@ function Profile({ user, onUpdateUser, loans = [] }) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const profileData = {
-        displayName: user?.displayName || user?.name,
-        ...formData,
+        displayName: formData.displayName,
+        email: formData.email,
         photoURL: avatarPreview,
         updatedAt: new Date().toISOString(),
       };
@@ -282,9 +271,8 @@ function Profile({ user, onUpdateUser, loans = [] }) {
 
   const handleEdit = () => {
     setFormData({
+      displayName: user?.displayName || user?.name || "",
       email: user?.email || "",
-      phone: user?.phone || "",
-      address: user?.address || "",
     });
     setIsEditing(true);
   };
@@ -292,8 +280,6 @@ function Profile({ user, onUpdateUser, loans = [] }) {
   const handleCancel = () => {
     setFormData({
       email: user?.email || "",
-      phone: "",
-      address: "",
     });
     setIsEditing(false);
     setMessage("");
@@ -368,7 +354,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
             onClick={triggerAvatarUpload}
             title="Profilkép cseréje"
           >
-            📷
+            <Camera size={20} />
           </button>
           <input
             id="avatar-upload"
@@ -386,42 +372,34 @@ function Profile({ user, onUpdateUser, loans = [] }) {
           <div className="profile-info">
             <div className="info-item">
               <label>Név</label>
-              <span>
-                {user?.displayName || user?.name || "Nincs beállítva"}
-              </span>
-            </div>
-            <div className="info-item">
-              <label>Email</label>
-              <span>{user?.email}</span>
-            </div>
-            <div className="info-item">
-              <label>Telefonszám</label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="edit-input"
-                  placeholder="+36 20 123 4567"
-                />
+              {!isEditing ? (
+                <span>
+                  {user?.displayName || user?.name || "Nincs beállítva"}
+                </span>
               ) : (
-                <span>{user?.phone || "Nincs megadva"}</span>
+                <input
+                  type="text"
+                  name="displayName"
+                  value={formData.displayName}
+                  onChange={handleInputChange}
+                  className="profile-inline-input"
+                  placeholder="Teljes név"
+                />
               )}
             </div>
             <div className="info-item">
-              <label>Lakcím</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  className="edit-input"
-                  placeholder="1234 Budapest, Utca utca 1."
-                />
+              <label>Email</label>
+              {!isEditing ? (
+                <span>{user?.email}</span>
               ) : (
-                <span>{user?.address || "Nincs megadva"}</span>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="profile-inline-input"
+                  placeholder="Email cím"
+                />
               )}
             </div>
             <div className="info-item">
@@ -449,7 +427,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
           {!isEditing ? (
             <div className="section-actions">
               <button className="profile-edit-btn" onClick={handleEdit}>
-                ✏️ Profil Szerkesztése
+                <Pencil size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> Profil Szerkesztése
               </button>
             </div>
           ) : (
@@ -460,10 +438,10 @@ function Profile({ user, onUpdateUser, loans = [] }) {
                   onClick={handleSubmit}
                   disabled={loading}
                 >
-                  {loading ? "Mentés..." : "💾 Mentés"}
+                  {loading ? "Mentés..." : <><Save size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> Mentés</>}
                 </button>
                 <button className="cancel-btn" onClick={handleCancel}>
-                  ❌ Mégse
+                  <X size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> Mégse
                 </button>
               </div>
             </div>
@@ -478,7 +456,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
                 className="profile-edit-btn"
                 onClick={() => setShowPasswordForm(true)}
               >
-                🔒 Jelszó Változtatás
+                <Lock size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> Jelszó Változtatás
               </button>
             </div>
           ) : (
@@ -536,7 +514,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
                   className="save-btn"
                   disabled={passwordLoading}
                 >
-                  {passwordLoading ? "Mentés..." : "💾 Jelszó Mentése"}
+                  {passwordLoading ? "Mentés..." : <><Save size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> Jelszó Mentése</>}
                 </button>
                 <button
                   type="button"
@@ -550,7 +528,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
                     });
                   }}
                 >
-                  ❌ Mégse
+                  <X size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> Mégse
                 </button>
               </div>
             </form>
@@ -621,7 +599,7 @@ function Profile({ user, onUpdateUser, loans = [] }) {
           }}
         >
           <span style={{ fontSize: "1.2rem" }}>
-            {toastType === "success" ? "✅" : "❌"}
+            {toastType === "success" ? <CircleCheck size={18} /> : <CircleX size={18} />}
           </span>
           <div>
             <div>{toastMessage}</div>

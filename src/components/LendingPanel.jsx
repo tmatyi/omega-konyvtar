@@ -3,6 +3,7 @@ import { database, dbRef, ref, onValue, off, update, push, set } from "../fireba
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { hu } from "date-fns/locale";
+import { BookMarked, Search, BookOpen, Check, User, Crosshair, CircleCheck, ClipboardList, AlertTriangle, CircleX, ChevronDown } from "lucide-react";
 import BarcodeScanner from "./BarcodeScanner.jsx";
 import "./BarcodeScanner.css";
 import "./LendingPanel.css";
@@ -94,9 +95,6 @@ const LendingPanel = ({ books, users, loans = [] }) => {
     const loansRef = dbRef(database, "loans");
     const newLoanRef = push(loansRef);
     set(newLoanRef, newLoan)
-      .then(() => {
-        console.log("Loan saved to Firebase:", newLoan);
-      })
       .catch((error) => {
         console.error("Error saving loan to Firebase:", error);
         showToastNotification(
@@ -128,7 +126,6 @@ const LendingPanel = ({ books, users, loans = [] }) => {
 
     update(loanRef, updatedLoan)
       .then(() => {
-        console.log("Loan returned in Firebase:", loanId);
         showToastNotification("Könyv sikeresen visszahozva!", "success");
       })
       .catch((error) => {
@@ -159,7 +156,6 @@ const LendingPanel = ({ books, users, loans = [] }) => {
 
     update(loanRef, updatedLoan)
       .then(() => {
-        console.log("Loan renewed in Firebase:", selectedLoan.id);
         showToastNotification(
           "Kölcsönzés sikeresen meghosszabbítva!",
           "success",
@@ -187,9 +183,6 @@ const LendingPanel = ({ books, users, loans = [] }) => {
 
   // Check which books are currently lent out
   const lentOutBookIds = new Set(activeLoans.map((loan) => loan.bookId));
-
-  // Debug logging
-  console.log("showLoanModal:", showLoanModal);
 
   const handleBookSelect = (book) => {
     // Prevent selection if book is already lent out
@@ -255,9 +248,10 @@ const LendingPanel = ({ books, users, loans = [] }) => {
 
   return (
     <div className="lending-panel">
-      <div className="lending-header">
-        <h2>📖 Könyvtári Kölcsönzés</h2>
-        <div className="lending-stats">
+      <div className="panel-header">
+        <h2><BookMarked size={20} style={{verticalAlign: "middle", marginRight: 6}} /> Könyvtári Kölcsönzés</h2>
+      </div>
+      <div className="lending-stats">
           <div className="stat-card">
             <span className="stat-number">{activeLoans.length}</span>
             <span className="stat-label">Aktív kölcsönzés</span>
@@ -271,11 +265,10 @@ const LendingPanel = ({ books, users, loans = [] }) => {
             <span className="stat-label">Könyv állomány</span>
           </div>
         </div>
-      </div>
 
       <div className="lending-content">
         <div className="books-section">
-          <h3>🔍 Könyvkeresés</h3>
+          <h3><Search size={16} style={{verticalAlign: "middle", marginRight: 6}} /> Könyvkeresés</h3>
           <div
             className="search-bar"
             style={{ display: "flex", flexDirection: "column", gap: "8px" }}
@@ -293,7 +286,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
               onClick={() => setShowScanner(true)}
               style={{
                 padding: "10px 14px",
-                background: "#844a59",
+                background: "#3741A8",
                 color: "#fff",
                 border: "none",
                 borderRadius: "10px",
@@ -349,9 +342,9 @@ const LendingPanel = ({ books, users, loans = [] }) => {
                         </div>
                         <div className="result-action">
                           {isLentOut
-                            ? "📚 Kikölcsönözve"
+                            ? <><BookOpen size={14} style={{verticalAlign: "middle", marginRight: 3}} /> Kikölcsönözve</>
                             : selectedBook?.id === book.id
-                              ? "✓ Kiválasztva"
+                              ? <><Check size={14} style={{verticalAlign: "middle", marginRight: 3}} /> Kiválasztva</>
                               : "Kiválasztás"}
                         </div>
                       </div>
@@ -365,7 +358,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
           {selectedBook && (
             <div className="selected-book-display">
               <div className="selected-book-header">
-                <h4>📖 Kiválasztott könyv:</h4>
+                <h4><BookMarked size={18} style={{verticalAlign: "middle", marginRight: 6}} /> Kiválasztott könyv:</h4>
                 <button className="back-btn" onClick={clearSelection}>
                   ← Törlés
                 </button>
@@ -404,7 +397,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
         {selectedBook && (
           <div className="user-selection-section">
             <div className="user-selection-header">
-              <h3>👤 Felhasználó kiválasztása</h3>
+              <h3><User size={18} style={{verticalAlign: "middle", marginRight: 6}} /> Felhasználó kiválasztása</h3>
             </div>
             <div className="user-search-bar">
               <input
@@ -447,7 +440,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
                         </div>
                         <div className="result-action">
                           {selectedUser?.id === user.id
-                            ? "✓ Kiválasztva"
+                            ? <><Check size={14} style={{verticalAlign: "middle", marginRight: 3}} /> Kiválasztva</>
                             : "Kiválasztás"}
                         </div>
                       </div>
@@ -459,7 +452,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
 
             {selectedUser && (
               <div className="selected-user-display">
-                <h4>🎯 Kiválasztott felhasználó:</h4>
+                <h4><Crosshair size={18} style={{verticalAlign: "middle", marginRight: 6}} /> Kiválasztott felhasználó:</h4>
                 <div className="selected-user-info">
                   <p>
                     <strong>Név:</strong>{" "}
@@ -482,19 +475,9 @@ const LendingPanel = ({ books, users, loans = [] }) => {
                 <div className="final-loan-actions">
                   <button
                     className="final-confirm-btn"
-                    onClick={() => {
-                      console.log("Final confirm button clicked");
-                      console.log("showLoanModal before:", showLoanModal);
-                      setShowLoanModal(true);
-                      setTimeout(() => {
-                        console.log(
-                          "showLoanModal after timeout:",
-                          showLoanModal,
-                        );
-                      }, 100);
-                    }}
+                    onClick={() => setShowLoanModal(true)}
                   >
-                    ✅ Kölcsönzés megerősítése
+                    <CircleCheck size={18} style={{verticalAlign: "middle", marginRight: 4}} /> Kölcsönzés megerősítése
                   </button>
                 </div>
               </div>
@@ -514,7 +497,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
 
       {/* Active Loans Section - Always Visible */}
       <div className="loans-section">
-        <h3>📋 Aktív kölcsönzések</h3>
+        <h3><ClipboardList size={20} style={{verticalAlign: "middle", marginRight: 8}} /> Aktív kölcsönzések</h3>
         <div className="loan-search-bar" style={{ marginBottom: "12px" }}>
           <input
             type="text"
@@ -573,7 +556,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
                             fontWeight: 600,
                           }}
                         >
-                          📖 {loan.bookTitle}
+                          <BookOpen size={16} style={{verticalAlign: "middle", marginRight: 4}} /> {loan.bookTitle}
                         </h4>
                         <p
                           style={{
@@ -631,7 +614,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
                             color: "#9ca3af",
                           }}
                         >
-                          ▼
+                          <ChevronDown size={14} />
                         </span>
                       </div>
                     </div>
@@ -671,12 +654,12 @@ const LendingPanel = ({ books, users, loans = [] }) => {
                           </p>
                           {isOverdue && (
                             <p className="overdue-text">
-                              ⚠️ {Math.abs(daysLeft)} napja lejárt
+                              <AlertTriangle size={14} style={{verticalAlign: "middle", marginRight: 3}} /> {Math.abs(daysLeft)} napja lejárt
                             </p>
                           )}
                           {!isOverdue && daysLeft <= 7 && (
                             <p className="warning-text">
-                              ⚠️ {daysLeft} nap van hátra
+                              <AlertTriangle size={14} style={{verticalAlign: "middle", marginRight: 3}} /> {daysLeft} nap van hátra
                             </p>
                           )}
                         </div>
@@ -740,7 +723,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3>📖 Kölcsönzés megerősítése</h3>
+            <h3><BookMarked size={22} style={{verticalAlign: "middle", marginRight: 8}} /> Kölcsönzés megerősítése</h3>
             {selectedBook && (
               <div className="selected-book-info">
                 <p>
@@ -1014,7 +997,7 @@ const LendingPanel = ({ books, users, loans = [] }) => {
           }}
         >
           <span style={{ fontSize: "1.2rem" }}>
-            {toastType === "success" ? "✅" : "❌"}
+            {toastType === "success" ? <CircleCheck size={18} /> : <CircleX size={18} />}
           </span>
           <div>
             <div style={{ fontWeight: "600", marginBottom: "4px" }}>

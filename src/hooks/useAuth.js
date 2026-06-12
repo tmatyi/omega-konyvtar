@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   auth,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -44,38 +43,6 @@ export function useAuth() {
     }
   };
 
-  const handleRegister = async (email, password, name, phone, address) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      );
-
-      // Create user record in Realtime Database
-      const userRef = dbRef(database, `users/${userCredential.user.uid}`);
-      const userData = {
-        uid: userCredential.user.uid,
-        email: userCredential.user.email,
-        displayName: name || email.split("@")[0], // Use name or first part of email
-        phone: phone || "",
-        address: address || "",
-        role: "member", // Default role for new users
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        photoURL: null,
-        bio: "",
-      };
-
-      await set(userRef, userData);
-
-      return userCredential.user;
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
-    }
-  };
-
   const handleForgotPassword = async (email) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -106,11 +73,19 @@ export function useAuth() {
 
   // Firebase auth state
   useEffect(() => {
+    let profileUnsubscribe = null;
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // Clean up previous profile listener before creating a new one
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+        profileUnsubscribe = null;
+      }
+
       if (user) {
         // Load profile data from Firebase database
         const userRef = dbRef(database, `users/${user.uid}`);
-        onValue(userRef, (snapshot) => {
+        profileUnsubscribe = onValue(userRef, (snapshot) => {
           const dbProfileData = snapshot.val();
 
           let enhancedUser = { ...user };
@@ -145,14 +120,19 @@ export function useAuth() {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+        profileUnsubscribe = null;
+      }
+    };
   }, []);
 
   return {
     user,
     loading,
     handleLogin,
-    handleRegister,
     handleForgotPassword,
     handleLogout,
     handleProfileUpdate,

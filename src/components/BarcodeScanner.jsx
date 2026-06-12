@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
+import { X, CircleCheck } from "lucide-react";
 import "./BarcodeScanner.css";
 
 // Generate a short beep using the Web Audio API
@@ -93,7 +94,7 @@ function BarcodeScanner({ onScan, onClose }) {
             onClick={onClose}
             aria-label="Bezárás"
           >
-            ✕
+            <X size={20} />
           </button>
         </div>
 
@@ -145,7 +146,7 @@ function BarcodeScanner({ onScan, onClose }) {
 
         {scannedCode ? (
           <div className="barcode-scanner-success">
-            <span className="barcode-scanner-success-icon">✓</span>
+            <span className="barcode-scanner-success-icon"><CircleCheck size={20} /></span>
             <span className="barcode-scanner-success-code">{scannedCode}</span>
           </div>
         ) : error ? (

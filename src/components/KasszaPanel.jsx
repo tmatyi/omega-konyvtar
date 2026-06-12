@@ -1,23 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   database,
   dbRef,
-  ref,
-  onValue,
-  off,
   remove,
   update,
   push,
   set,
 } from "../firebase.js";
+import useToast from "../hooks/useToast";
+import { ClipboardList, CircleCheck, CircleX, CircleDollarSign, Check, X, Lock, LockOpen, Trash2, Pencil, BookOpen, Gift, AlertTriangle, Banknote, CreditCard, Landmark } from "lucide-react";
 
 import BarcodeScanner from "./BarcodeScanner.jsx";
 import POSOverlay from "./POSOverlay.jsx";
 import "./BarcodeScanner.css";
 
-const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
-  const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
+const fmt = (val) => {
+  const n = Math.round(Number(val || 0));
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
+const KasszaPanel = ({ user, users = [], books = [], gifts = [], sales = [], shifts = [], extraTransactions = [] }) => {
+  const {
+    showToast,
+    toastMessage,
+    toastType,
+    isToastExiting,
+    showToastNotification,
+  } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
@@ -32,14 +41,6 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("success");
-  const [isToastExiting, setIsToastExiting] = useState(false);
-  const [viewMode, setViewMode] = useState("daily"); // "daily", "monthly", or "all"
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().slice(0, 7),
-  ); // YYYY-MM format
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -47,7 +48,6 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   const [showPOSOverlay, setShowPOSOverlay] = useState(false);
 
   // Extra transactions state
-  const [extraTransactions, setExtraTransactions] = useState([]);
   const [showExtraForm, setShowExtraForm] = useState(false);
   const [extraData, setExtraData] = useState({
     description: "",
@@ -56,14 +56,9 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   });
 
   // Shift Management state
-  const [shifts, setShifts] = useState([]);
-  const [activeShift, setActiveShift] = useState(null);
+  const activeShift = shifts.find((s) => s.status === "open") || null;
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
-  const [showShiftHistory, setShowShiftHistory] = useState(false);
-  const [expandedShiftId, setExpandedShiftId] = useState(null);
-  const [shiftToDelete, setShiftToDelete] = useState(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [openShiftData, setOpenShiftData] = useState({
     openingBalance: "",
     staffOnDuty: [],
@@ -89,73 +84,6 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
     };
   }, []);
 
-  const showToastNotification = (message, type = "success") => {
-    setToastMessage(message);
-    setToastType(type);
-    setIsToastExiting(false);
-    setShowToast(true);
-
-    // Start exit animation after 2.5 seconds
-    setTimeout(() => {
-      setIsToastExiting(true);
-    }, 2500);
-
-    // Actually hide after 3 seconds (allows exit animation to complete)
-    setTimeout(() => {
-      setShowToast(false);
-      setIsToastExiting(false);
-    }, 3000);
-  };
-
-  useEffect(() => {
-    const salesRef = dbRef(database, "sales");
-    const shiftsRef = dbRef(database, "shifts");
-    const extraTransRef = dbRef(database, "extraTransactions");
-
-    const handleSalesData = (snapshot) => {
-      const salesData = snapshot.val();
-      if (salesData) {
-        const salesList = Object.keys(salesData).map((saleId) => ({
-          id: saleId,
-          ...salesData[saleId],
-        }));
-        setSales(salesList);
-      } else {
-        setSales([]);
-      }
-      setLoading(false);
-    };
-
-    const handleShiftsData = (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const shiftsList = Object.keys(data).map((id) => ({ id, ...data[id] }));
-        setShifts(shiftsList);
-        // Find the currently open shift (status === "open")
-        const openShift = shiftsList.find((s) => s.status === "open");
-        setActiveShift(openShift || null);
-      } else {
-        setShifts([]);
-        setActiveShift(null);
-      }
-    };
-
-    const handleExtraTransactions = (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        setExtraTransactions(
-          Object.keys(data).map((id) => ({ id, ...data[id] })),
-        );
-      } else {
-        setExtraTransactions([]);
-      }
-    };
-
-    onValue(salesRef, handleSalesData);
-    onValue(shiftsRef, handleShiftsData);
-    onValue(extraTransRef, handleExtraTransactions);
-  }, []);
-
   // Barcode scan handler — find book by ISBN or gift by barcode
   const handleBarcodeScan = useCallback(
     (scannedCode) => {
@@ -179,7 +107,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
         setProductSearchTerm(`${matchedBook.title} - ${matchedBook.author}`);
         setScanResult({
           type: "success",
-          message: `📚 ${matchedBook.title} (${matchedBook.author})`,
+          message: `(Könyv) ${matchedBook.title} (${matchedBook.author})`,
         });
         setShowSaleForm(true);
         return;
@@ -202,7 +130,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
         setProductSearchTerm(matchedGift.name);
         setScanResult({
           type: "success",
-          message: `🎁 ${matchedGift.name}`,
+          message: `(Ajándék) ${matchedGift.name}`,
         });
         setShowSaleForm(true);
         return;
@@ -258,7 +186,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       }
 
       // Update stock with the difference
-      const itemRef = ref(
+      const itemRef = dbRef(
         database,
         `${saleData.itemType === "book" ? "books" : "gifts"}/${saleData.itemId}`,
       );
@@ -309,7 +237,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       set(newSaleRef, saleDataToSave);
 
       // Decrease stock
-      const itemRef = ref(
+      const itemRef = dbRef(
         database,
         `${saleData.itemType === "book" ? "books" : "gifts"}/${saleData.itemId}`,
       );
@@ -359,7 +287,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
   const confirmDelete = () => {
     if (saleToDelete) {
       // Restore stock first
-      const itemRef = ref(
+      const itemRef = dbRef(
         database,
         `${saleToDelete.itemType === "book" ? "books" : "gifts"}/${saleToDelete.itemId}`,
       );
@@ -458,7 +386,7 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
 
   const handleCloseShift = () => {
     if (!closeShiftData.actualBalance) {
-      alert("Kérjük, adja meg a fizikai záró egyenleget!");
+      alert("Kérjük, adja meg a tényleges záró egyenleget!");
       return;
     }
     if (!activeShift) return;
@@ -475,6 +403,9 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
       closedByName:
         user?.name || user?.displayName || user?.email || "ismeretlen",
       salesTotal: shiftSalesTotal,
+      cashTotal: shiftCashTotal,
+      cardTotal: shiftCardTotal,
+      transferTotal: shiftTransferTotal,
       extraIncome: shiftExtraIncome,
       extraExpense: shiftExtraExpense,
       expectedBalance,
@@ -491,8 +422,8 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
     });
     const extraNetText =
       shiftExtraIncome - shiftExtraExpense >= 0
-        ? `+${(shiftExtraIncome - shiftExtraExpense).toLocaleString("hu-HU")} Ft`
-        : `${(shiftExtraIncome - shiftExtraExpense).toLocaleString("hu-HU")} Ft`;
+        ? `+${fmt(shiftExtraIncome - shiftExtraExpense)} Ft`
+        : `${fmt(shiftExtraIncome - shiftExtraExpense)} Ft`;
 
     // Build extra details
     const shiftExtrasForSummary = extraTransactions.filter(
@@ -500,19 +431,24 @@ const KasszaPanel = ({ user, users = [], books = [], gifts = [] }) => {
     );
     let extraLines = "";
     shiftExtrasForSummary.forEach((t) => {
-      extraLines += `  ${t.type === "income" ? "+" : "-"}${t.amount.toLocaleString("hu-HU")} Ft (${t.description})\n`;
+      extraLines += `  ${t.type === "income" ? "+" : "-"}${fmt(t.amount)} Ft (${t.description})\n`;
     });
+
+    const netChange = actualBalance - Number(activeShift.openingBalance || 0);
 
     const summary = `--- OMEGA KÖNYVTÁR NAPI ZÁRÁS ---
 Dátum: ${dateStr}
 Személyzet: ${staffNames}
 ---------------------------------
-Nyitó egyenleg: ${activeShift.openingBalance.toLocaleString("hu-HU")} Ft
-Összes eladás: ${shiftSalesTotal.toLocaleString("hu-HU")} Ft
+Nyitó egyenleg: ${fmt(activeShift.openingBalance)} Ft
+Készpénzes eladások: ${fmt(shiftCashTotal)} Ft
+Bankkártyás eladások: ${fmt(shiftCardTotal)} Ft
+${shiftTransferTotal > 0 ? `Átutalásos eladások: ${fmt(shiftTransferTotal)} Ft\n` : ""}Összes eladás: ${fmt(shiftSalesTotal)} Ft
 Egyéb mozgás: ${extraNetText}${extraLines ? "\n" + extraLines : ""}
-Várt egyenleg: ${expectedBalance.toLocaleString("hu-HU")} Ft
-Fizikai záró: ${actualBalance.toLocaleString("hu-HU")} Ft
-ELTÉRÉS: ${discrepancy >= 0 ? "+" : ""}${discrepancy.toLocaleString("hu-HU")} Ft
+Várt készpénz egyenleg: ${fmt(expectedBalance)} Ft
+Tényleges záró: ${fmt(actualBalance)} Ft
+Eltérés: ${discrepancy === 0 ? "0" : discrepancy > 0 ? `+${fmt(discrepancy)}` : `${fmt(discrepancy)}`} Ft
+Összesen változás: ${netChange >= 0 ? "+" : ""}${fmt(netChange)} Ft
 ---------------------------------
 Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
 
@@ -528,7 +464,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
     setShowCloseShiftModal(false);
     setCopiedSummary(false);
     showToastNotification(
-      `Kassza sikeresen lezárva! Eltérés: ${discrepancy >= 0 ? "+" : ""}${discrepancy.toLocaleString("hu-HU")} Ft`,
+      `Kassza sikeresen lezárva! Eltérés: ${discrepancy === 0 ? "0" : discrepancy > 0 ? `+${fmt(discrepancy)}` : `${fmt(discrepancy)}`} Ft`,
       discrepancy === 0 ? "success" : "error",
     );
   };
@@ -552,234 +488,6 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
     });
   };
 
-  // Delete shift with all associated sales
-  const handleDeleteShift = async () => {
-    if (deleteConfirmText !== "JÓVÁHAGY") {
-      alert("Kérjük, írja be pontosan: JÓVÁHAGY");
-      return;
-    }
-
-    if (!shiftToDelete) return;
-
-    try {
-      // Find all sales in this shift
-      const shiftSalesData = sales.filter(
-        (s) =>
-          s.timestamp &&
-          new Date(s.timestamp) >= new Date(shiftToDelete.openedAt) &&
-          new Date(s.timestamp) <= new Date(shiftToDelete.closedAt),
-      );
-
-      // Delete all sales in this shift
-      for (const sale of shiftSalesData) {
-        const saleRef = dbRef(database, `sales/${sale.id}`);
-        await remove(saleRef);
-      }
-
-      // Delete all extra transactions in this shift
-      const shiftExtrasData = extraTransactions.filter(
-        (t) => t.shiftId === shiftToDelete.id,
-      );
-      for (const extra of shiftExtrasData) {
-        const extraRef = dbRef(database, `extraTransactions/${extra.id}`);
-        await remove(extraRef);
-      }
-
-      // Delete the shift itself
-      const shiftRef = dbRef(database, `shifts/${shiftToDelete.id}`);
-      await remove(shiftRef);
-
-      showToastNotification(
-        `Műszak és ${shiftSalesData.length} eladás sikeresen törölve!`,
-        "success",
-      );
-      setShiftToDelete(null);
-      setDeleteConfirmText("");
-    } catch (error) {
-      console.error("Error deleting shift:", error);
-      alert("Hiba történt a műszak törlése közben!");
-    }
-  };
-
-  // Print individual shift
-  const handlePrintShift = (shift, shiftSalesData, shiftExtrasData) => {
-    const printWindow = window.open("", "_blank");
-    const dateStr = new Date(shift.closedAt).toLocaleDateString("hu-HU", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    const timeStr = new Date(shift.closedAt).toLocaleTimeString("hu-HU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    let salesHTML = "";
-    if (shiftSalesData.length > 0) {
-      salesHTML = `
-        <h3>Eladások (${shiftSalesData.length} db)</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background: #f1f5f9;">
-              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Időpont</th>
-              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Termék</th>
-              <th style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">Mennyiség</th>
-              <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">Egységár</th>
-              <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">Összeg</th>
-              <th style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">Fizetés</th>
-              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Eladó</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${shiftSalesData
-              .map(
-                (sale) => `
-              <tr>
-                <td style="padding: 8px; border: 1px solid #e2e8f0;">${new Date(sale.timestamp).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}</td>
-                <td style="padding: 8px; border: 1px solid #e2e8f0;">${sale.itemType === "book" ? "📚" : "🎁"} ${sale.itemName}</td>
-                <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">${sale.quantity}</td>
-                <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">${parseInt(sale.price).toLocaleString("hu-HU")} Ft</td>
-                <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0; font-weight: 600;">${sale.totalAmount.toLocaleString("hu-HU")} Ft</td>
-                <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">${sale.paymentMethod === "cash" ? "Készpénz" : sale.paymentMethod === "card" ? "Kártya" : "Átutalás"}</td>
-                <td style="padding: 8px; border: 1px solid #e2e8f0;">${sale.sellerName || "N/A"}</td>
-              </tr>
-            `,
-              )
-              .join("")}
-          </tbody>
-        </table>
-      `;
-    }
-
-    let extrasHTML = "";
-    if (shiftExtrasData.length > 0) {
-      extrasHTML = `
-        <h3>Egyéb Mozgások (${shiftExtrasData.length} db)</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background: #f1f5f9;">
-              <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Leírás</th>
-              <th style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">Típus</th>
-              <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">Összeg</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${shiftExtrasData
-              .map(
-                (extra) => `
-              <tr>
-                <td style="padding: 8px; border: 1px solid #e2e8f0;">${extra.description}</td>
-                <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">${extra.type === "income" ? "Bevétel" : "Kiadás"}</td>
-                <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0; font-weight: 600; color: ${extra.type === "income" ? "#059669" : "#dc2626"};">${extra.type === "income" ? "+" : "-"}${extra.amount.toLocaleString("hu-HU")} Ft</td>
-              </tr>
-            `,
-              )
-              .join("")}
-          </tbody>
-        </table>
-      `;
-    }
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Műszak Jelentés - ${dateStr}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
-              max-width: 900px;
-              margin: 0 auto;
-            }
-            h1 { color: #1e293b; margin-bottom: 10px; }
-            h2 { color: #475569; margin-top: 20px; margin-bottom: 10px; }
-            h3 { color: #64748b; margin-top: 15px; margin-bottom: 10px; }
-            .summary {
-              background: #f8fafc;
-              padding: 15px;
-              border-radius: 8px;
-              margin-bottom: 20px;
-            }
-            .summary-row {
-              display: flex;
-              justify-content: space-between;
-              padding: 8px 0;
-              border-bottom: 1px solid #e2e8f0;
-            }
-            .summary-row:last-child {
-              border-bottom: none;
-              font-weight: 700;
-              font-size: 16px;
-              margin-top: 8px;
-              padding-top: 12px;
-              border-top: 2px solid #cbd5e1;
-            }
-            .label { color: #64748b; }
-            .value { font-weight: 600; }
-            @media print {
-              body { padding: 10px; }
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Műszak Jelentés</h1>
-          <p><strong>Dátum:</strong> ${dateStr} ${timeStr}</p>
-          <p><strong>Személyzet:</strong> ${shift.staffOnDuty?.join(", ") || "N/A"}</p>
-          
-          <div class="summary">
-            <h2>Összegzés</h2>
-            <div class="summary-row">
-              <span class="label">Nyitó egyenleg:</span>
-              <span class="value">${(shift.openingBalance || 0).toLocaleString("hu-HU")} Ft</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Eladások összesen:</span>
-              <span class="value">${(shift.salesTotal || 0).toLocaleString("hu-HU")} Ft</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Egyéb bevétel:</span>
-              <span class="value" style="color: #059669;">+${(shift.extraIncome || 0).toLocaleString("hu-HU")} Ft</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Egyéb kiadás:</span>
-              <span class="value" style="color: #dc2626;">-${(shift.extraExpense || 0).toLocaleString("hu-HU")} Ft</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Várt egyenleg:</span>
-              <span class="value">${(shift.expectedBalance || 0).toLocaleString("hu-HU")} Ft</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Fizikai záró egyenleg:</span>
-              <span class="value">${(shift.actualBalance || 0).toLocaleString("hu-HU")} Ft</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Eltérés:</span>
-              <span class="value" style="color: ${(shift.discrepancy || 0) === 0 ? "#059669" : (shift.discrepancy || 0) > 0 ? "#2563eb" : "#dc2626"};">
-                ${(shift.discrepancy || 0) >= 0 ? "+" : ""}${(shift.discrepancy || 0).toLocaleString("hu-HU")} Ft
-              </span>
-            </div>
-          </div>
-
-          ${salesHTML}
-          ${extrasHTML}
-
-          <p style="margin-top: 30px; color: #94a3b8; font-size: 12px;">
-            Nyomtatva: ${new Date().toLocaleString("hu-HU")}
-          </p>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
-
   // --- Shift Balance Calculations ---
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -792,9 +500,20 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
       )
     : [];
   const shiftSalesTotal = shiftSales.reduce(
-    (sum, s) => sum + (s.totalAmount || 0),
+    (sum, s) => sum + Number(s.totalAmount || 0),
     0,
   );
+
+  // Payment method breakdown for active shift
+  const shiftCashTotal = shiftSales
+    .filter((s) => (s.paymentMethod || "cash") === "cash")
+    .reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
+  const shiftCardTotal = shiftSales
+    .filter((s) => s.paymentMethod === "card")
+    .reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
+  const shiftTransferTotal = shiftSales
+    .filter((s) => s.paymentMethod === "transfer")
+    .reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
 
   // Extra transactions during active shift
   const shiftExtras = activeShift
@@ -802,45 +521,21 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
     : [];
   const shiftExtraIncome = shiftExtras
     .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + (t.amount || 0), 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
   const shiftExtraExpense = shiftExtras
     .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + (t.amount || 0), 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const shiftExpectedBalance = activeShift
-    ? activeShift.openingBalance +
-      shiftSalesTotal +
+    ? Number(activeShift.openingBalance) +
+      shiftCashTotal +
       shiftExtraIncome -
       shiftExtraExpense
     : 0;
 
-  // Shift history (sorted newest first)
-  const closedShifts = [...shifts]
-    .filter((s) => s.status === "closed")
-    .sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
-
-  // --- Filtered sales calculations ---
-  const dailySales = sales.filter(
-    (sale) => sale.timestamp && sale.timestamp.startsWith(todayStr),
-  );
-  const monthlySales = sales.filter(
-    (sale) => sale.timestamp && sale.timestamp.startsWith(selectedMonth),
-  );
-
-  const currentSales =
-    viewMode === "daily"
-      ? dailySales
-      : viewMode === "monthly"
-        ? monthlySales
-        : sales;
-
-  const totalRevenue = currentSales.reduce(
-    (sum, sale) => sum + (sale.totalAmount || 0),
-    0,
-  );
-  const totalSalesCount = currentSales.length;
-
-  const filteredSales = currentSales
+  // Today's sales only (Kassza shows today)
+  const todaySales = sales
+    .filter((sale) => sale.timestamp && sale.timestamp.startsWith(todayStr))
     .filter(
       (sale) =>
         sale.itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -849,24 +544,11 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
     )
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: "50px" }}>
-        <div className="loading-spinner"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="kassza-panel">
-      <header className="App-header">
-        <div className="header-section header-title">
-          <div className="title-container">
-            <h1>Kassza</h1>
-            <p>Értékesítési és bevételi nyilvántartás</p>
-          </div>
-        </div>
-      </header>
+      <div className="panel-header">
+        <h2><CircleDollarSign size={20} style={{verticalAlign: "middle", marginRight: 6}} /> Kassza</h2>
+      </div>
 
       {/* Status Badge */}
       <div
@@ -890,7 +572,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
             : "0 4px 12px rgba(220, 38, 38, 0.3)",
         }}
       >
-        <span style={{ fontSize: "20px" }}>{activeShift ? "🟢" : "🔴"}</span>
+        <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: "50%", background: activeShift ? "#22c55e" : "#ef4444", marginRight: 8, flexShrink: 0 }} />
         {activeShift ? "KASSZA NYITVA" : "KASSZA ZÁRVA"}
         {activeShift && activeShift.staffOnDuty && (
           <span style={{ fontWeight: 400, fontSize: "13px", opacity: 0.9 }}>
@@ -919,7 +601,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
             }}
           >
             <h3 style={{ margin: 0, color: "#92400e", fontSize: "16px" }}>
-              📋 Zárási Összegzés
+              <ClipboardList size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Zárási Összegzés
             </h3>
             <div style={{ display: "flex", gap: "8px" }}>
               <button
@@ -935,7 +617,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                   cursor: "pointer",
                 }}
               >
-                {copiedSummary ? "✅ Másolva!" : "📋 Másolás"}
+                {copiedSummary ? <><CircleCheck size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Másolva!</> : <><ClipboardList size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Másolás</>}
               </button>
               <button
                 onClick={() => {
@@ -953,7 +635,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                   cursor: "pointer",
                 }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
           </div>
@@ -1006,7 +688,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
               gap: "8px",
             }}
           >
-            🔓 Kassza Nyitás
+            <LockOpen size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Kassza Nyitás
           </button>
         ) : (
           <button
@@ -1027,524 +709,10 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
               gap: "8px",
             }}
           >
-            🔒 Kassza Zárás
+            <Lock size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Kassza Zárás
           </button>
         )}
-        <button
-          onClick={() => setShowShiftHistory(!showShiftHistory)}
-          style={{
-            padding: "14px 20px",
-            background: showShiftHistory ? "#4f46e5" : "#6366f1",
-            color: "#fff",
-            border: "none",
-            borderRadius: "12px",
-            fontSize: "15px",
-            fontWeight: 700,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          📖 Műszak Napló
-        </button>
       </div>
-
-      {/* Shift History Table */}
-      {showShiftHistory && (
-        <div
-          style={{
-            margin: "0 16px 16px",
-            padding: "20px",
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            borderRadius: "12px",
-          }}
-        >
-          <h3
-            style={{ margin: "0 0 16px", fontSize: "16px", color: "#1e293b" }}
-          >
-            📖 Műszak Napló
-          </h3>
-          {closedShifts.length === 0 ? (
-            <p
-              style={{ color: "#94a3b8", textAlign: "center", padding: "20px" }}
-            >
-              Még nincsenek lezárt műszakok.
-            </p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: "13px",
-                }}
-              >
-                <thead>
-                  <tr style={{ background: "#e2e8f0" }}>
-                    <th
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "left",
-                        borderRadius: "8px 0 0 0",
-                      }}
-                    >
-                      Dátum
-                    </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left" }}>
-                      Személyzet
-                    </th>
-                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                      Nyitó
-                    </th>
-                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                      Eladások
-                    </th>
-                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                      Várt
-                    </th>
-                    <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                      Fizikai
-                    </th>
-                    <th
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "right",
-                        borderRadius: "0 8px 0 0",
-                      }}
-                    >
-                      Eltérés
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {closedShifts.map((shift) => {
-                    const isExpanded = expandedShiftId === shift.id;
-                    const shiftSalesData = sales.filter(
-                      (s) =>
-                        s.timestamp &&
-                        new Date(s.timestamp) >= new Date(shift.openedAt) &&
-                        new Date(s.timestamp) <= new Date(shift.closedAt),
-                    );
-                    const shiftExtrasData = extraTransactions.filter(
-                      (t) => t.shiftId === shift.id,
-                    );
-
-                    return (
-                      <React.Fragment key={shift.id}>
-                        <tr
-                          onClick={() =>
-                            setExpandedShiftId(isExpanded ? null : shift.id)
-                          }
-                          style={{
-                            borderBottom: "1px solid #e2e8f0",
-                            cursor: "pointer",
-                            background: isExpanded ? "#f1f5f9" : "transparent",
-                            transition: "background 0.2s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isExpanded)
-                              e.currentTarget.style.background = "#f8fafc";
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isExpanded)
-                              e.currentTarget.style.background = "transparent";
-                          }}
-                        >
-                          <td
-                            style={{
-                              padding: "10px 12px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: "12px",
-                                transition: "transform 0.2s ease",
-                                transform: isExpanded
-                                  ? "rotate(90deg)"
-                                  : "rotate(0deg)",
-                              }}
-                            >
-                              ▶
-                            </span>
-                            {new Date(shift.closedAt).toLocaleDateString(
-                              "hu-HU",
-                            )}
-                          </td>
-                          <td style={{ padding: "10px 12px" }}>
-                            {shift.staffOnDuty?.join(", ") || "N/A"}
-                          </td>
-                          <td
-                            style={{ padding: "10px 12px", textAlign: "right" }}
-                          >
-                            {(shift.openingBalance || 0).toLocaleString(
-                              "hu-HU",
-                            )}{" "}
-                            Ft
-                          </td>
-                          <td
-                            style={{ padding: "10px 12px", textAlign: "right" }}
-                          >
-                            {(shift.salesTotal || 0).toLocaleString("hu-HU")} Ft
-                          </td>
-                          <td
-                            style={{ padding: "10px 12px", textAlign: "right" }}
-                          >
-                            {(shift.expectedBalance || 0).toLocaleString(
-                              "hu-HU",
-                            )}{" "}
-                            Ft
-                          </td>
-                          <td
-                            style={{ padding: "10px 12px", textAlign: "right" }}
-                          >
-                            {(shift.actualBalance || 0).toLocaleString("hu-HU")}{" "}
-                            Ft
-                          </td>
-                          <td
-                            style={{
-                              padding: "10px 12px",
-                              textAlign: "right",
-                              fontWeight: 700,
-                              color:
-                                (shift.discrepancy || 0) === 0
-                                  ? "#059669"
-                                  : (shift.discrepancy || 0) > 0
-                                    ? "#2563eb"
-                                    : "#dc2626",
-                            }}
-                          >
-                            {(shift.discrepancy || 0) >= 0 ? "+" : ""}
-                            {(shift.discrepancy || 0).toLocaleString(
-                              "hu-HU",
-                            )}{" "}
-                            Ft
-                          </td>
-                        </tr>
-                        {isExpanded && (
-                          <tr>
-                            <td
-                              colSpan="7"
-                              style={{
-                                padding: "16px",
-                                background: "#ffffff",
-                                borderBottom: "2px solid #e2e8f0",
-                              }}
-                            >
-                              <div style={{ marginBottom: "16px" }}>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    marginBottom: "12px",
-                                  }}
-                                >
-                                  <h4
-                                    style={{
-                                      margin: 0,
-                                      fontSize: "14px",
-                                      color: "#1e293b",
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    📊 Eladások ({shiftSalesData.length} db)
-                                  </h4>
-                                  <div style={{ display: "flex", gap: "8px" }}>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handlePrintShift(
-                                          shift,
-                                          shiftSalesData,
-                                          shiftExtrasData,
-                                        );
-                                      }}
-                                      style={{
-                                        padding: "6px 12px",
-                                        background: "#844a59",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "6px",
-                                        fontSize: "12px",
-                                        cursor: "pointer",
-                                        fontWeight: 500,
-                                      }}
-                                    >
-                                      🖨️ Nyomtatás
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShiftToDelete(shift);
-                                      }}
-                                      style={{
-                                        padding: "6px 12px",
-                                        background: "#dc2626",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "6px",
-                                        fontSize: "12px",
-                                        cursor: "pointer",
-                                        fontWeight: 500,
-                                      }}
-                                    >
-                                      🗑️ Törlés
-                                    </button>
-                                  </div>
-                                </div>
-                                {shiftSalesData.length === 0 ? (
-                                  <p
-                                    style={{
-                                      color: "#94a3b8",
-                                      fontSize: "13px",
-                                      margin: "8px 0",
-                                    }}
-                                  >
-                                    Nincsenek eladások ebben a műszakban.
-                                  </p>
-                                ) : (
-                                  <div
-                                    style={{
-                                      maxHeight: "300px",
-                                      overflowY: "auto",
-                                      border: "1px solid #e2e8f0",
-                                      borderRadius: "8px",
-                                    }}
-                                  >
-                                    <table
-                                      style={{
-                                        width: "100%",
-                                        fontSize: "12px",
-                                        borderCollapse: "collapse",
-                                      }}
-                                    >
-                                      <thead
-                                        style={{
-                                          position: "sticky",
-                                          top: 0,
-                                          background: "#f8fafc",
-                                        }}
-                                      >
-                                        <tr>
-                                          <th
-                                            style={{
-                                              padding: "8px",
-                                              textAlign: "left",
-                                              borderBottom: "1px solid #e2e8f0",
-                                            }}
-                                          >
-                                            Időpont
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "8px",
-                                              textAlign: "left",
-                                              borderBottom: "1px solid #e2e8f0",
-                                            }}
-                                          >
-                                            Termék
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "8px",
-                                              textAlign: "center",
-                                              borderBottom: "1px solid #e2e8f0",
-                                            }}
-                                          >
-                                            Mennyiség
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "8px",
-                                              textAlign: "right",
-                                              borderBottom: "1px solid #e2e8f0",
-                                            }}
-                                          >
-                                            Egységár
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "8px",
-                                              textAlign: "right",
-                                              borderBottom: "1px solid #e2e8f0",
-                                            }}
-                                          >
-                                            Összeg
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "8px",
-                                              textAlign: "center",
-                                              borderBottom: "1px solid #e2e8f0",
-                                            }}
-                                          >
-                                            Fizetés
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "8px",
-                                              textAlign: "left",
-                                              borderBottom: "1px solid #e2e8f0",
-                                            }}
-                                          >
-                                            Eladó
-                                          </th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {shiftSalesData.map((sale) => (
-                                          <tr
-                                            key={sale.id}
-                                            style={{
-                                              borderBottom: "1px solid #f1f5f9",
-                                            }}
-                                          >
-                                            <td style={{ padding: "8px" }}>
-                                              {new Date(
-                                                sale.timestamp,
-                                              ).toLocaleTimeString("hu-HU", {
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                              })}
-                                            </td>
-                                            <td style={{ padding: "8px" }}>
-                                              {sale.itemType === "book"
-                                                ? "📚"
-                                                : "🎁"}{" "}
-                                              {sale.itemName}
-                                            </td>
-                                            <td
-                                              style={{
-                                                padding: "8px",
-                                                textAlign: "center",
-                                              }}
-                                            >
-                                              {sale.quantity}
-                                            </td>
-                                            <td
-                                              style={{
-                                                padding: "8px",
-                                                textAlign: "right",
-                                              }}
-                                            >
-                                              {parseInt(
-                                                sale.price,
-                                              ).toLocaleString("hu-HU")}{" "}
-                                              Ft
-                                            </td>
-                                            <td
-                                              style={{
-                                                padding: "8px",
-                                                textAlign: "right",
-                                                fontWeight: 600,
-                                              }}
-                                            >
-                                              {sale.totalAmount.toLocaleString(
-                                                "hu-HU",
-                                              )}{" "}
-                                              Ft
-                                            </td>
-                                            <td
-                                              style={{
-                                                padding: "8px",
-                                                textAlign: "center",
-                                              }}
-                                            >
-                                              {sale.paymentMethod === "cash"
-                                                ? "💵"
-                                                : sale.paymentMethod === "card"
-                                                  ? "💳"
-                                                  : "🏦"}
-                                            </td>
-                                            <td style={{ padding: "8px" }}>
-                                              {sale.sellerName || "N/A"}
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                              </div>
-                              {shiftExtrasData.length > 0 && (
-                                <div>
-                                  <h4
-                                    style={{
-                                      margin: "0 0 8px",
-                                      fontSize: "14px",
-                                      color: "#1e293b",
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    💰 Egyéb Mozgások ({shiftExtrasData.length}{" "}
-                                    db)
-                                  </h4>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      gap: "6px",
-                                    }}
-                                  >
-                                    {shiftExtrasData.map((extra) => (
-                                      <div
-                                        key={extra.id}
-                                        style={{
-                                          padding: "8px 12px",
-                                          background:
-                                            extra.type === "income"
-                                              ? "#f0fdf4"
-                                              : "#fef2f2",
-                                          border: `1px solid ${
-                                            extra.type === "income"
-                                              ? "#bbf7d0"
-                                              : "#fecaca"
-                                          }`,
-                                          borderRadius: "6px",
-                                          fontSize: "12px",
-                                          display: "flex",
-                                          justifyContent: "space-between",
-                                          alignItems: "center",
-                                        }}
-                                      >
-                                        <span>{extra.description}</span>
-                                        <span
-                                          style={{
-                                            fontWeight: 600,
-                                            color:
-                                              extra.type === "income"
-                                                ? "#059669"
-                                                : "#dc2626",
-                                          }}
-                                        >
-                                          {extra.type === "income" ? "+" : "-"}
-                                          {extra.amount.toLocaleString(
-                                            "hu-HU",
-                                          )}{" "}
-                                          Ft
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="kassza-content">
         {/* Shift Balance Section */}
@@ -1555,34 +723,55 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
               <div className="balance-card">
                 <span className="balance-label">Nyitó</span>
                 <span className="balance-value">
-                  {activeShift.openingBalance.toLocaleString("hu-HU")} Ft
+                  {fmt(activeShift.openingBalance)} Ft
                 </span>
               </div>
               <div className="balance-card positive">
-                <span className="balance-label">Eladások</span>
+                <span className="balance-label">Készpénzes eladások</span>
                 <span className="balance-value">
-                  +{shiftSalesTotal.toLocaleString("hu-HU")} Ft
+                  +{fmt(shiftCashTotal)} Ft
                 </span>
               </div>
+              <div className="balance-card card-payment">
+                <span className="balance-label">Bankkártyás eladások</span>
+                <span className="balance-value">
+                  +{fmt(shiftCardTotal)} Ft
+                </span>
+              </div>
+              {shiftTransferTotal > 0 && (
+                <div className="balance-card transfer-payment">
+                  <span className="balance-label">Átutalásos eladások</span>
+                  <span className="balance-value">
+                    +{fmt(shiftTransferTotal)} Ft
+                  </span>
+                </div>
+              )}
               <div className="balance-card positive">
                 <span className="balance-label">Egyéb bevétel</span>
                 <span className="balance-value">
-                  +{shiftExtraIncome.toLocaleString("hu-HU")} Ft
+                  +{fmt(shiftExtraIncome)} Ft
                 </span>
               </div>
               <div className="balance-card negative">
                 <span className="balance-label">Egyéb kiadás</span>
                 <span className="balance-value">
-                  -{shiftExtraExpense.toLocaleString("hu-HU")} Ft
+                  -{fmt(shiftExtraExpense)} Ft
                 </span>
               </div>
             </div>
+            {shiftCardTotal > 0 && (
+              <div className="balance-card-terminal">
+                <Banknote size={14} style={{verticalAlign: "middle", marginRight: 4}} />
+                Bankkártya terminál: {fmt(shiftCardTotal)} Ft
+                {shiftTransferTotal > 0 && ` + Átutalás: ${fmt(shiftTransferTotal)} Ft`}
+              </div>
+            )}
             <div className="balance-closing">
-              <span className="balance-closing-label">Várt egyenleg</span>
+              <span className="balance-closing-label">Várt készpénz egyenleg</span>
               <span
                 className={`balance-closing-value ${shiftExpectedBalance >= 0 ? "positive" : "negative"}`}
               >
-                {shiftExpectedBalance.toLocaleString("hu-HU")} Ft
+                {fmt(shiftExpectedBalance)} Ft
               </span>
             </div>
             <div className="daily-balance-actions">
@@ -1601,7 +790,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                     <span className="extra-desc">{t.description}</span>
                     <span className={`extra-amount ${t.type}`}>
                       {t.type === "income" ? "+" : "-"}
-                      {t.amount.toLocaleString("hu-HU")} Ft
+                      {fmt(t.amount)} Ft
                     </span>
                   </div>
                 ))}
@@ -1622,7 +811,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
               border: "2px dashed #cbd5e1",
             }}
           >
-            <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔒</div>
+            <div style={{ fontSize: "48px", marginBottom: "12px" }}><Lock size={16} style={{verticalAlign: "middle", marginRight: 4}} /></div>
             <h3 style={{ color: "#475569", margin: "0 0 8px" }}>
               A kassza jelenleg zárva van
             </h3>
@@ -1632,269 +821,214 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
           </div>
         )}
 
-        <div className="kassza-section">
-          <h3>Eladási Történet</h3>
-          <div className="view-controls">
-            <div className="view-mode-buttons">
-              <button
-                className={`view-mode-btn ${viewMode === "daily" ? "active" : ""}`}
-                onClick={() => setViewMode("daily")}
-              >
-                Napi
-              </button>
-              <button
-                className={`view-mode-btn ${viewMode === "monthly" ? "active" : ""}`}
-                onClick={() => setViewMode("monthly")}
-              >
-                Havi
-              </button>
-              <button
-                className={`view-mode-btn ${viewMode === "all" ? "active" : ""}`}
-                onClick={() => setViewMode("all")}
-              >
-                Összes
-              </button>
-            </div>
-            {viewMode === "monthly" && (
-              <div className="month-picker">
-                <label>Válassz hónapot:</label>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="month-input"
-                />
-              </div>
-            )}
-          </div>
-          <div className="sales-summary">
-            <div className="summary-card">
-              <h4>Összes Bevétel</h4>
-              <p className="summary-amount">
-                {totalRevenue.toLocaleString("hu-HU")} Ft
-              </p>
-            </div>
-            <div className="summary-card">
-              <h4>Eladások Száma</h4>
-              <p className="summary-count">{totalSalesCount}</p>
-            </div>
-          </div>
-
+        {/* Sale Recording Section */}
+        <div
+          className="kassza-section"
+          style={{
+            opacity: activeShift ? 1 : 0.5,
+            pointerEvents: activeShift ? "auto" : "none",
+          }}
+        >
+          <h3>Eladás Rögzítése</h3>
           <div
-            className="kassza-section"
             style={{
-              opacity: activeShift ? 1 : 0.5,
-              pointerEvents: activeShift ? "auto" : "none",
+              display: "flex",
+              gap: "12px",
+              marginBottom: "12px",
             }}
           >
-            <h3>Eladás Rögzítése</h3>
-            <div
+            <button
+              onClick={() => setShowScanner(true)}
+              disabled={!activeShift}
               style={{
+                flex: 1,
+                padding: "14px",
+                minHeight: "48px",
+                background: activeShift ? "#3741A8" : "#e9ecef",
+                border: "none",
+                borderRadius: "12px",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: activeShift ? "pointer" : "not-allowed",
                 display: "flex",
-                gap: "12px",
-                marginBottom: "12px",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                transition: "all 0.2s ease",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
               }}
             >
-              <button
-                onClick={() => setShowScanner(true)}
-                disabled={!activeShift}
-                style={{
-                  flex: 1,
-                  padding: "14px",
-                  minHeight: "48px",
-                  background: activeShift ? "#844a59" : "#e9ecef",
-                  border: "none",
-                  borderRadius: "12px",
-                  color: "white",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: activeShift ? "pointer" : "not-allowed",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  transition: "all 0.2s ease",
-                  WebkitTapHighlightColor: "transparent",
-                  touchAction: "manipulation",
-                }}
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                  <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                  <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                  <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                  <line x1="7" y1="12" x2="17" y2="12" />
-                </svg>
-                Szkennelés
-              </button>
+                <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                <line x1="7" y1="12" x2="17" y2="12" />
+              </svg>
+              Szkennelés
+            </button>
 
-              <button
-                onClick={() => setShowSaleForm(true)}
-                disabled={!activeShift}
-                style={{
-                  flex: 1,
-                  padding: "14px",
-                  minHeight: "48px",
-                  background: activeShift ? "#495057" : "#e9ecef",
-                  border: "none",
-                  borderRadius: "12px",
-                  color: "white",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: activeShift ? "pointer" : "not-allowed",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  transition: "all 0.2s ease",
-                  WebkitTapHighlightColor: "transparent",
-                  touchAction: "manipulation",
-                }}
+            <button
+              onClick={() => setShowSaleForm(true)}
+              disabled={!activeShift}
+              style={{
+                flex: 1,
+                padding: "14px",
+                minHeight: "48px",
+                background: activeShift ? "#495057" : "#e9ecef",
+                border: "none",
+                borderRadius: "12px",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: activeShift ? "pointer" : "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                transition: "all 0.2s ease",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="currentColor"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="18"
-                  height="18"
-                  fill="currentColor"
-                >
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
-                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" fill="white" />
-                </svg>
-                Manuális
-              </button>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" fill="white" />
+              </svg>
+              Manuális
+            </button>
+          </div>
+
+          {scanResult && (
+            <div
+              className={`scan-result-banner ${scanResult.type}`}
+              style={{
+                padding: "12px 16px",
+                borderRadius: "10px",
+                marginBottom: "12px",
+                fontSize: "14px",
+                fontWeight: "500",
+                background:
+                  scanResult.type === "success"
+                    ? "rgba(52, 199, 89, 0.1)"
+                    : "rgba(255, 59, 48, 0.1)",
+                color: scanResult.type === "success" ? "#1d7a3a" : "#d32f2f",
+                border: `1px solid ${scanResult.type === "success" ? "rgba(52, 199, 89, 0.3)" : "rgba(255, 59, 48, 0.3)"}`,
+              }}
+            >
+              {scanResult.message}
             </div>
+          )}
+        </div>
 
-            {scanResult && (
-              <div
-                className={`scan-result-banner ${scanResult.type}`}
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: "10px",
-                  marginBottom: "12px",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  background:
-                    scanResult.type === "success"
-                      ? "rgba(52, 199, 89, 0.1)"
-                      : "rgba(255, 59, 48, 0.1)",
-                  color: scanResult.type === "success" ? "#1d7a3a" : "#d32f2f",
-                  border: `1px solid ${scanResult.type === "success" ? "rgba(52, 199, 89, 0.3)" : "rgba(255, 59, 48, 0.3)"}`,
-                }}
-              >
-                {scanResult.message}
+        {/* Search + Today's Sales */}
+        <div className="kassza-section">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+            <h3 style={{ margin: 0 }}>Mai Eladások</h3>
+            <span style={{ fontSize: "13px", color: "#64748b" }}>
+              {todaySales.length} db
+            </span>
+          </div>
+          <input
+            type="text"
+            placeholder="Keresés könyv cím vagy vásárló szerint..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="kassza-search"
+            style={{ marginBottom: "12px" }}
+          />
+
+          <div className="sales-list">
+            {todaySales.length === 0 ? (
+              <div className="no-sales">
+                <p>Még nincsenek rögzített eladások.</p>
               </div>
-            )}
-          </div>
-
-          <div className="kassza-section">
-            <h3>Keresés</h3>
-            <input
-              type="text"
-              placeholder="Keresés könyv cím vagy vásárló szerint..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="kassza-search"
-            />
-          </div>
-
-          <div className="kassza-section sales-list-section">
-            <h3>Eladási Lista</h3>
-            <div className="sales-list">
-              {filteredSales.length === 0 ? (
-                <div className="no-sales">
-                  <p>Még nincsenek rögzített eladások.</p>
-                </div>
-              ) : (
-                filteredSales.map((sale) => (
-                  <div key={sale.id} className="sale-item">
-                    <div className="sale-info">
-                      <div className="sale-book">
-                        <h4>{sale.itemName}</h4>
-                        <div className="sale-badges">
-                          <span className="sale-date">
-                            {new Date(sale.timestamp).toLocaleString("hu-HU", {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                          <span
-                            className={`sale-type ${sale.itemType === "book" ? "book" : "gift"}`}
-                          >
-                            {sale.itemType === "book"
-                              ? "📚 Könyv"
-                              : "🎁 Ajándék"}
-                          </span>
-                          <span className="sale-quantity">
-                            {sale.quantity} db
-                          </span>
-                          <span className="sale-price">
-                            {parseInt(sale.price).toLocaleString("hu-HU")} Ft/db
-                          </span>
-                          <span className="sale-payment">
-                            {sale.paymentMethod === "cash"
-                              ? "Készpénz"
-                              : sale.paymentMethod === "card"
-                                ? "Bankkártya"
-                                : "Átutalás"}
-                          </span>
-                          <span className="sale-amount">
-                            {sale.totalAmount.toLocaleString("hu-HU")} Ft
-                          </span>
-                          {sale.sellerName && (
-                            <span className="sale-seller">
+            ) : (
+              todaySales.map((sale) => (
+                <div key={sale.id} className="sale-item">
+                  <div className="sale-info">
+                    <div className="sale-book">
+                      <h4>{sale.itemName}</h4>
+                      <div className="sale-meta-line">
+                        {new Date(sale.timestamp).toLocaleTimeString("hu-HU", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        {" · "}
+                        {sale.quantity} db
+                        {" · "}
+                        {fmt(sale.price)} Ft/db
+                        {" · "}
+                        {sale.paymentMethod === "cash"
+                          ? "Készpénz"
+                          : sale.paymentMethod === "card"
+                            ? "Bankkártya"
+                            : "Átutalás"}
+                        {" · "}
+                        <strong>{fmt(sale.totalAmount)} Ft</strong>
+                        {sale.sellerName && (
+                          <>
+                            {" · "}
+                            <span style={{ color: "#64748b", fontSize: "12px" }}>
                               {sale.sellerName}
                             </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="sale-actions">
-                        {activeShift &&
-                        sale.timestamp &&
-                        new Date(sale.timestamp) >=
-                          new Date(activeShift.openedAt) ? (
-                          <>
-                            <button
-                              onClick={() => handleSaleEdit(sale)}
-                              className="kassza-btn edit"
-                            >
-                              ✏️ Szerkesztés
-                            </button>
-                            <button
-                              onClick={() => handleSaleDelete(sale)}
-                              className="kassza-btn delete"
-                            >
-                              🗑️ Törlés
-                            </button>
                           </>
-                        ) : (
-                          <span
-                            style={{
-                              fontSize: "12px",
-                              color: "#94a3b8",
-                              fontStyle: "italic",
-                            }}
-                          >
-                            Lezárt műszak
-                          </span>
                         )}
                       </div>
                     </div>
+                    <div className="sale-actions">
+                      {activeShift &&
+                      sale.timestamp &&
+                      new Date(sale.timestamp) >=
+                        new Date(activeShift.openedAt) ? (
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            onClick={() => handleSaleEdit(sale)}
+                            className="kassza-btn edit"
+                            style={{ fontSize: "13px", padding: "6px 12px", minHeight: "36px" }}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleSaleDelete(sale)}
+                            className="kassza-btn delete"
+                            style={{ fontSize: "13px", padding: "6px 12px", minHeight: "36px" }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            color: "#94a3b8",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Lezárt műszak
+                        </span>
+                      )}
+                    </div>
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -1921,7 +1055,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                         });
                       }}
                     >
-                      📚 Könyv
+                      <BookOpen size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Könyv
                     </button>
                     <button
                       type="button"
@@ -1936,7 +1070,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                         });
                       }}
                     >
-                      🎁 Ajándéktárgy
+                      <Gift size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Ajándéktárgy
                     </button>
                   </div>
                 </div>
@@ -2137,7 +1271,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
               <h3>Eladás Törlése</h3>
             </div>
             <div className="delete-modal-body">
-              <div className="delete-warning-icon">⚠️</div>
+              <div className="delete-warning-icon"><AlertTriangle size={32} /></div>
               <p>Biztosan törölni szeretnéd ezt az eladást?</p>
               {saleToDelete && (
                 <div className="sale-preview">
@@ -2145,12 +1279,12 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                   <div className="sale-details-preview">
                     <span>Mennyiség: {saleToDelete.quantity} db</span>
                     <span>
-                      Ár: {parseInt(saleToDelete.price).toLocaleString("hu-HU")}{" "}
+                      Ár: {fmt(saleToDelete.price)}{" "}
                       Ft/db
                     </span>
                     <span>
                       Összesen:{" "}
-                      {saleToDelete.totalAmount.toLocaleString("hu-HU")} Ft
+                      {fmt(saleToDelete.totalAmount)} Ft
                     </span>
                   </div>
                 </div>
@@ -2250,10 +1384,10 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
       {showOpenShiftModal && (
         <div className="kassza-modal">
           <div className="kassza-modal-content">
-            <h3>🔓 Kassza Nyitás</h3>
+            <h3><LockOpen size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Kassza Nyitás</h3>
             <div className="kassza-modal-body">
               <div className="form-group">
-                <label>Fizikai nyitó egyenleg (Ft):</label>
+                <label>Tényleges nyitó egyenleg (Ft):</label>
                 <input
                   type="number"
                   value={openShiftData.openingBalance}
@@ -2301,7 +1435,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                           transition: "all 0.15s ease",
                         }}
                       >
-                        {isSelected ? "✓ " : ""}
+                        {isSelected && <Check size={18} />}
                         {name}
                       </button>
                     );
@@ -2357,36 +1491,52 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
       {showCloseShiftModal && activeShift && (
         <div className="kassza-modal">
           <div className="kassza-modal-content">
-            <h3>🔒 Kassza Zárás</h3>
+            <h3><Lock size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Kassza Zárás</h3>
             <div className="kassza-modal-body">
               <div className="sale-preview" style={{ marginBottom: "16px" }}>
                 <div className="sale-details-preview">
                   <span>
                     Nyitó egyenleg:{" "}
-                    {activeShift.openingBalance.toLocaleString("hu-HU")} Ft
+                    {fmt(activeShift.openingBalance)} Ft
+                  </span>
+                  <span style={{ color: "#059669" }}>
+                    Készpénzes eladások: +{fmt(shiftCashTotal)} Ft
+                  </span>
+                  <span style={{ color: "#2563eb" }}>
+                    Bankkártyás eladások: +{fmt(shiftCardTotal)} Ft
+                  </span>
+                  {shiftTransferTotal > 0 && (
+                    <span style={{ color: "#7c3aed" }}>
+                      Átutalásos eladások: +{fmt(shiftTransferTotal)} Ft
+                    </span>
+                  )}
+                  <span>
+                    Eladások összesen: +{fmt(shiftSalesTotal)} Ft
                   </span>
                   <span>
-                    Eladások: +{shiftSalesTotal.toLocaleString("hu-HU")} Ft
-                  </span>
-                  <span>
-                    Egyéb bevétel: +{shiftExtraIncome.toLocaleString("hu-HU")}{" "}
+                    Egyéb bevétel: +{fmt(shiftExtraIncome)}{" "}
                     Ft
                   </span>
                   <span>
-                    Egyéb kiadás: -{shiftExtraExpense.toLocaleString("hu-HU")}{" "}
+                    Egyéb kiadás: -{fmt(shiftExtraExpense)}{" "}
                     Ft
                   </span>
                   <span>
                     <strong>
-                      Várt egyenleg:{" "}
-                      {shiftExpectedBalance.toLocaleString("hu-HU")} Ft
+                      Várt készpénz egyenleg:{" "}
+                      {fmt(shiftExpectedBalance)} Ft
                     </strong>
                   </span>
+                  {shiftCardTotal > 0 && (
+                    <span style={{fontSize: "12px", color: "#6b7280", fontStyle: "italic"}}>
+                      A bankkártyás forgalom ({fmt(shiftCardTotal)} Ft) a terminálban van, nem a kasszában.
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="form-group">
                 <label style={{ fontSize: "15px", fontWeight: 700 }}>
-                  Fizikai záró egyenleg (Ft):
+                  Tényleges készpénz egyenleg (Ft):
                 </label>
                 <input
                   type="number"
@@ -2400,29 +1550,18 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                   style={{ fontSize: "18px", padding: "14px", fontWeight: 600 }}
                 />
               </div>
-              {closeShiftData.actualBalance && (
+              {closeShiftData.actualBalance && (() => {
+                  const elteres = parseFloat(closeShiftData.actualBalance) - shiftExpectedBalance;
+                  const isZero = Math.abs(elteres) < 0.01;
+                  const isPositive = elteres > 0;
+                  return (
                 <div
                   style={{
                     padding: "14px",
                     borderRadius: "10px",
                     marginTop: "8px",
-                    background:
-                      parseFloat(closeShiftData.actualBalance) ===
-                      shiftExpectedBalance
-                        ? "#ecfdf5"
-                        : parseFloat(closeShiftData.actualBalance) >
-                            shiftExpectedBalance
-                          ? "#eff6ff"
-                          : "#fef2f2",
-                    border: `1px solid ${
-                      parseFloat(closeShiftData.actualBalance) ===
-                      shiftExpectedBalance
-                        ? "#a7f3d0"
-                        : parseFloat(closeShiftData.actualBalance) >
-                            shiftExpectedBalance
-                          ? "#bfdbfe"
-                          : "#fecaca"
-                    }`,
+                    background: isZero ? "#ecfdf5" : isPositive ? "#fefce8" : "#fef2f2",
+                    border: `1px solid ${isZero ? "#a7f3d0" : isPositive ? "#fde68a" : "#fecaca"}`,
                     textAlign: "center",
                   }}
                 >
@@ -2439,25 +1578,10 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                     style={{
                       fontSize: "22px",
                       fontWeight: 800,
-                      color:
-                        parseFloat(closeShiftData.actualBalance) ===
-                        shiftExpectedBalance
-                          ? "#059669"
-                          : parseFloat(closeShiftData.actualBalance) >
-                              shiftExpectedBalance
-                            ? "#2563eb"
-                            : "#dc2626",
+                      color: isZero ? "#059669" : isPositive ? "#b45309" : "#dc2626",
                     }}
                   >
-                    {parseFloat(closeShiftData.actualBalance) -
-                      shiftExpectedBalance >=
-                    0
-                      ? "+"
-                      : ""}
-                    {(
-                      parseFloat(closeShiftData.actualBalance) -
-                      shiftExpectedBalance
-                    ).toLocaleString("hu-HU")}{" "}
+                    {isZero ? "0" : isPositive ? `+${fmt(elteres)}` : `${fmt(elteres)}`}{" "}
                     Ft
                   </div>
                   <div
@@ -2467,16 +1591,15 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
                       marginTop: "4px",
                     }}
                   >
-                    {parseFloat(closeShiftData.actualBalance) ===
-                    shiftExpectedBalance
-                      ? "Tökéletes egyezés! ✅"
-                      : parseFloat(closeShiftData.actualBalance) >
-                          shiftExpectedBalance
-                        ? "Többlet a kasszában"
-                        : "Hiány a kasszában ⚠️"}
+                    {isZero
+                      ? "Pontosan egyezik"
+                      : isPositive
+                        ? "Többlet a várt egyenleghez képest"
+                        : "Hiány a várt egyenleghez képest"}
                   </div>
                 </div>
-              )}
+                  );
+                })()}
             </div>
             <div className="kassza-modal-footer">
               <button
@@ -2511,164 +1634,14 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
         />
       )}
 
-      {/* Shift Delete Confirmation Modal */}
-      {shiftToDelete && (
-        <div className="kassza-modal">
-          <div className="kassza-modal-content" style={{ maxWidth: "500px" }}>
-            <h3 style={{ color: "#dc2626", marginBottom: "16px" }}>
-              ⚠️ Műszak Törlése
-            </h3>
-            <div className="kassza-modal-body">
-              <p style={{ marginBottom: "16px", lineHeight: "1.6" }}>
-                <strong>FIGYELEM!</strong> Ez a művelet véglegesen törli a
-                műszakot és az összes hozzá tartozó eladást és tranzakciót.
-              </p>
-              <div
-                style={{
-                  background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  marginBottom: "16px",
-                }}
-              >
-                <p style={{ margin: "0 0 8px", fontWeight: "600" }}>
-                  Törlésre kerül:
-                </p>
-                <ul style={{ margin: 0, paddingLeft: "20px" }}>
-                  <li>
-                    Műszak:{" "}
-                    {new Date(shiftToDelete.closedAt).toLocaleDateString(
-                      "hu-HU",
-                    )}
-                  </li>
-                  <li>
-                    Személyzet: {shiftToDelete.staffOnDuty?.join(", ") || "N/A"}
-                  </li>
-                  <li>
-                    Eladások száma:{" "}
-                    {
-                      sales.filter(
-                        (s) =>
-                          s.timestamp &&
-                          new Date(s.timestamp) >=
-                            new Date(shiftToDelete.openedAt) &&
-                          new Date(s.timestamp) <=
-                            new Date(shiftToDelete.closedAt),
-                      ).length
-                    }{" "}
-                    db
-                  </li>
-                </ul>
-              </div>
-              <p style={{ marginBottom: "12px", fontWeight: "600" }}>
-                A törlés megerősítéséhez írja be:{" "}
-                <code
-                  style={{
-                    background: "#f1f5f9",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                  }}
-                >
-                  JÓVÁHAGY
-                </code>
-              </p>
-              <input
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder="Írja be: JÓVÁHAGY"
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  border: "2px solid #e2e8f0",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  marginBottom: "16px",
-                  fontFamily: "monospace",
-                  textTransform: "uppercase",
-                }}
-                autoFocus
-              />
-              <div style={{ display: "flex", gap: "12px" }}>
-                <button
-                  onClick={() => {
-                    setShiftToDelete(null);
-                    setDeleteConfirmText("");
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    background: "#f1f5f9",
-                    color: "#475569",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                  }}
-                >
-                  Mégse
-                </button>
-                <button
-                  onClick={handleDeleteShift}
-                  disabled={deleteConfirmText !== "JÓVÁHAGY"}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    background:
-                      deleteConfirmText === "JÓVÁHAGY" ? "#dc2626" : "#cbd5e1",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    cursor:
-                      deleteConfirmText === "JÓVÁHAGY"
-                        ? "pointer"
-                        : "not-allowed",
-                  }}
-                >
-                  Törlés
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Toast Notification */}
       {showToast && (
-        <div
-          style={{
-            position: "fixed",
-            top: "20px",
-            right: "20px",
-            background:
-              toastType === "success"
-                ? "linear-gradient(135deg, #28a745, #20c997)"
-                : "linear-gradient(135deg, #dc3545, #c82333)",
-            color: "white",
-            padding: "16px 20px",
-            borderRadius: "12px",
-            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
-            fontWeight: "500",
-            maxWidth: "400px",
-            wordWrap: "break-word",
-            animation: isToastExiting
-              ? "slideOutRight 0.3s ease-in forwards"
-              : "slideInRight 0.3s ease-out",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            zIndex: 9999,
-          }}
-        >
-          <span style={{ fontSize: "1.2rem" }}>
-            {toastType === "success" ? "✅" : "❌"}
+        <div className={`kassza-toast ${toastType} ${isToastExiting ? "exiting" : ""}`}>
+          <span className="kassza-toast-icon">
+            {toastType === "success" ? <CircleCheck size={18} /> : <CircleX size={18} />}
           </span>
           <div>
-            <div style={{ fontWeight: "600", marginBottom: "4px" }}>
+            <div className="kassza-toast-title">
               {toastType === "success" ? "Siker" : "Hiba"}
             </div>
             <div>{toastMessage}</div>
@@ -2681,36 +1654,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
         <button
           onClick={() => setShowPOSOverlay(true)}
           className="pos-fab"
-          style={{
-            position: "fixed",
-            top: "80px",
-            right: "20px",
-            width: "60px",
-            height: "60px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #059669, #10b981)",
-            border: "none",
-            color: "white",
-            fontSize: "28px",
-            fontWeight: "700",
-            cursor: "pointer",
-            boxShadow: "0 4px 20px rgba(5, 150, 105, 0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "scale(1.1) rotate(90deg)";
-            e.currentTarget.style.boxShadow =
-              "0 6px 24px rgba(5, 150, 105, 0.5)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1) rotate(0deg)";
-            e.currentTarget.style.boxShadow =
-              "0 4px 20px rgba(5, 150, 105, 0.4)";
-          }}
+          aria-label="Gyors eladás"
         >
           <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
@@ -2730,6 +1674,7 @@ Zárta: ${user?.name || user?.displayName || user?.email || "ismeretlen"}`;
         onSaleComplete={() => {
           showToastNotification("Eladás sikeresen rögzítve!", "success");
         }}
+        onToast={showToastNotification}
       />
     </div>
   );

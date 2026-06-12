@@ -26,8 +26,8 @@ export default defineConfig({
         description: isStaging
           ? "TESZT - Digitális Könyvtárad"
           : "Digitális Könyvtárad",
-        theme_color: "#844a59",
-        background_color: "#f8f9fa",
+        theme_color: "#3741A8",
+        background_color: "#F6F8FD",
         display: "standalone",
         orientation: "portrait",
         scope: "/",

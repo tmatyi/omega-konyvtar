@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Plus, Gift, Pencil, Trash2, Save, X } from "lucide-react";
 import {
   addGiftToDb,
   updateGiftInDb,
@@ -74,7 +75,7 @@ function GiftsPanel({ user, gifts }) {
 
   // Handle gift image click for popup
   const handleGiftImageClick = (gift) => {
-    if (gift.image && gift.image !== "🎁") {
+    if (gift.image) {
       setPopupImage(gift.image);
       setShowImagePopup(true);
     }
@@ -88,52 +89,45 @@ function GiftsPanel({ user, gifts }) {
 
   return (
     <>
-      <div className="tab-content custom-scrollbar">
-        <header className="App-header">
-          <div className="header-section header-title">
-            <div className="title-container">
-              <h1>Ajándéktárgyak</h1>
-              <p>Raktárkezelő Rendszer</p>
+      <div className="gifts-panel custom-scrollbar">
+        <div className="panel-header">
+          <h2><Gift size={20} style={{verticalAlign: "middle", marginRight: 6}} /> Ajándéktárgyak</h2>
+        </div>
+        <div className="panel-controls">
+          <div className="controls-left">
+            <div className="book-stats">
+              {user?.role === "admin" && (
+                <span className="total-books">
+                  Raktáron: {gifts.length} ajándéktárgy
+                </span>
+              )}
             </div>
           </div>
-          <div className="header-section header-controls">
-            <div className="controls-left">
-              <div className="book-stats">
-                {user?.role === "admin" && (
-                  <span className="total-books">
-                    Raktáron: {gifts.length} ajándéktárgy
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="controls-right">
-              <select
-                value={giftSortBy}
-                onChange={(e) => setGiftSortBy(e.target.value)}
-                className="filter-select"
-                style={{ minWidth: "140px" }}
-              >
-                <option value="name">Név (A-Z)</option>
-                <option value="name-desc">Név (Z-A)</option>
-                <option value="price">Ár (növekvő)</option>
-                <option value="price-desc">Ár (csökkenő)</option>
-                <option value="createdAt-desc">Legújabb</option>
-                <option value="createdAt">Legrégebbi</option>
-              </select>
-              <button
-                className="filter-toggle-btn"
-                onClick={() => setShowAddGiftForm(true)}
-              >
-                ➕ Új Ajándéktárgy
-              </button>
-            </div>
+          <div className="controls-right">
+            <select
+              value={giftSortBy}
+              onChange={(e) => setGiftSortBy(e.target.value)}
+              className="filter-select"
+              style={{ minWidth: "140px" }}
+            >
+              <option value="name">Név (A-Z)</option>
+              <option value="name-desc">Név (Z-A)</option>
+              <option value="price">Ár (növekvő)</option>
+              <option value="price-desc">Ár (csökkenő)</option>
+              <option value="createdAt-desc">Legújabb</option>
+              <option value="createdAt">Legrégebbi</option>
+            </select>
+            <button
+              className="filter-toggle-btn"
+              onClick={() => setShowAddGiftForm(true)}
+            >
+              <Plus size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Új Ajándéktárgy
+            </button>
           </div>
-        </header>
+        </div>
         <main className={`App-main gifts-padding`}>
           <div className="content-wrapper">
             <div className="inventory-table">
-              <h2>Raktárkészlet</h2>
-
               {/* Desktop: original table */}
               <div className="table-container gifts-table-desktop">
                 <table className="inventory-table">
@@ -217,7 +211,7 @@ function GiftsPanel({ user, gifts }) {
                                 />
                               ) : (
                                 <span className="placeholder-icon">
-                                  {gift.image || "🎁"}
+                                  {gift.image || <Gift size={24} />}
                                 </span>
                               )}
                             </div>
@@ -256,7 +250,7 @@ function GiftsPanel({ user, gifts }) {
                                     setShowEditGiftForm(true);
                                   }}
                                 >
-                                  ✏️
+                                  <Pencil size={14} />
                                 </button>
                                 <button
                                   className="delete-btn"
@@ -265,7 +259,7 @@ function GiftsPanel({ user, gifts }) {
                                     setShowDeleteGiftConfirm(true);
                                   }}
                                 >
-                                  🗑️
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             </td>
@@ -322,7 +316,7 @@ function GiftsPanel({ user, gifts }) {
                             <img src={gift.image} alt={gift.name} />
                           ) : (
                             <span className="compact-row__thumb-placeholder">
-                              {gift.image || "🎁"}
+                              {gift.image || <Gift size={20} />}
                             </span>
                           )}
                         </div>
@@ -490,10 +484,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -531,10 +525,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -573,10 +567,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -616,10 +610,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -659,10 +653,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -700,10 +694,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -783,7 +777,7 @@ function GiftsPanel({ user, gifts }) {
                       price: parseFloat(giftPrice),
                       purchasePrice: parseFloat(giftPurchasePrice) || 0,
                       barcode: giftBarcode || "",
-                      image: giftImage || "🎁",
+                      image: giftImage || "",
                       status: "Raktáron",
                       createdAt: new Date().toISOString(),
                       addedBy: user?.email || "unknown",
@@ -832,7 +826,7 @@ function GiftsPanel({ user, gifts }) {
                   backgroundColor:
                     !giftName || !giftQuantity || !giftPrice
                       ? "#94a3b8"
-                      : "#844a59",
+                      : "#3741A8",
                   color: "white",
                   cursor:
                     !giftName || !giftQuantity || !giftPrice
@@ -843,20 +837,20 @@ function GiftsPanel({ user, gifts }) {
                 }}
                 onMouseEnter={(e) => {
                   if (giftName && giftQuantity && giftPrice) {
-                    e.target.style.backgroundColor = "#6b3a48";
+                    e.target.style.backgroundColor = "#424EB5";
                     e.target.style.transform = "translateY(-1px)";
                     e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (giftName && giftQuantity && giftPrice) {
-                    e.target.style.backgroundColor = "#844a59";
+                    e.target.style.backgroundColor = "#3741A8";
                     e.target.style.transform = "translateY(0)";
                     e.target.style.boxShadow = "none";
                   }
                 }}
               >
-                💾 Ajándéktárgy Hozzáadása
+                <Save size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Ajándéktárgy Hozzáadása
               </button>
               <button
                 onClick={() => {
@@ -891,7 +885,7 @@ function GiftsPanel({ user, gifts }) {
                   e.target.style.boxShadow = "none";
                 }}
               >
-                ❌ Mégse
+                <X size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Mégse
               </button>
             </div>
           </div>
@@ -967,7 +961,7 @@ function GiftsPanel({ user, gifts }) {
                   e.target.style.boxShadow = "none";
                 }}
               >
-                🗑️ Törlés
+                <Trash2 size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Törlés
               </button>
               <button
                 onClick={() => {
@@ -996,7 +990,7 @@ function GiftsPanel({ user, gifts }) {
                   e.target.style.boxShadow = "none";
                 }}
               >
-                ❌ Mégse
+                <X size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Mégse
               </button>
             </div>
           </div>
@@ -1055,10 +1049,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -1096,10 +1090,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -1138,10 +1132,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -1180,10 +1174,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -1222,10 +1216,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -1263,10 +1257,10 @@ function GiftsPanel({ user, gifts }) {
                     boxSizing: "border-box",
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = "#844a59";
+                    e.target.style.borderColor = "#3741A8";
                     e.target.style.backgroundColor = "#fff";
                     e.target.style.boxShadow =
-                      "0 0 0 3px rgba(132, 74, 89, 0.1)";
+                      "0 0 0 3px rgba(55, 65, 168, 0.1)";
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = "#e9ecef";
@@ -1320,24 +1314,24 @@ function GiftsPanel({ user, gifts }) {
                   borderRadius: "8px",
                   fontSize: "16px",
                   fontWeight: "600",
-                  backgroundColor: "#844a59",
+                  backgroundColor: "#3741A8",
                   color: "white",
                   cursor: "pointer",
                   transition: "all 0.3s ease",
                   whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#6b3a48";
+                  e.target.style.backgroundColor = "#424EB5";
                   e.target.style.transform = "translateY(-1px)";
                   e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "#844a59";
+                  e.target.style.backgroundColor = "#3741A8";
                   e.target.style.transform = "translateY(0)";
                   e.target.style.boxShadow = "none";
                 }}
               >
-                💾 Változtatások Mentése
+                <Save size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Változtatások Mentése
               </button>
               <button
                 onClick={() => {
@@ -1367,7 +1361,7 @@ function GiftsPanel({ user, gifts }) {
                   e.target.style.boxShadow = "none";
                 }}
               >
-                ❌ Mégse
+                <X size={16} style={{verticalAlign: "middle", marginRight: 4}} /> Mégse
               </button>
             </div>
           </div>

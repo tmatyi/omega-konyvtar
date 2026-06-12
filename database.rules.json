@@ -1,0 +1,80 @@
+{
+  "rules": {
+    "books": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "gifts": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        "role": {
+          ".validate": "(!data.exists() && newData.val() === 'owner') || root.child('users').child(auth.uid).child('role').val() === 'admin'"
+        }
+      }
+    },
+    "loans": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "sales": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "shifts": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "extraTransactions": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "invites": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "staging": {
+      "books": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "gifts": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "users": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('staging').child('users').child(auth.uid).child('role').val() === 'admin')",
+          "role": {
+            ".validate": "(!data.exists() && newData.val() === 'owner') || root.child('staging').child('users').child(auth.uid).child('role').val() === 'admin'"
+          }
+        }
+      },
+      "loans": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "sales": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "shifts": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "extraTransactions": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "invites": {
+        ".read": "auth != null && root.child('staging').child('users').child(auth.uid).child('role').val() === 'admin'",
+        ".write": "auth != null && root.child('staging').child('users').child(auth.uid).child('role').val() === 'admin'"
+      }
+    }
+  }
+}

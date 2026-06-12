@@ -2,9 +2,6 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-  background: #e8e0e2;
-  min-height: 100vh;
-  border-radius: 16px;
 }
 
 .profile-header {
@@ -33,7 +30,7 @@
 }
 
 .profile-edit-btn {
-  background: linear-gradient(135deg, #844a59, #6b3c47);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #fff;
   border: none;
   padding: 12px 24px;
@@ -42,7 +39,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(132, 74, 89, 0.2);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.2);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -50,8 +47,8 @@
 
 .profile-edit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(132, 74, 89, 0.3);
-  background: linear-gradient(135deg, #9a5a69, #7b4c57);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.3);
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary-hover));
 }
 
 .profile-edit-btn:active {
@@ -78,30 +75,30 @@
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #844a59;
-  box-shadow: 0 4px 12px rgba(132, 74, 89, 0.2);
+  border: 4px solid var(--color-primary);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
 }
 
 .avatar-placeholder {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #844a59, #6b3c47);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 700;
   font-size: 36px;
-  border: 4px solid #844a59;
-  box-shadow: 0 4px 12px rgba(132, 74, 89, 0.2);
+  border: 4px solid var(--color-primary);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
 }
 
 .avatar-change-btn {
   position: absolute;
   bottom: 5px;
   right: 5px;
-  background: #844a59;
+  background: var(--color-primary);
   color: #fff;
   border: none;
   width: 36px;
@@ -118,9 +115,9 @@
 }
 
 .avatar-change-btn:hover {
-  background: #6b3c47;
+  background: var(--color-primary-hover);
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(132, 74, 89, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .avatar-change-btn:active {
@@ -183,9 +180,38 @@
   font-size: 1rem;
 }
 
+/* Inline edit input — matches .info-item span typography */
+.profile-inline-input {
+  color: #2c3e50;
+  font-size: 1rem;
+  font-family: inherit;
+  text-align: right;
+  border: none;
+  border-bottom: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  background: transparent;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  max-width: 280px;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  box-sizing: border-box;
+}
+
+.profile-inline-input:hover {
+  background: rgba(var(--color-primary-rgb), 0.04);
+  border-bottom-color: #94a3b8;
+}
+
+.profile-inline-input:focus {
+  border-bottom-style: solid;
+  border-bottom-color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.06);
+}
+
 .edit-btn,
 .change-password-btn {
-  background: linear-gradient(135deg, #844a59, #6b3c47);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #fff;
   border: none;
   padding: 12px 24px;
@@ -200,7 +226,7 @@
 .edit-btn:hover,
 .change-password-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(132, 74, 89, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .edit-form,
@@ -260,18 +286,18 @@
 
 .edit-input:focus {
   outline: none;
-  border-color: #844a59;
+  border-color: var(--color-primary);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(132, 74, 89, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #844a59;
+  border-color: var(--color-primary);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(132, 74, 89, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .form-group input.error,
@@ -409,7 +435,7 @@
 .stat-number {
   font-size: 2rem;
   font-weight: 700;
-  color: #844a59;
+  color: var(--color-primary);
   margin-bottom: 8px;
 }
 
@@ -483,8 +509,6 @@
 @media (max-width: 768px) {
   .profile-container {
     padding: 20px 15px;
-    background: #e8e0e2;
-    min-height: 100vh;
   }
 
   .profile-section {
@@ -528,6 +552,13 @@
 
   .info-item span {
     font-size: 16px;
+  }
+
+  .profile-inline-input {
+    text-align: left;
+    max-width: 100%;
+    width: 100%;
+  }
   }
 
   .edit-form,

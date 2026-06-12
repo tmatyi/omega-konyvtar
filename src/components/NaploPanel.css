@@ -1,0 +1,376 @@
+/* ===== NaploPanel Styles ===== */
+
+.naplo-panel {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+}
+
+/* ===== Anchor Pills ===== */
+.naplo-anchors {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding: 12px 16px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+}
+
+.naplo-anchor-btn {
+  padding: 10px 20px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.naplo-anchor-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.naplo-anchor-btn.active {
+  background: var(--color-primary, #3741A8);
+  color: #fff;
+  border-color: var(--color-primary, #3741A8);
+}
+
+  padding: 20px;
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+}
+
+/* ===== Shift History Section ===== */
+.naplo-shift-section {
+  margin: 0 16px 16px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+/* Desktop table: visible on wider screens */
+.naplo-shift-table {
+  display: none;
+}
+
+/* Mobile cards: visible on narrow screens */
+.naplo-shift-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ===== Shift Card (Mobile) ===== */
+.shift-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.shift-card:active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.shift-card-header {
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.shift-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shift-card-date {
+  font-weight: 700;
+  font-size: 15px;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shift-expand-arrow {
+  font-size: 10px;
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.shift-expand-arrow.open {
+  transform: rotate(90deg);
+}
+
+.shift-card-staff {
+  font-size: 13px;
+  color: #475569;
+}
+
+.shift-card-balances {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  font-size: 13px;
+}
+
+.shift-balance-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  color: #475569;
+}
+
+.shift-balance-row .positive {
+  color: #059669;
+  font-weight: 600;
+}
+
+.shift-balance-row .negative {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.shift-balance-row.summary {
+  grid-column: 1 / -1;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 6px;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.shift-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.shift-card-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shift-card-btn.print {
+  background: var(--color-primary);
+  color: white;
+}
+
+.shift-card-btn.print:active {
+  background: var(--color-primary-hover);
+}
+
+.shift-card-btn.delete {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.shift-card-btn.delete:active {
+  background: #fecaca;
+}
+
+/* ===== Shift Card Expanded Details ===== */
+.shift-card-details {
+  border-top: 1px solid #e2e8f0;
+  padding: 14px 16px;
+  background: #f8fafc;
+  animation: shiftExpandIn 0.2s ease;
+}
+
+@keyframes shiftExpandIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+.shift-no-sales {
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.shift-sales-list h4,
+.shift-extras-list h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.shift-sale-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.shift-sale-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.shift-sale-icon {
+  font-size: 14px;
+}
+
+.shift-sale-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shift-sale-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 11px;
+  color: #64748b;
+  padding-left: 22px;
+}
+
+.shift-extras-list {
+  margin-top: 12px;
+}
+
+.shift-extra-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.shift-extra-item.income {
+  background: #f0fdf4;
+  color: #059669;
+  border: 1px solid #bbf7d0;
+}
+
+.shift-extra-item.expense {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* ===== Sale Item Improvements (shared) ===== */
+.sale-meta-line {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.sale-type-badge {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+/* ===== Desktop Overrides ===== */
+@media (min-width: 769px) {
+  .naplo-shift-table {
+    display: block;
+  }
+
+  .naplo-shift-cards {
+    display: none;
+  }
+
+  .shift-card-actions {
+    display: none; /* actions are inside the expanded table row */
+  }
+}
+
+/* ===== Mobile Responsive ===== */
+@media (max-width: 768px) {
+  .naplo-panel {
+    padding: 12px;
+  }
+
+  .naplo-shift-section {
+    margin: 0 0 12px;
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .kassza-header h2 {
+    font-size: 22px;
+    padding: 14px 0;
+  }
+
+  .kassza-header p {
+    font-size: 14px;
+  }
+
+  /* Anchor pills: tighter on mobile, respect notch */
+  .naplo-anchors {
+    padding: 10px 12px 8px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    gap: 8px;
+  }
+
+  .naplo-anchor-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  /* Make view mode buttons fill width */
+  .view-mode-buttons {
+    width: 100%;
+  }
+
+  .view-mode-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* Sale items more compact */
+  .sale-item {
+    padding: 10px !important;
+  }
+
+  .sale-meta-line {
+    font-size: 12px;
+  }
+}

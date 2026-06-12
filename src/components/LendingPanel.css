@@ -94,30 +94,20 @@
   box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
 }
 
-.lending-header {
-  margin-bottom: 30px;
-}
-
-.lending-header h2 {
-  color: #2c3e50;
-  margin-bottom: 20px;
-  font-size: 28px;
-}
-
 .lending-stats {
-  display: flex;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
-  flex-wrap: wrap;
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--color-stat-from), var(--color-stat-to));
   color: white;
   padding: 20px;
   border-radius: 12px;
   text-align: center;
-  min-width: 150px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(var(--color-primary-rgb), 0.3);
   transition: transform 0.3s ease;
 }
 
@@ -167,7 +157,7 @@
   color: #2c3e50;
   margin-bottom: 20px;
   font-size: 1.3rem;
-  border-bottom: 2px solid #667eea;
+  border-bottom: 2px solid var(--color-stat-from);
   padding-bottom: 10px;
 }
 
@@ -200,8 +190,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--color-stat-from);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .books-grid {
@@ -240,19 +230,19 @@
 }
 
 .book-card:hover {
-  border-color: #667eea;
+  border-color: var(--color-stat-from);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
 }
 
 .book-card.selected {
-  border-color: #667eea;
+  border-color: var(--color-stat-from);
   background: linear-gradient(
     135deg,
-    rgba(102, 126, 234, 0.1),
-    rgba(118, 75, 162, 0.1)
+    rgba(var(--color-primary-rgb), 0.1),
+    rgba(var(--color-primary-rgb), 0.1)
   );
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .book-thumbnail {
@@ -303,7 +293,7 @@
 }
 
 .loan-btn {
-  background: #667eea;
+  background: var(--color-stat-from);
   color: white;
   border: none;
   padding: 10px 16px;
@@ -359,11 +349,11 @@
 }
 
 .search-result-item:hover {
-  border-color: #667eea;
+  border-color: var(--color-stat-from);
   background: linear-gradient(
     135deg,
-    rgba(102, 126, 234, 0.05),
-    rgba(118, 75, 162, 0.05)
+    rgba(var(--color-primary-rgb), 0.05),
+    rgba(var(--color-primary-rgb), 0.05)
   );
   transform: translateY(-1px);
 }
@@ -396,7 +386,7 @@
 }
 
 .result-action {
-  color: #667eea;
+  color: var(--color-stat-from);
   font-weight: 600;
   font-size: 14px;
 }
@@ -446,11 +436,11 @@
   padding: 20px;
   background: linear-gradient(
     135deg,
-    rgba(102, 126, 234, 0.1),
-    rgba(118, 75, 162, 0.1)
+    rgba(var(--color-primary-rgb), 0.1),
+    rgba(var(--color-primary-rgb), 0.1)
   );
   border-radius: 8px;
-  border: 2px solid #667eea;
+  border: 2px solid var(--color-stat-from);
 }
 
 .selected-book-header {
@@ -586,7 +576,7 @@
 }
 
 .confirm-loan-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--color-stat-from), var(--color-stat-to));
   color: white;
   border: none;
   padding: 15px 30px;
@@ -595,12 +585,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .confirm-loan-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(var(--color-primary-rgb), 0.4);
 }
 
 .loans-list {
@@ -786,19 +776,19 @@
 .form-input:focus,
 .form-select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--color-stat-from);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .library-info {
   background: linear-gradient(
     135deg,
-    rgba(102, 126, 234, 0.1),
-    rgba(118, 75, 162, 0.1)
+    rgba(var(--color-primary-rgb), 0.1),
+    rgba(var(--color-primary-rgb), 0.1)
   );
   padding: 15px;
   border-radius: 8px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--color-stat-from);
   margin: 20px 0;
   font-size: 14px;
   color: #495057;
@@ -822,14 +812,14 @@
 }
 
 .confirm-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--color-stat-from), var(--color-stat-to));
   color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .confirm-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(var(--color-primary-rgb), 0.4);
 }
 
 .cancel-btn {
@@ -847,22 +837,13 @@
     padding: 12px;
   }
 
-  .lending-header {
-    margin-bottom: 16px;
-  }
-
-  .lending-header h2 {
-    font-size: 22px;
-    margin-bottom: 12px;
-  }
-
   .lending-stats {
-    flex-direction: row;
+    padding: 0 16px;
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
 
   .stat-card {
-    min-width: auto;
     padding: 10px 12px;
     border-radius: 10px;
   }
@@ -1097,9 +1078,9 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #844a59;
+  border-color: var(--color-primary);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(132, 74, 89, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 /* Modern DatePicker Styles */
@@ -1118,9 +1099,9 @@
 
 .custom-datepicker:focus {
   outline: none;
-  border-color: #844a59;
+  border-color: var(--color-primary);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(132, 74, 89, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 /* React DatePicker Calendar Styles */
@@ -1135,7 +1116,7 @@
 }
 
 .react-datepicker__header {
-  background: linear-gradient(135deg, #844a59, #a05d7a);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: white;
   padding: 16px;
   border-bottom: none;
@@ -1171,12 +1152,12 @@
 
 .react-datepicker__day:hover {
   background: #f8f9fa;
-  color: #844a59;
+  color: var(--color-primary);
   transform: scale(1.1);
 }
 
 .react-datepicker__day--selected {
-  background: linear-gradient(135deg, #844a59, #a05d7a);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: white;
   font-weight: 600;
   border-radius: 8px;
@@ -1184,7 +1165,7 @@
 
 .react-datepicker__day--today {
   background: #e9ecef;
-  color: #844a59;
+  color: var(--color-primary);
   font-weight: 600;
   border-radius: 8px;
 }
@@ -1205,7 +1186,7 @@
 }
 
 .react-datepicker__day-name {
-  color: #844a59;
+  color: var(--color-primary);
   font-weight: 600;
   font-size: 0.85rem;
   text-transform: uppercase;

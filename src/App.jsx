@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Search, BookOpen, ShoppingCart, Building2 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth.js";
 import { useDatabase } from "./hooks/useDatabase.js";
 import Login from "./Login.jsx";
@@ -6,12 +7,15 @@ import Sidebar from "./Sidebar.jsx";
 import Profile from "./Profile.jsx";
 import UsersPanel from "./components/UsersPanel.jsx";
 import LendingPanel from "./components/LendingPanel.jsx";
+import SkeletonUI from "./components/SkeletonUI.jsx";
 import KasszaPanel from "./components/KasszaPanel.jsx";
+import NaploPanel from "./components/NaploPanel.jsx";
 import GiftsPanel from "./components/GiftsPanel.jsx";
 import AddBookModal from "./components/AddBookModal.jsx";
 import BookDetailModal from "./components/BookDetailModal.jsx";
 import BooksTable from "./components/BooksTable.jsx";
 import "./components/KasszaPanel.css";
+import "./components/NaploPanel.css";
 import "./App.css";
 
 function App() {
@@ -19,12 +23,11 @@ function App() {
     user,
     loading,
     handleLogin,
-    handleRegister,
     handleForgotPassword,
     handleLogout,
     handleProfileUpdate,
   } = useAuth();
-  const { books, gifts, users, loans } = useDatabase();
+  const { books, gifts, users, loans, sales, shifts, extraTransactions, dataLoaded } = useDatabase(!!user);
 
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem("activeTab") || "books";
@@ -44,10 +47,11 @@ function App() {
   const [selectedBook, setSelectedBook] = useState(null);
   const [showBookDetail, setShowBookDetail] = useState(false);
 
-  // Sorting for table
-  const [sortField, setSortField] = useState("title");
-  const [sortOrder, setSortOrder] = useState("asc");
+  // Sorting for table — sortBy is the single source of truth
+  // Format: "field" (ascending) or "field-desc" (descending)
   const [sortBy, setSortBy] = useState("title");
+  const sortField = sortBy.replace("-desc", "").replace("-asc", "");
+  const sortOrder = sortBy.endsWith("-desc") ? "desc" : "asc";
 
   const handleDensityChange = (newDensity) => {
     if (newDensity === cardDensity) return;
@@ -167,21 +171,18 @@ function App() {
   const activeLoans = loans.filter((loan) => loan.status === "active");
   const lentOutBookIds = new Set(activeLoans.map((loan) => loan.bookId));
 
-  // Handle sorting for table
+  // Handle sorting for table — column header click
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortBy(sortOrder === "asc" ? `${field}-desc` : field);
     } else {
-      setSortField(field);
-      setSortOrder("asc");
+      setSortBy(field);
     }
   };
 
   // Handle sort dropdown change
   const handleSortByChange = (value) => {
     setSortBy(value);
-    setSortField(value.replace("-desc", "").replace("-asc", ""));
-    setSortOrder(value.endsWith("-desc") ? "desc" : "asc");
   };
 
   // Sort filtered books
@@ -246,9 +247,27 @@ function App() {
     return (
       <Login
         onLogin={handleLogin}
-        onRegister={handleRegister}
         onForgotPassword={handleForgotPassword}
       />
+    );
+  }
+
+  // Show skeleton UI while Firebase data is loading
+  if (!dataLoaded) {
+    return (
+      <div className="App">
+        <Sidebar
+          user={user}
+          onLogout={handleLogout}
+          activeTab={activeTab}
+          activeMode={activeMode}
+          onTabChange={setActiveTab}
+          onModeChange={setActiveMode}
+        />
+        <div className="main-content-with-sidebar">
+          <SkeletonUI activeTab={activeTab} activeMode={activeMode} cardDensity={cardDensity} />
+        </div>
+      </div>
     );
   }
 
@@ -264,47 +283,42 @@ function App() {
       />
       <div className="main-content-with-sidebar">
         {activeTab === "books" && (
-          <>
-            <header className="App-header">
-              <div className="header-section header-title">
-                <div className="title-container">
-                  <h1>Könyvesbolt</h1>
-                  <p>Raktárkezelés</p>
-                </div>
-              </div>
-              <div className="header-section header-controls">
-                <div className="controls-left">
-                  <div className="book-stats">
-                    <span className="total-books">
-                      {filteredBooks.length} könyv található
-                    </span>
-                    {filteredBooks.length !==
-                      books.filter(
-                        (book) =>
-                          book.category === getCategoryFilter(activeTab),
-                      ).length && (
-                      <span className="filtered-books">(szűrve)</span>
-                    )}
-                  </div>
-                </div>
-                <div className="controls-right">
-                  <button
-                    className="filter-toggle-btn"
-                    onClick={() => setShowFilters(!showFilters)}
-                  >
-                    🔍 {showFilters ? "Szűrők Elrejtése" : "Szűrők Mutatása"}
-                  </button>
-                  {user?.role === "admin" && (
-                    <button
-                      className="add-book-btn"
-                      onClick={() => setShowAddForm(true)}
-                    >
-                      + Új Könyv Hozzáadása
-                    </button>
+          <div className="books-panel">
+            <div className="panel-header">
+              <h2><ShoppingCart size={20} style={{verticalAlign: "middle", marginRight: 6}} /> Könyvesbolt</h2>
+            </div>
+            <div className="panel-controls">
+              <div className="controls-left">
+                <div className="book-stats">
+                  <span className="total-books">
+                    {filteredBooks.length} könyv található
+                  </span>
+                  {filteredBooks.length !==
+                    books.filter(
+                      (book) =>
+                        book.category === getCategoryFilter(activeTab),
+                    ).length && (
+                    <span className="filtered-books">(szűrve)</span>
                   )}
                 </div>
               </div>
-            </header>
+              <div className="controls-right">
+                <button
+                  className="filter-toggle-btn"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Search size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> {showFilters ? "Szűrők Elrejtése" : "Szűrők Mutatása"}
+                </button>
+                {user?.role === "admin" && (
+                  <button
+                    className="add-book-btn"
+                    onClick={() => setShowAddForm(true)}
+                  >
+                    + Új Könyv Hozzáadása
+                  </button>
+                )}
+              </div>
+            </div>
 
             <div className={`filters-wrapper ${showFilters ? "show" : ""}`}>
               <div className="filters-section">
@@ -458,40 +472,32 @@ function App() {
                 )}
               </div>
             </main>
-          </>
+          </div>
         )}
 
         {activeTab === "gifts" && <GiftsPanel user={user} gifts={gifts} />}
         {activeTab === "profile" && (
-          <div className="tab-content custom-scrollbar">
-            <Profile
-              user={user}
-              onUpdateUser={handleProfileUpdate}
-              loans={loans}
-            />
-          </div>
+          <Profile
+            user={user}
+            onUpdateUser={handleProfileUpdate}
+            loans={loans}
+          />
         )}
 
         {activeTab === "lending" && (
-          <div className="tab-content custom-scrollbar">
-            <LendingPanel books={books} users={users} loans={loans} />
-          </div>
+          <LendingPanel books={books} users={users} loans={loans} />
         )}
 
         {activeTab === "library" && (
-          <>
-            <header className="App-header">
-              <div className="header-section header-title">
-                <div className="title-container">
-                  <h1>Omega Könyvtár</h1>
-                  <p>Digitális Könyvtárad</p>
-                </div>
-              </div>
-              <div className="header-section header-controls">
-                <div className="controls-left">
-                  <div className="book-stats">
-                    <span className="total-books">
-                      {filteredBooks.length} könyv található
+          <div className="library-panel">
+            <div className="panel-header">
+              <h2><Building2 size={20} style={{verticalAlign: "middle", marginRight: 6}} /> Omega Könyvtár</h2>
+            </div>
+            <div className="panel-controls">
+              <div className="controls-left">
+                <div className="book-stats">
+                  <span className="total-books">
+                    {filteredBooks.length} könyv található
                     </span>
                     {filteredBooks.length !==
                       books.filter(
@@ -507,7 +513,7 @@ function App() {
                     className="filter-toggle-btn"
                     onClick={() => setShowFilters(!showFilters)}
                   >
-                    🔍 {showFilters ? "Szűrők Elrejtése" : "Szűrők Mutatása"}
+                    <Search size={16} style={{ verticalAlign: "middle", marginRight: 4 }} /> {showFilters ? "Szűrők Elrejtése" : "Szűrők Mutatása"}
                   </button>
                   {user?.role === "admin" && (
                     <button
@@ -519,7 +525,6 @@ function App() {
                   )}
                 </div>
               </div>
-            </header>
 
             <div className={`filters-wrapper ${showFilters ? "show" : ""}`}>
               <div className="filters-section">
@@ -712,11 +717,11 @@ function App() {
                               className="book-thumbnail"
                             />
                           ) : (
-                            <div className="book-thumbnail-placeholder">📚</div>
+                            <div className="book-thumbnail-placeholder"><BookOpen size={32} /></div>
                           )}
                           {isLentOut && (
                             <div className="lent-out-badge">
-                              📚 Kikölcsönözve
+                              <BookOpen size={12} style={{ verticalAlign: "middle", marginRight: 3 }} /> Kikölcsönözve
                             </div>
                           )}
                         </div>
@@ -744,23 +749,34 @@ function App() {
                 )}
               </div>
             </main>
-          </>
+          </div>
         )}
 
         {activeTab === "users" && (
-          <div className="tab-content custom-scrollbar">
-            <UsersPanel user={user} users={users} />
-          </div>
+          <UsersPanel user={user} users={users} />
         )}
         {activeTab === "kassza" && (
-          <div className="tab-content custom-scrollbar">
-            <KasszaPanel
-              user={user}
-              users={users}
-              books={books}
-              gifts={gifts}
-            />
-          </div>
+          <KasszaPanel
+            user={user}
+            users={users}
+            books={books}
+            gifts={gifts}
+            sales={sales}
+            shifts={shifts}
+            extraTransactions={extraTransactions}
+          />
+        )}
+
+        {activeTab === "naplo" && (
+          <NaploPanel
+            user={user}
+            users={users}
+            books={books}
+            gifts={gifts}
+            sales={sales}
+            shifts={shifts}
+            extraTransactions={extraTransactions}
+          />
         )}
       </div>
 
