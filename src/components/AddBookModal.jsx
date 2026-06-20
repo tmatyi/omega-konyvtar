@@ -6,7 +6,7 @@ import {
   processMolyHuUrl,
 } from "../services/scrapingService.js";
 import { addBookToDb } from "../services/firebaseService.js";
-import { database, dbRef, ref, push, set, onValue } from "../firebase.js";
+import { database, dbRef, ref, push, set, onValue, uploadImageToStorage } from "../firebase.js";
 
 function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
   const [title, setTitle] = useState("");
@@ -83,7 +83,7 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
     }
   };
 
-  // Process thumbnail image file
+  // Process thumbnail image file — returns a Blob ready for upload
   const processThumbnailFile = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -115,12 +115,14 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
           // Draw and resize image
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to JPEG with 80% quality for smaller file size
+          // Convert to JPEG with 80% quality, resolve with Blob directly
           canvas.toBlob(
             (blob) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Failed to create blob from canvas"));
+              }
             },
             "image/jpeg",
             0.8,
@@ -152,10 +154,22 @@ function AddBookModal({ show, onClose, user, activeTab, getCategoryFilter }) {
       }
 
       try {
-        // Process the image file
-        const processedImage = await processThumbnailFile(file);
-        setThumbnailPreview(processedImage);
-        setThumbnail(processedImage);
+        // Process the image file — returns a Blob
+        const processedBlob = await processThumbnailFile(file);
+
+        // Create object URL for instant preview while uploading
+        const previewUrl = URL.createObjectURL(processedBlob);
+        setThumbnailPreview(previewUrl);
+
+        // Upload to Firebase Storage
+        const fileName = `books/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+        const downloadURL = await uploadImageToStorage(processedBlob, fileName);
+
+        // Replace preview with permanent URL and save
+        setThumbnailPreview(downloadURL);
+        setThumbnail(downloadURL);
+        URL.revokeObjectURL(previewUrl);
+
         alert("Borítókép sikeresen feltöltve!");
       } catch (error) {
         console.error("Error processing thumbnail:", error);

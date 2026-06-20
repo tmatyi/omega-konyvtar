@@ -4,6 +4,9 @@ import {
   dbRef,
   ref,
   onValue,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved,
   off,
 } from "../firebase.js";
 
@@ -37,28 +40,57 @@ export function useDatabase(isAuthenticated) {
     }
   };
 
-  // Load books from Firebase
+  // Load books from Firebase — incremental listeners (only changed books downloaded on writes)
   useEffect(() => {
     if (!isAuthenticated) {
       setBooks([]);
       return;
     }
     const booksRef = dbRef(database, "books");
-    const unsubscribe = onValue(booksRef, (snapshot) => {
-      markLoaded("books");
-      const data = snapshot.val();
-      if (data) {
-        const booksArray = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-        }));
-        setBooks(booksArray);
+    const bookMap = {};
+    let initialBatchDone = false;
+    let flushTimer = null;
+
+    // Debounced flush — fires 50ms after the LAST initial child event arrives
+    const scheduleInitialFlush = () => {
+      clearTimeout(flushTimer);
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        initialBatchDone = true;
+        setBooks(Object.values(bookMap));
+        markLoaded("books");
+      }, 50);
+    };
+
+    const unsubAdded = onChildAdded(booksRef, (snapshot) => {
+      const book = { id: snapshot.key, ...snapshot.val() };
+      bookMap[book.id] = book;
+      if (!initialBatchDone) {
+        scheduleInitialFlush();
       } else {
-        setBooks([]);
+        setBooks((prev) => [...prev, book]);
       }
     });
 
-    return () => unsubscribe();
+    const unsubChanged = onChildChanged(booksRef, (snapshot) => {
+      const updated = { id: snapshot.key, ...snapshot.val() };
+      bookMap[updated.id] = updated;
+      if (!initialBatchDone) return; // handled by initial flush
+      setBooks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    });
+
+    const unsubRemoved = onChildRemoved(booksRef, (snapshot) => {
+      delete bookMap[snapshot.key];
+      if (!initialBatchDone) return; // handled by initial flush
+      setBooks((prev) => prev.filter((b) => b.id !== snapshot.key));
+    });
+
+    return () => {
+      clearTimeout(flushTimer);
+      unsubAdded();
+      unsubChanged();
+      unsubRemoved();
+    };
   }, [isAuthenticated]);
 
   // Load gifts from Firebase
@@ -133,24 +165,56 @@ export function useDatabase(isAuthenticated) {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  // Load sales from Firebase
+  // Load sales from Firebase — incremental listeners
   useEffect(() => {
     if (!isAuthenticated) {
       setSales([]);
       return;
     }
     const salesRef = dbRef(database, "sales");
-    const unsubscribe = onValue(salesRef, (snapshot) => {
-      markLoaded("sales");
-      const data = snapshot.val();
-      if (data) {
-        setSales(Object.keys(data).map((key) => ({ id: key, ...data[key] })));
+    const saleMap = {};
+    let initialBatchDone = false;
+    let flushTimer = null;
+
+    const scheduleInitialFlush = () => {
+      clearTimeout(flushTimer);
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        initialBatchDone = true;
+        setSales(Object.values(saleMap));
+        markLoaded("sales");
+      }, 50);
+    };
+
+    const unsubAdded = onChildAdded(salesRef, (snapshot) => {
+      const sale = { id: snapshot.key, ...snapshot.val() };
+      saleMap[sale.id] = sale;
+      if (!initialBatchDone) {
+        scheduleInitialFlush();
       } else {
-        setSales([]);
+        setSales((prev) => [...prev, sale]);
       }
     });
 
-    return () => unsubscribe();
+    const unsubChanged = onChildChanged(salesRef, (snapshot) => {
+      const updated = { id: snapshot.key, ...snapshot.val() };
+      saleMap[updated.id] = updated;
+      if (!initialBatchDone) return;
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    });
+
+    const unsubRemoved = onChildRemoved(salesRef, (snapshot) => {
+      delete saleMap[snapshot.key];
+      if (!initialBatchDone) return;
+      setSales((prev) => prev.filter((s) => s.id !== snapshot.key));
+    });
+
+    return () => {
+      clearTimeout(flushTimer);
+      unsubAdded();
+      unsubChanged();
+      unsubRemoved();
+    };
   }, [isAuthenticated]);
 
   // Load shifts from Firebase

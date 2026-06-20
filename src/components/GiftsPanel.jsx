@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Plus, Gift, Pencil, Trash2, Save, X } from "lucide-react";
 import {
   addGiftToDb,
   updateGiftInDb,
   deleteGiftFromDb,
 } from "../services/firebaseService.js";
-import { database, dbRef, ref, push, set } from "../firebase.js";
+import { database, dbRef, ref, push, set, uploadImageToStorage } from "../firebase.js";
 import "./BooksTable.css";
 
 function GiftsPanel({ user, gifts }) {
@@ -16,6 +16,7 @@ function GiftsPanel({ user, gifts }) {
   const [giftPurchasePrice, setGiftPurchasePrice] = useState("");
   const [deductFromCashier, setDeductFromCashier] = useState(false);
   const [giftImage, setGiftImage] = useState("");
+  const giftImageBlobRef = useRef(null); // Holds the processed Blob for Storage upload
   const [giftBarcode, setGiftBarcode] = useState("");
   const [giftToDelete, setGiftToDelete] = useState(null);
   const [showDeleteGiftConfirm, setShowDeleteGiftConfirm] = useState(false);
@@ -465,9 +466,44 @@ function GiftsPanel({ user, gifts }) {
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
+                      // Validate file size (max 5MB)
+                      if (file.size > 5 * 1024 * 1024) {
+                        alert("A képfájl mérete nem haladhatja meg az 5MB-ot!");
+                        return;
+                      }
+                      // Process image: resize to max 800x800, convert to JPEG
                       const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setGiftImage(reader.result);
+                      reader.onload = (ev) => {
+                        const img = new Image();
+                        img.onload = () => {
+                          const canvas = document.createElement("canvas");
+                          const ctx = canvas.getContext("2d");
+                          let { width, height } = img;
+                          const maxSize = 800;
+                          if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                              height = (height * maxSize) / width;
+                              width = maxSize;
+                            } else {
+                              width = (width * maxSize) / height;
+                              height = maxSize;
+                            }
+                          }
+                          canvas.width = width;
+                          canvas.height = height;
+                          ctx.drawImage(img, 0, 0, width, height);
+                          canvas.toBlob(
+                            (blob) => {
+                              if (blob) {
+                                giftImageBlobRef.current = blob;
+                                setGiftImage(URL.createObjectURL(blob));
+                              }
+                            },
+                            "image/jpeg",
+                            0.8,
+                          );
+                        };
+                        img.src = ev.target.result;
                       };
                       reader.readAsDataURL(file);
                     }
@@ -768,16 +804,32 @@ function GiftsPanel({ user, gifts }) {
               }}
             >
               <button
-                onClick={() => {
+                onClick={async () => {
                   // Add gift to Firebase
                   if (giftName && giftQuantity && giftPrice) {
+                    // Upload image to Storage if we have a new blob
+                    let imageUrl = giftImage || "";
+                    if (giftImageBlobRef.current) {
+                      try {
+                        const fileName = `gifts/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+                        imageUrl = await uploadImageToStorage(giftImageBlobRef.current, fileName);
+                        // Revoke the preview object URL and use the permanent one
+                        URL.revokeObjectURL(giftImage);
+                        setGiftImage(imageUrl);
+                      } catch (err) {
+                        console.error("Failed to upload gift image:", err);
+                        alert("Hiba történt a kép feltöltése során!");
+                        return;
+                      }
+                    }
+
                     const newGift = {
                       name: giftName,
                       quantity: parseInt(giftQuantity),
                       price: parseFloat(giftPrice),
                       purchasePrice: parseFloat(giftPurchasePrice) || 0,
                       barcode: giftBarcode || "",
-                      image: giftImage || "",
+                      image: imageUrl,
                       status: "Raktáron",
                       createdAt: new Date().toISOString(),
                       addedBy: user?.email || "unknown",
@@ -812,7 +864,11 @@ function GiftsPanel({ user, gifts }) {
                     setGiftPrice("");
                     setGiftPurchasePrice("");
                     setGiftBarcode("");
+                    if (giftImage && giftImage.startsWith("blob:")) {
+                      URL.revokeObjectURL(giftImage);
+                    }
                     setGiftImage("");
+                    giftImageBlobRef.current = null;
                     setDeductFromCashier(false);
                   }
                 }}
@@ -860,7 +916,11 @@ function GiftsPanel({ user, gifts }) {
                   setGiftPrice("");
                   setGiftPurchasePrice("");
                   setGiftBarcode("");
+                  if (giftImage && giftImage.startsWith("blob:")) {
+                    URL.revokeObjectURL(giftImage);
+                  }
                   setGiftImage("");
+                  giftImageBlobRef.current = null;
                 }}
                 style={{
                   padding: "12px 24px",

@@ -3,7 +3,7 @@ import {
   updateBookInDb,
   deleteBookFromDb,
 } from "../services/firebaseService.js";
-import { database, dbRef, ref, onValue } from "../firebase.js";
+import { database, dbRef, ref, onValue, uploadImageToStorage } from "../firebase.js";
 
 function BookDetailModal({ show, book, onClose, user }) {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -264,7 +264,7 @@ function BookDetailModal({ show, book, onClose, user }) {
     setBookToDelete(null);
   };
 
-  // Process thumbnail image file
+  // Process thumbnail image file — returns a Blob ready for upload
   const processThumbnailFile = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -293,11 +293,14 @@ function BookDetailModal({ show, book, onClose, user }) {
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
 
+          // Convert to JPEG with 80% quality, resolve with Blob directly
           canvas.toBlob(
             (blob) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Failed to create blob from canvas"));
+              }
             },
             "image/jpeg",
             0.8,
@@ -327,9 +330,22 @@ function BookDetailModal({ show, book, onClose, user }) {
       }
 
       try {
-        const processedImage = await processThumbnailFile(file);
-        setThumbnailPreview(processedImage);
-        setThumbnail(processedImage);
+        // Process the image file — returns a Blob
+        const processedBlob = await processThumbnailFile(file);
+
+        // Create object URL for instant preview while uploading
+        const previewUrl = URL.createObjectURL(processedBlob);
+        setThumbnailPreview(previewUrl);
+
+        // Upload to Firebase Storage
+        const fileName = `books/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+        const downloadURL = await uploadImageToStorage(processedBlob, fileName);
+
+        // Replace preview with permanent URL and save
+        setThumbnailPreview(downloadURL);
+        setThumbnail(downloadURL);
+        URL.revokeObjectURL(previewUrl);
+
         alert("Borítókép sikeresen feltöltve!");
       } catch (error) {
         console.error("Error processing thumbnail:", error);

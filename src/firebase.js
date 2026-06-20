@@ -3,6 +3,9 @@ import {
   getDatabase,
   ref,
   onValue,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved,
   off,
   push,
   update,
@@ -21,6 +24,12 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDsGop0bF9OvJalbi56-jSr4n4wiq7686w",
@@ -37,6 +46,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 // Set authentication persistence to local storage (remembers login across app restarts)
 setPersistence(auth, browserLocalPersistence).catch((error) => {
@@ -62,6 +72,18 @@ export function dbPrefix() {
  */
 export function dbRef(db, path) {
   return ref(db, dbPrefix() + path);
+}
+
+/**
+ * Uploads a file (Blob/File/Uint8Array) to Firebase Storage and returns the download URL.
+ * @param {Blob|File|Uint8Array} file - The file data to upload
+ * @param {string} path - The storage path (e.g., "books/abc123.jpg")
+ * @returns {Promise<string>} The public download URL
+ */
+export async function uploadImageToStorage(file, path) {
+  const storageReference = storageRef(storage, path);
+  const snapshot = await uploadBytes(storageReference, file);
+  return getDownloadURL(snapshot.ref);
 }
 
 // Firebase Callable Functions — wrappers for Cloud Functions
@@ -95,12 +117,16 @@ export {
   database,
   ref,
   onValue,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved,
   off,
   update,
   push,
   remove,
   set,
   auth,
+  storage,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,

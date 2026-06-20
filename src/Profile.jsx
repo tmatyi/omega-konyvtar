@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Camera, Pencil, Save, X, Lock, CircleCheck, CircleX } from "lucide-react";
-import { database, dbRef, ref, set, update, onValue, off, auth } from "./firebase.js";
+import { database, dbRef, ref, set, update, onValue, off, auth, uploadImageToStorage } from "./firebase.js";
 import {
   updatePassword,
   EmailAuthProvider,
@@ -138,17 +138,26 @@ function Profile({ user, onUpdateUser, loans = [] }) {
       }
 
       try {
-        // Process the image file
-        const processedImage = await processImageFile(file);
+        // Process the image file — returns a Blob
+        const processedBlob = await processImageFile(file);
 
-        setAvatarPreview(processedImage);
+        // Create an object URL for local preview while upload completes
+        const previewUrl = URL.createObjectURL(processedBlob);
+        setAvatarPreview(previewUrl);
 
-        // Auto-save the avatar immediately after successful processing
+        // Upload to Firebase Storage
+        const storagePath = `avatars/${user?.uid}_${Date.now()}.jpg`;
+        const downloadURL = await uploadImageToStorage(processedBlob, storagePath);
+
+        // Auto-save the avatar immediately after successful upload
         const profileData = {
           ...formData,
-          photoURL: processedImage,
+          photoURL: downloadURL,
           updatedAt: new Date().toISOString(),
         };
+
+        // Update preview to use the permanent URL
+        setAvatarPreview(downloadURL);
 
         // Save to Firebase
         try {
@@ -202,12 +211,14 @@ function Profile({ user, onUpdateUser, loans = [] }) {
           // Draw and resize image
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to JPEG with 80% quality for smaller file size
+          // Convert to JPEG with 80% quality, resolve with Blob directly
           canvas.toBlob(
             (blob) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Failed to create blob from canvas"));
+              }
             },
             "image/jpeg",
             0.8,
